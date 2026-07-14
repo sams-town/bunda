@@ -1,0 +1,55 @@
+diff --git a/src/App.tsx b/src/App.tsx
+index 1051fb8..f7c792e 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -186,23 +186,34 @@ const PAGE_TO_PATH: Record<Page, string> = {
+   'change-password': '/change-password',
+ };
+ 
++// Normalize keys so we handle routes and params flexibly
++const normalizePath = (path: string) => `/${path.split('/').filter(Boolean)[0] || 'dashboard'}`;
++
+ // Reverse map: URL path to Page type
+ const PATH_TO_PAGE: Record<string, Page> = Object.entries(PAGE_TO_PATH).reduce(
+   (acc, [page, path]) => ({ ...acc, [path]: page as Page }),
+   {} as Record<string, Page>
+ );
+ 
+-export default function App() {
+   const navigate = useNavigate();
+   const location = useLocation();
+ 
++  const pathParts = location.pathname.split('/').filter(Boolean);
++  const baseSegment = pathParts[0] ? `/${pathParts[0]}` : '/dashboard';
++  // Check if baseSegment exists within valid routes, if not fallback to dashboard
++  const isKnownRoute = !!PATH_TO_PAGE[baseSegment];
++  const activeBaseSegment = isKnownRoute ? baseSegment : '/dashboard';
++
++  const paramParts = pathParts.slice(isKnownRoute ? 1 : 0); // Preserve parameters
++  const paramSegment = paramParts.length > 0 ? `/${paramParts.join('/')}` : '';
++
+   // Derive currentPage from the URL path
+-  const currentPage: Page = PATH_TO_PAGE[location.pathname] || 'dashboard';
++  const currentPage: Page = PATH_TO_PAGE[activeBaseSegment] || 'dashboard';
+ 
+   // Navigate helper that updates the URL
+   const setCurrentPage = useCallback((page: Page) => {
+-    navigate(PAGE_TO_PATH[page] || '/dashboard');
+-  }, [navigate]);
++    navigate(`${PAGE_TO_PATH[page] || '/dashboard'}${paramSegment}`);
++  }, [navigate, paramSegment]);
+ 
+   const [isLoggedIn, setIsLoggedIn] = useState(false);
+   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+@@ -234,9 +245,9 @@ export default function App() {
+   // Redirect to /dashboard if on root path
+   useEffect(() => {
+     if (location.pathname === '/' && isLoggedIn) {
+-      navigate('/dashboard', { replace: true });
++      navigate(`/dashboard${paramSegment}`, { replace: true });
+     }
+-  }, [location.pathname, isLoggedIn, navigate]);
++  }, [location.pathname, isLoggedIn, navigate, paramSegment]);
+ 
+   // Handle accordion states based on currentPage
+   useEffect(() => {

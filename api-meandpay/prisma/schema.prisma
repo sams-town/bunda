@@ -1,0 +1,835 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model auto_shifts {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  jabatan_id BigInt    @db.UnsignedBigInt
+  shift_id   BigInt    @db.UnsignedBigInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model beritas {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  tipe             String?
+  judul            String?
+  isi              String?   @db.Text
+  link             String?   @db.VarChar(255)
+  berita_file_path String?
+  berita_file_name String?
+  created_at       DateTime? @db.Timestamp(0)
+  updated_at       DateTime? @db.Timestamp(0)
+}
+
+model counters {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String
+  text       String?
+  counter    Int
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model cutis {
+  id            BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  lokasi_id     BigInt?   @db.UnsignedBigInt
+  user_id       BigInt?   @db.UnsignedBigInt
+  nama_cuti     String?
+  tanggal       String?
+  alasan_cuti   String?   @db.Text
+  foto_cuti     String?
+  status_cuti   String?
+  catatan       String?
+  user_approval BigInt?   @db.UnsignedBigInt
+  created_at    DateTime? @db.Timestamp(0)
+  updated_at    DateTime? @db.Timestamp(0)
+  users         users?    @relation(fields: [user_approval], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cutis_user_approval_foreign")
+
+  @@index([user_approval], map: "cutis_user_approval_foreign")
+}
+
+model dinas_luars {
+  id              BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id         BigInt    @db.UnsignedBigInt
+  shift_id        BigInt    @db.UnsignedBigInt
+  tanggal         String
+  jam_absen       String?
+  telat           String?
+  lat_absen       String?
+  long_absen      String?
+  foto_jam_absen  String?
+  jam_pulang      String?
+  pulang_cepat    String?
+  foto_jam_pulang String?
+  lat_pulang      String?
+  long_pulang     String?
+  status_absen    String?
+  created_at      DateTime? @db.Timestamp(0)
+  updated_at      DateTime? @db.Timestamp(0)
+}
+
+model failed_jobs {
+  id         BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  uuid       String   @unique(map: "failed_jobs_uuid_unique")
+  connection String   @db.Text
+  queue      String   @db.Text
+  payload    String   @db.LongText
+  exception  String   @db.LongText
+  failed_at  DateTime @default(now()) @db.Timestamp(0)
+}
+
+model files {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  jenis_file String
+  user_id    BigInt?   @db.UnsignedBigInt
+  fileUpload String
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model golongans {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model inventories {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  kode_barang String?
+  nama_barang String?
+  stok        Float?
+  uom         String?
+  desc        String?   @db.Text
+  lokasi_id   BigInt?   @db.UnsignedBigInt
+  jabatan_id  BigInt?   @db.UnsignedBigInt
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+}
+
+model jabatans {
+  id                   BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  nama_jabatan         String
+  manager              BigInt?                @db.UnsignedBigInt
+  created_at           DateTime?              @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  users                users?                 @relation("jabatans_manager", fields: [manager], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "jabatans_manager_foreign")
+  target_kinerja_teams target_kinerja_teams[]
+  user_jabatans        users[]                @relation("users_jabatan")
+
+  @@index([manager], map: "jabatans_manager_foreign")
+}
+
+model jenis_kinerjas {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  nama       String?
+  bobot      BigInt?
+  detail     String?   @db.Text
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model kasbons {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id    BigInt    @db.UnsignedBigInt
+  tanggal    DateTime  @db.Date
+  nominal    Int
+  keperluan  String    @db.Text
+  status     String
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model kategoris {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String
+  jumlah     BigInt?
+  active     Int?
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model kontraks {
+  id                      BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                 BigInt    @db.UnsignedBigInt
+  tanggal                 DateTime? @db.Date
+  jenis_kontrak           String?
+  tanggal_mulai           DateTime? @db.Date
+  tanggal_selesai         DateTime? @db.Date
+  masa_berlaku_sebelumnya DateTime? @db.Date
+  keterangan              String?   @db.Text
+  kontrak_file_path       String?
+  kontrak_file_name       String?
+  created_at              DateTime? @db.Timestamp(0)
+  updated_at              DateTime? @db.Timestamp(0)
+}
+
+model kunjungans {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id        BigInt    @db.UnsignedBigInt
+  tanggal        DateTime? @db.Date
+  visit_in       DateTime? @db.DateTime(0)
+  foto_in        String?
+  lat_in         String?
+  long_in        String?
+  keterangan_in  String?   @db.Text
+  visit_out      DateTime? @db.DateTime(0)
+  foto_out       String?
+  lat_out        String?
+  long_out       String?
+  keterangan_out String?   @db.Text
+  status         String?
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+}
+
+model laporan_kerjas {
+  id                      BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                 BigInt?   @db.UnsignedBigInt
+  tanggal                 DateTime? @db.Date
+  informasi_umum          String?   @db.Text
+  pekerjaan_dilaksanakan  String?   @db.Text
+  pekerjaan_belum_selesai String?   @db.Text
+  catatan                 String?   @db.Text
+  created_at              DateTime? @db.Timestamp(0)
+  updated_at              DateTime? @db.Timestamp(0)
+}
+
+model laporan_kinerjas {
+  id                 BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id            BigInt?   @db.UnsignedBigInt
+  tanggal            DateTime? @db.Date
+  jenis_kinerja_id   BigInt?   @db.UnsignedBigInt
+  nilai              BigInt?
+  penilaian_berjalan BigInt?
+  reference          String?
+  reference_id       Int?
+  created_at         DateTime? @db.Timestamp(0)
+  updated_at         DateTime? @db.Timestamp(0)
+}
+
+model lemburs {
+  id              BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id         BigInt    @db.UnsignedBigInt
+  lokasi_id       BigInt    @db.UnsignedBigInt
+  tanggal         String
+  jam_masuk       String
+  lat_masuk       String
+  long_masuk      String
+  jarak_masuk     String
+  foto_jam_masuk  String
+  jam_keluar      String?
+  lat_keluar      String?
+  long_keluar     String?
+  jarak_keluar    String?
+  foto_jam_keluar String?
+  total_lembur    String?
+  status          String?
+  notes           String?
+  approved_by     BigInt?   @db.UnsignedBigInt
+  created_at      DateTime? @db.Timestamp(0)
+  updated_at      DateTime? @db.Timestamp(0)
+  file_lembur     String?   @db.Text
+  approver        users?    @relation("ApproverLembur", fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lemburs_approved_by_foreign")
+  lokasi          lokasis   @relation("LokasiLembur", fields: [lokasi_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lemburs_lokasi_id_foreign")
+  karyawan        users     @relation("KaryawanLembur", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lemburs_user_id_foreign")
+
+  @@index([user_id], map: "lemburs_user_id_foreign")
+  @@index([lokasi_id], map: "lemburs_lokasi_id_foreign")
+  @@index([approved_by], map: "lemburs_approved_by_foreign")
+}
+
+model lokasis {
+  id                               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  nama_lokasi                      String
+  lat_kantor                       String?
+  long_kantor                      String?
+  radius                           String?
+  keterangan                       String?
+  status                           String?
+  created_by                       BigInt?   @db.UnsignedBigInt
+  approved_by                      BigInt?   @db.UnsignedBigInt
+  created_at                       DateTime? @db.Timestamp(0)
+  updated_at                       DateTime? @db.Timestamp(0)
+  lemburs                          lemburs[] @relation("LokasiLembur")
+  users_lokasis_approved_byTousers users?    @relation("lokasis_approved_byTousers", fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lokasis_approved_by_foreign")
+  users_lokasis_created_byTousers  users?    @relation("lokasis_created_byTousers", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "lokasis_created_by_foreign")
+  user_lokasis                     users[]   @relation("users_lokasi")
+
+  @@index([approved_by], map: "lokasis_approved_by_foreign")
+  @@index([created_by], map: "lokasis_created_by_foreign")
+}
+
+model mapping_shifts {
+  id                   BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id              BigInt    @db.UnsignedBigInt
+  shift_id             BigInt?   @db.UnsignedBigInt
+  tanggal              DateTime  @db.Date
+  jam_absen            String?
+  telat                String?
+  lat_absen            String?
+  long_absen           String?
+  jarak_masuk          String?
+  foto_jam_absen       String?
+  keterangan_masuk     String?
+  jam_pulang           String?
+  pulang_cepat         String?
+  lat_pulang           String?
+  long_pulang          String?
+  jarak_pulang         String?
+  foto_jam_pulang      String?
+  keterangan_pulang    String?
+  status_absen         String?
+  lock_location        String?
+  jam_masuk_pengajuan  String?
+  jam_pulang_pengajuan String?
+  deskripsi            String?
+  status_pengajuan     String?
+  file_pengajuan       String?
+  komentar             String?
+  approved_by          BigInt?   @db.UnsignedBigInt
+  created_at           DateTime? @db.Timestamp(0)
+  updated_at           DateTime? @db.Timestamp(0)
+  approved_by_user     users?    @relation("ApprovedBy", fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mapping_shifts_approved_by_foreign")
+  shifts               shifts?   @relation(fields: [shift_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "mapping_shifts_user_id_foreign")
+
+  @@index([user_id], map: "mapping_shifts_user_id_foreign")
+  @@index([approved_by], map: "mapping_shifts_approved_by_foreign")
+  @@index([shift_id], map: "mapping_shifts_shift_id_foreign")
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  migration String
+  batch     Int
+}
+
+model model_has_permissions {
+  permission_id BigInt      @db.UnsignedBigInt
+  model_type    String
+  model_id      BigInt      @db.UnsignedBigInt
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "model_has_permissions_permission_id_foreign")
+
+  @@id([permission_id, model_id, model_type])
+  @@index([model_id, model_type], map: "model_has_permissions_model_id_model_type_index")
+}
+
+model model_has_roles {
+  role_id    BigInt @db.UnsignedBigInt
+  model_type String
+  model_id   BigInt @db.UnsignedBigInt
+  roles      roles  @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "model_has_roles_role_id_foreign")
+
+  @@id([role_id, model_id, model_type])
+  @@index([model_id, model_type], map: "model_has_roles_model_id_model_type_index")
+}
+
+model notifications {
+  id              Int       @id @default(autoincrement())
+  type            String
+  notifiable_type String
+  notifiable_id   BigInt    @db.UnsignedBigInt
+  data            String    @db.Text
+  read_at         DateTime? @db.Timestamp(0)
+  created_at      DateTime? @db.Timestamp(0)
+  updated_at      DateTime? @db.Timestamp(0)
+
+  @@index([notifiable_type, notifiable_id], map: "notifications_notifiable_type_notifiable_id_index")
+}
+
+model pajaks {
+  id           BigInt       @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id      BigInt       @db.UnsignedBigInt
+  status_id    BigInt       @db.UnsignedBigInt
+  bulan        String
+  tahun        String
+  created_at   DateTime?    @db.Timestamp(0)
+  updated_at   DateTime?    @db.Timestamp(0)
+  status_ptkps status_ptkps @relation(fields: [status_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pajaks_status_id_foreign")
+
+  @@index([status_id], map: "pajaks_status_id_foreign")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model password_resets {
+  email      String
+  token      String
+  created_at DateTime? @db.Timestamp(0)
+
+  @@index([email], map: "password_resets_email_index")
+  @@ignore
+}
+
+model patrolis {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id    BigInt?   @db.UnsignedBigInt
+  lokasi_id  BigInt?   @db.UnsignedBigInt
+  tanggal    DateTime? @db.Date
+  jam        String?
+  lat        String?
+  long       String?
+  jarak      String?
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model payrolls {
+  id                                   BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                              BigInt?   @db.UnsignedBigInt
+  tanggal_mulai                        DateTime  @db.Date
+  tanggal_akhir                        DateTime  @db.Date
+  bulan                                String
+  tahun                                String
+  persentase_kehadiran                 String
+  no_gaji                              String
+  gaji_pokok                           BigInt
+  total_reimbursement                  BigInt
+  jumlah_tunjangan_transport           BigInt
+  uang_tunjangan_transport             BigInt
+  total_tunjangan_transport            BigInt
+  jumlah_tunjangan_makan               BigInt
+  uang_tunjangan_makan                 BigInt
+  total_tunjangan_makan                BigInt
+  total_tunjangan_bpjs_kesehatan       BigInt
+  total_tunjangan_bpjs_ketenagakerjaan BigInt
+  total_potongan_bpjs_kesehatan        BigInt
+  total_potongan_bpjs_ketenagakerjaan  BigInt
+  jumlah_mangkir                       BigInt
+  uang_mangkir                         BigInt
+  total_mangkir                        BigInt
+  jumlah_lembur                        BigInt
+  uang_lembur                          BigInt
+  total_lembur                         BigInt
+  jumlah_izin                          BigInt
+  uang_izin                            BigInt
+  total_izin                           BigInt
+  bonus_pribadi                        BigInt
+  bonus_team                           BigInt
+  bonus_jackpot                        BigInt
+  jumlah_terlambat                     BigInt
+  uang_terlambat                       BigInt
+  total_terlambat                      BigInt
+  jumlah_kehadiran                     BigInt
+  uang_kehadiran                       BigInt
+  total_kehadiran                      BigInt
+  saldo_kasbon                         BigInt
+  bayar_kasbon                         BigInt
+  jumlah_thr                           BigInt
+  uang_thr                             BigInt
+  total_thr                            BigInt
+  loss                                 BigInt
+  total_penjumlahan                    BigInt
+  total_pengurangan                    BigInt
+  grand_total                          BigInt
+  created_at                           DateTime? @db.Timestamp(0)
+  updated_at                           DateTime? @db.Timestamp(0)
+  potongan_koperasi                    BigInt?
+  employee                             users?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "payrolls_user_id_foreign")
+
+  @@index([user_id], map: "payrolls_user_id_foreign")
+}
+
+model pegawai_keluars {
+  id                       BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id                  BigInt    @db.UnsignedBigInt
+  tanggal                  DateTime? @db.Date
+  jenis                    String?
+  alasan                   String?   @db.Text
+  pegawai_keluar_file_path String?
+  pegawai_keluar_file_name String?
+  approved_by              BigInt?   @db.UnsignedBigInt
+  tanggal_approval         DateTime? @db.Date
+  notes                    String?   @db.Text
+  status                   String?
+  created_at               DateTime? @db.Timestamp(0)
+  updated_at               DateTime? @db.Timestamp(0)
+  users                    users?    @relation(fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pegawai_keluars_approved_by_foreign")
+
+  @@index([approved_by], map: "pegawai_keluars_approved_by_foreign")
+}
+
+model pengajuan_keuangan_items {
+  id                    BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  pengajuan_keuangan_id BigInt?   @db.UnsignedBigInt
+  nama                  String?
+  qty                   Float?
+  harga                 BigInt?
+  total                 BigInt?
+  created_at            DateTime? @db.Timestamp(0)
+  updated_at            DateTime? @db.Timestamp(0)
+}
+
+model pengajuan_keuangans {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id        BigInt?   @db.UnsignedBigInt
+  nomor          String?
+  tanggal        DateTime? @db.Date
+  total_harga    BigInt?
+  keterangan     String?   @db.Text
+  pk_file_path   String?
+  pk_file_name   String?
+  status         String?
+  nota_file_path String?
+  nota_file_name String?
+  user_approval  BigInt?   @db.UnsignedBigInt
+  note_approval  String?
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+  approver       users?    @relation("ApproverFinance", fields: [user_approval], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "pengajuan_keuangans_user_approval_foreign")
+
+  @@index([user_approval], map: "pengajuan_keuangans_user_approval_foreign")
+}
+
+model penugasan_items {
+  id           BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  penugasan_id BigInt?   @db.UnsignedBigInt
+  user_id      BigInt?   @db.UnsignedBigInt
+  flow         String?
+  created_at   DateTime? @db.Timestamp(0)
+  updated_at   DateTime? @db.Timestamp(0)
+}
+
+model penugasans {
+  id              BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  nomor_penugasan String?
+  user_id         BigInt?   @db.UnsignedBigInt
+  tanggal         DateTime? @db.Date
+  judul           String?
+  rincian         String?   @db.Text
+  status          String?
+  created_at      DateTime? @db.Timestamp(0)
+  updated_at      DateTime? @db.Timestamp(0)
+  progress        String?
+}
+
+model permissions {
+  id                    BigInt                  @id @default(autoincrement()) @db.UnsignedBigInt
+  name                  String
+  guard_name            String
+  created_at            DateTime?               @db.Timestamp(0)
+  updated_at            DateTime?               @db.Timestamp(0)
+  model_has_permissions model_has_permissions[]
+  role_has_permissions  role_has_permissions[]
+
+  @@unique([name, guard_name], map: "permissions_name_guard_name_unique")
+}
+
+model personal_access_tokens {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  tokenable_type String
+  tokenable_id   BigInt    @db.UnsignedBigInt
+  name           String
+  token          String    @unique(map: "personal_access_tokens_token_unique") @db.VarChar(64)
+  abilities      String?   @db.Text
+  last_used_at   DateTime? @db.Timestamp(0)
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+
+  @@index([tokenable_type, tokenable_id], map: "personal_access_tokens_tokenable_type_tokenable_id_index")
+}
+
+model rapat_notulens {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  rapat_id   BigInt?   @db.UnsignedBigInt
+  user_id    BigInt?   @db.UnsignedBigInt
+  notulen    String?   @db.Text
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model rapat_pegawais {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  rapat_id   BigInt?   @db.UnsignedBigInt
+  user_id    BigInt?   @db.UnsignedBigInt
+  hadir      DateTime? @db.DateTime(0)
+  status     String?
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model rapats {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  nama        String
+  tanggal     DateTime  @db.Date
+  jam_mulai   String
+  jam_selesai String
+  lokasi      String
+  detail      String    @db.Text
+  jenis       String
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+}
+
+model reimbursements {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id     BigInt    @db.UnsignedBigInt
+  kategori_id BigInt    @db.UnsignedBigInt
+  tanggal     DateTime? @db.Date
+  event       String?   @db.Text
+  status      String?
+  jumlah      BigInt?
+  qty         Int?
+  total       BigInt?
+  sisa        BigInt?
+  file_path   String?
+  file_name   String?
+  created_at  DateTime? @db.Timestamp(0)
+  updated_at  DateTime? @db.Timestamp(0)
+}
+
+model reimbursements_items {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  reimbursement_id BigInt    @db.UnsignedBigInt
+  user_id          BigInt?   @db.UnsignedBigInt
+  fee              BigInt?
+  created_at       DateTime? @db.Timestamp(0)
+  updated_at       DateTime? @db.Timestamp(0)
+}
+
+model reset_cutis {
+  id                     BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  izin_cuti              String
+  izin_dinas_luar        String
+  izin_sakit             String
+  izin_cek_kesehatan     String
+  izin_keperluan_pribadi String
+  izin_telat             String
+  izin_pulang_cepat      String
+  izin_lainnya           String
+  created_at             DateTime? @db.Timestamp(0)
+  updated_at             DateTime? @db.Timestamp(0)
+}
+
+model role_has_permissions {
+  permission_id BigInt      @db.UnsignedBigInt
+  role_id       BigInt      @db.UnsignedBigInt
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_has_permissions_permission_id_foreign")
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "role_has_permissions_role_id_foreign")
+
+  @@id([permission_id, role_id])
+  @@index([role_id], map: "role_has_permissions_role_id_foreign")
+}
+
+model roles {
+  id                   BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  name                 String
+  guard_name           String
+  created_at           DateTime?              @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  model_has_roles      model_has_roles[]
+  role_has_permissions role_has_permissions[]
+
+  @@unique([name, guard_name], map: "roles_name_guard_name_unique")
+}
+
+model settings {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name             String?
+  logo             String?
+  alamat           String?
+  phone            String?
+  whatsapp         String?
+  api_url          String?
+  api_whatsapp     String?
+  email            String?
+  file_form_cuti   String?   @db.Text
+  file_slip_gaji   String?   @db.Text
+  file_form_lembur String?   @db.Text
+  footer           String?   @db.VarChar(100)
+  created_at       DateTime? @db.Timestamp(0)
+  updated_at       DateTime? @db.Timestamp(0)
+}
+
+model shifts {
+  id                    BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  nama_shift            String
+  jam_masuk             String
+  jam_keluar            String
+  jam_mulai_istirahat   String?
+  jam_selesai_istirahat String?
+  created_at            DateTime?        @db.Timestamp(0)
+  updated_at            DateTime?        @db.Timestamp(0)
+  mapping_shifts        mapping_shifts[]
+}
+
+model sips {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id          BigInt    @db.UnsignedBigInt
+  nama_dokumen     String
+  tanggal_berakhir String
+  file             String?
+  created_at       DateTime? @db.Timestamp(0)
+  updated_at       DateTime? @db.Timestamp(0)
+}
+
+model status_pajaks {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String?
+  ptkp       BigInt?
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+  users      users[]   @relation("users_status_pajak")
+}
+
+model status_ptkps {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name           String
+  ptkp_2016      Decimal   @default(0.00) @db.Decimal(15, 2)
+  ptkp_2015      Decimal   @default(0.00) @db.Decimal(15, 2)
+  ptkp_2009_2012 Decimal   @default(0.00) @db.Decimal(15, 2)
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+  pajaks         pajaks[]
+}
+
+model target_kinerja_teams {
+  id                    BigInt           @id @default(autoincrement()) @db.UnsignedBigInt
+  target_kinerja_id     BigInt?          @db.UnsignedBigInt
+  user_id               BigInt?          @db.UnsignedBigInt
+  jabatan_id            BigInt?          @db.UnsignedBigInt
+  target_pribadi        BigInt?
+  jumlah_persen_pribadi BigInt?
+  bonus_pribadi         BigInt?
+  judul                 String?
+  jumlah                BigInt?
+  capai                 Float?
+  nilai                 String?
+  bonus_p               BigInt?
+  bonus_t               BigInt?
+  bonus_j               BigInt?
+  keterangan            String?          @db.Text
+  created_at            DateTime?        @db.Timestamp(0)
+  updated_at            DateTime?        @db.Timestamp(0)
+  jabatans              jabatans?        @relation(fields: [jabatan_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "target_kinerja_teams_jabatan_id_foreign")
+  target_kinerjas       target_kinerjas? @relation(fields: [target_kinerja_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "target_kinerja_teams_target_kinerja_id_foreign")
+  users                 users?           @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "target_kinerja_teams_user_id_foreign")
+
+  @@index([jabatan_id], map: "target_kinerja_teams_jabatan_id_foreign")
+  @@index([target_kinerja_id], map: "target_kinerja_teams_target_kinerja_id_foreign")
+  @@index([user_id], map: "target_kinerja_teams_user_id_foreign")
+}
+
+model target_kinerjas {
+  id                   BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  nomor                String?
+  target_team          BigInt?
+  jumlah_persen_team   BigInt?
+  bonus_team           BigInt?
+  jackpot              BigInt?
+  tanggal_awal         DateTime?              @db.Date
+  tanggal_akhir        DateTime?              @db.Date
+  created_at           DateTime?              @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  target_kinerja_teams target_kinerja_teams[]
+}
+
+model tunjangans {
+  id                  BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  golongan_id         BigInt    @db.UnsignedBigInt
+  tunjangan_makan     Decimal   @default(0.00) @db.Decimal(15, 2)
+  tunjangan_transport Decimal   @default(0.00) @db.Decimal(15, 2)
+  created_at          DateTime? @db.Timestamp(0)
+  updated_at          DateTime? @db.Timestamp(0)
+}
+
+model users {
+  id                                 BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  name                               String
+  foto_karyawan                      String?
+  foto_face_recognition              String?
+  email                              String?
+  telepon                            String?
+  username                           String?
+  password                           String?
+  tgl_lahir                          String?
+  gender                             String?
+  tgl_join                           String?
+  alamat                             String?                @db.Text
+  izin_cuti                          BigInt                 @default(0)
+  izin_lainnya                       BigInt                 @default(0)
+  izin_telat                         BigInt                 @default(0)
+  izin_pulang_cepat                  BigInt                 @default(0)
+  is_admin                           String?
+  masa_berlaku                       DateTime?              @db.Date
+  status_pajak_id                    BigInt?                @db.UnsignedBigInt
+  jabatan_id                         BigInt?                @db.UnsignedBigInt
+  lokasi_id                          BigInt?                @db.UnsignedBigInt
+  ktp                                String?
+  kartu_keluarga                     String?
+  bpjs_kesehatan                     String?
+  bpjs_ketenagakerjaan               String?
+  npwp                               String?
+  sim                                String?
+  no_pkwt                            String?
+  no_kontrak                         String?
+  tanggal_mulai_pkwt                 DateTime?              @db.Date
+  tanggal_berakhir_pkwt              DateTime?              @db.Date
+  rekening                           String?
+  nama_rekening                      String?
+  gaji_pokok                         BigInt?
+  tunjangan_makan                    BigInt?
+  tunjangan_transport                BigInt?
+  tunjangan_bpjs_kesehatan           BigInt?
+  tunjangan_bpjs_ketenagakerjaan     BigInt?
+  lembur                             BigInt?
+  kehadiran                          BigInt?
+  thr                                BigInt?
+  bonus_pribadi                      BigInt?
+  bonus_team                         BigInt?
+  bonus_jackpot                      BigInt?
+  izin                               BigInt?
+  terlambat                          BigInt?
+  mangkir                            BigInt?
+  saldo_kasbon                       BigInt?
+  potongan_bpjs_kesehatan            BigInt?
+  potongan_bpjs_ketenagakerjaan      BigInt?
+  email_verified_at                  DateTime?              @db.Timestamp(0)
+  remember_token                     String?                @db.VarChar(100)
+  created_at                         DateTime?              @db.Timestamp(0)
+  updated_at                         DateTime?              @db.Timestamp(0)
+  darurat_nama                       String?                @db.VarChar(100)
+  darurat_telepon                    String?                @db.VarChar(100)
+  darurat_hubungan                   String?                @db.VarChar(100)
+  batas_terlambat                    BigInt?
+  potongan_koperasi                  BigInt?
+  provinsi                           String?                @db.VarChar(120)
+  kota_kabupaten                     String?                @db.VarChar(120)
+  kecamatan                          String?                @db.VarChar(120)
+  kelurahan                          String?                @db.VarChar(120)
+  cuti_melahirkan                    BigInt?
+  cuti_kematian                      BigInt?
+  alamat_domisili                    String?                @db.Text
+  kecamatan_domisili                 String?                @db.VarChar(120)
+  kelurahan_domisili                 String?                @db.VarChar(120)
+  kode_pos                           String?                @db.VarChar(10)
+  kode_pos_domisili                  String?                @db.VarChar(10)
+  kota_kabupaten_domisili            String?                @db.VarChar(120)
+  nama_ibu_kandung                   String?                @db.VarChar(150)
+  provinsi_domisili                  String?                @db.VarChar(120)
+  cutis                              cutis[]
+  managed_jabatans                   jabatans[]             @relation("jabatans_manager")
+  approved_lemburs                   lemburs[]              @relation("ApproverLembur")
+  lemburs                            lemburs[]              @relation("KaryawanLembur")
+  lokasis_lokasis_approved_byTousers lokasis[]              @relation("lokasis_approved_byTousers")
+  lokasis_lokasis_created_byTousers  lokasis[]              @relation("lokasis_created_byTousers")
+  approved_mapping_shifts            mapping_shifts[]       @relation("ApprovedBy")
+  mapping_shifts                     mapping_shifts[]
+  payrolls                           payrolls[]
+  pegawai_keluars                    pegawai_keluars[]
+  pengajuan_approver                 pengajuan_keuangans[]  @relation("ApproverFinance")
+  target_kinerja_teams               target_kinerja_teams[]
+  jabatan                            jabatans?              @relation("users_jabatan", fields: [jabatan_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  lokasi                             lokasis?               @relation("users_lokasi", fields: [lokasi_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  status_pajak                       status_pajaks?         @relation("users_status_pajak", fields: [status_pajak_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([jabatan_id], map: "users_jabatan_id_fkey")
+  @@index([lokasi_id], map: "users_lokasi_id_fkey")
+  @@index([status_pajak_id], map: "users_status_pajak_id_fkey")
+}

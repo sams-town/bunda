@@ -1,0 +1,3 @@
+2026-06-10T03:35:53.102Z
+["nama_pegawai","gaji_pokok","total_tunjangan_bpjs_kesehatan","total_tunjangan_bpjs_ketenagakerjaan","total_tunjangan_transport","total_tunjangan_makan","bonus_team","bonus_pribadi","total_lembur","bonus_jackpot","insentif_tetap","total_reimbursement","total_thr","jasa_sip","total_kehadiran","bayar_kasbon","obat_bulan_ini","total_potongan_bpjs_ketenagakerjaan","potongan_koperasi","total_potongan_bpjs_kesehatan","total_mangkir","total_izin","total_terlambat","status","message"]
+

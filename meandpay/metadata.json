@@ -1,0 +1,5 @@
+{
+  "name": "MeAndPay",
+  "description": "A modern, sleek financial management and payment platform for seamless transactions.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"]
+}

@@ -1,0 +1,13 @@
+2026-06-09T13:54:03.868Z\nPrismaClientKnownRequestError: 
+Invalid `prisma.payrolls.create()` invocation:
+
+
+Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 90000 ms, however 90006 ms passed since the start of the transaction. Consider increasing the interactive transaction timeout or doing less work in the transaction.
+    at $n.handleRequestError (/Users/mac/Documents/programmer/backendjs/api-meandpay/node_modules/@prisma/client/runtime/library.js:121:7315)
+    at $n.handleAndLogRequestError (/Users/mac/Documents/programmer/backendjs/api-meandpay/node_modules/@prisma/client/runtime/library.js:121:6623)
+    at $n.request (/Users/mac/Documents/programmer/backendjs/api-meandpay/node_modules/@prisma/client/runtime/library.js:121:6307)
+    at async l (/Users/mac/Documents/programmer/backendjs/api-meandpay/node_modules/@prisma/client/runtime/library.js:130:9633)
+    at async prisma.$transaction.maxWait (file:///Users/mac/Documents/programmer/backendjs/api-meandpay/src/services/PayrollService.js:973:36)
+    at async Proxy._transactionWithCallback (/Users/mac/Documents/programmer/backendjs/api-meandpay/node_modules/@prisma/client/runtime/library.js:130:8000)
+    at async PayrollService.bulkImport (file:///Users/mac/Documents/programmer/backendjs/api-meandpay/src/services/PayrollService.js:799:16)
+    at async PayrollController.bulkImport (file:///Users/mac/Documents/programmer/backendjs/api-meandpay/src/controllers/PayrollController.js:98:28)\n\n
