@@ -24,7 +24,10 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
     if (path.startsWith('http') || path.startsWith('blob:')) return path;
     let cleanPath = path.replace(/^\//, '');
     if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
-    return `https://rsthb.id/apihris/uploads/${cleanPath}`;
+    const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
+    const apiBase = import.meta.env.VITE_API_MEANDPAY;
+    const base = (apiData || apiBase || 'https://rsthb.id/apihris').replace(/\/api$/, '').replace(/\/$/, '');
+    return `${base}/uploads/${cleanPath}`;
   };
   const navigate = useNavigate();
 
