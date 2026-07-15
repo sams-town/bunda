@@ -22,9 +22,14 @@ class SettingService {
     }
 
     async getById(id) {
-        const record = await prisma.settings.findFirst({
+        let record = await prisma.settings.findUnique({
             where: { id: BigInt(id) },
         });
+        if (!record) {
+            record = await prisma.settings.findFirst({
+                orderBy: { id: "asc" }
+            });
+        }
         if (!record) return null;
         return this.serialize(record);
     }
@@ -42,13 +47,21 @@ class SettingService {
     }
  
     async update(id, data) {
-        const existing = await prisma.settings.findUnique({
+        let existing = await prisma.settings.findUnique({
             where: { id: BigInt(id) },
         });
-        if (!existing) return null;
+        if (!existing) {
+            existing = await prisma.settings.findFirst({
+                orderBy: { id: "asc" }
+            });
+        }
+
+        if (!existing) {
+            return this.create(data);
+        }
 
         const record = await prisma.settings.update({
-            where: { id: BigInt(id) },
+            where: { id: existing.id },
             data: {
                 ...this.sanitizeInput(data),
                 updated_at: new Date(),
@@ -58,11 +71,16 @@ class SettingService {
     }
 
     async delete(id) {
-        const existing = await prisma.settings.findUnique({
+        let existing = await prisma.settings.findUnique({
             where: { id: BigInt(id) },
         });
+        if (!existing) {
+            existing = await prisma.settings.findFirst({
+                orderBy: { id: "asc" }
+            });
+        }
         if (!existing) return null;
-        await prisma.settings.delete({ where: { id: BigInt(id) } });
+        await prisma.settings.delete({ where: { id: existing.id } });
         return true;
     }
 
