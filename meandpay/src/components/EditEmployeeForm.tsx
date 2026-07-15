@@ -401,7 +401,17 @@ export function EditEmployeeForm({ employeeId, onBack, onSuccess }: EditEmployee
                                     <FormSelect label="Jenis Kelamin" name="gender" options={['Laki-laki', 'Perempuan', 'Lain-lain']} value={form.gender} onChange={update} icon={User} required />
                                     <FormInput label="Tgl Masuk" name="tgl_join" type="date" value={form.tgl_join} onChange={update} icon={Calendar} required />
                                     <Field label="Masa Kerja"><input type="text" disabled value={form.tgl_join ? `${Math.floor((new Date().getTime() - new Date(form.tgl_join).getTime())/86400000)} hari` : ''} className={inputCls(false,true)} /></Field>
-                                    <FormSearchSelect label="Role" name="role" placeholder="Pilih Role" options={master.roles} value={form.role} onChange={update} icon={Shield} required />
+                                     <FormSearchSelect 
+                                         label="Role" 
+                                         name="role" 
+                                         placeholder="Pilih Role" 
+                                         options={form.role === 'dokter' ? [{ value: 'dokter', label: 'dokter' }] : master.roles.filter((r: any) => r.value !== 'dokter')} 
+                                         value={form.role} 
+                                         onChange={update} 
+                                         icon={Shield} 
+                                         disabled={form.role === 'dokter'}
+                                         required 
+                                     />
                                     <FormSearchSelect label="Divisi" name="jabatan_id" placeholder="Pilih Divisi" options={master.jabatan} value={form.jabatan_id} onChange={update} icon={Briefcase} required />
                                     <FormSelect label="Is Admin" name="is_admin" options={['admin', 'user']} value={form.is_admin} onChange={update} icon={Shield} required />
                                     <FormInput label="Nama Ibu Kandung" name="nama_ibu_kandung" icon={User} value={form.nama_ibu_kandung} onChange={update} required />

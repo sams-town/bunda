@@ -15,6 +15,7 @@ import {
 interface AddEmployeeFormProps {
     onBack: () => void;
     onSuccess?: () => void;
+    defaultRole?: string;
 }
 
 interface EmployeeFormData {
@@ -63,9 +64,9 @@ const defaultForm: EmployeeFormData = {
 
 const BASE_URL = import.meta.env.VITE_API_MEANDPAY;
 
-export function AddEmployeeForm({ onBack, onSuccess }: AddEmployeeFormProps) {
+export function AddEmployeeForm({ onBack, onSuccess, defaultRole }: AddEmployeeFormProps) {
     const [master, setMaster] = useState({ lokasi: [], roles: [], jabatan: [], statusPajak: [], loading: true });
-    const [form, setForm] = useState<EmployeeFormData>(defaultForm);
+    const [form, setForm] = useState<EmployeeFormData>({ ...defaultForm, role: defaultRole || '' });
     
     // Address Selection State
     const [regions, setRegions] = useState({
@@ -376,7 +377,18 @@ export function AddEmployeeForm({ onBack, onSuccess }: AddEmployeeFormProps) {
                                     <FormSelect label="Jenis Kelamin" name="gender" options={['Laki-laki', 'Perempuan', 'Lain-lain']} value={form.gender} onChange={handleChange} icon={User} required />
                                     <FormInput label="Tgl Masuk" name="tgl_join" type="date" value={form.tgl_join} onChange={handleChange} icon={Calendar} required />
                                     <Field label="Masa Kerja"><input type="text" disabled value={form.tgl_join ? `${Math.floor((new Date().getTime() - new Date(form.tgl_join).getTime())/86400000)} hari` : ''} className={inputCls(false,true)} /></Field>
-                                    <FormSearchSelect label="Role" name="role" placeholder="Pilih Role" options={master.roles} value={form.role} onChange={handleChange} icon={Shield} error={errors.role} required />
+                                     <FormSearchSelect 
+                                         label="Role" 
+                                         name="role" 
+                                         placeholder="Pilih Role" 
+                                         options={defaultRole === 'dokter' ? [{ value: 'dokter', label: 'dokter' }] : master.roles.filter((r: any) => r.value !== 'dokter')} 
+                                         value={form.role} 
+                                         onChange={handleChange} 
+                                         icon={Shield} 
+                                         error={errors.role} 
+                                         disabled={defaultRole === 'dokter'}
+                                         required 
+                                     />
                                     <FormSearchSelect label="Divisi" name="jabatan_id" placeholder="Pilih Divisi" options={master.jabatan} value={form.jabatan_id} onChange={handleChange} icon={Briefcase} required />
                                     <FormSelect label="Is Admin" name="is_admin" options={['admin', 'user']} value={form.is_admin} onChange={handleChange} icon={Shield} required />
                                     <FormInput label="Nama Ibu Kandung" name="nama_ibu_kandung" icon={User} value={form.nama_ibu_kandung} onChange={handleChange} required />

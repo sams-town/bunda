@@ -1510,7 +1510,7 @@ export function EmployeesPage() {
     }
   };
 
-  if (editEmployeeId) return <EditEmployeeForm employeeId={editEmployeeId} onBack={() => navigate('/employees')} onSuccess={handleAddSuccess} />;
+  if (editEmployeeId) return <EditEmployeeForm employeeId={editEmployeeId} onBack={() => navigate(-1)} onSuccess={handleAddSuccess} />;
   if (isAdding) return <AddEmployeeForm onBack={() => setIsAdding(false)} onSuccess={handleAddSuccess} />;
   if (mappingEmployee) return <MappingDinasLuar employee={mappingEmployee} onBack={() => setMappingEmployee(null)} />;
   if (mappingShiftEmployee) return <MappingShift employee={mappingShiftEmployee} onBack={() => setMappingShiftEmployee(null)} />;

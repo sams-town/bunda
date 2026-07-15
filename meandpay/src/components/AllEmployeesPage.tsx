@@ -1208,8 +1208,8 @@ export function AllEmployeesPage({ initialRole }: { initialRole?: string; key?: 
     }
   };
 
-  if (editEmployeeId) return <EditEmployeeForm employeeId={editEmployeeId} onBack={() => navigate('/all-employees')} onSuccess={handleAddSuccess} />;
-  if (isAdding) return <AddEmployeeForm onBack={() => setIsAdding(false)} onSuccess={handleAddSuccess} />;
+  if (editEmployeeId) return <EditEmployeeForm employeeId={editEmployeeId} onBack={() => navigate(-1)} onSuccess={handleAddSuccess} />;
+  if (isAdding) return <AddEmployeeForm onBack={() => setIsAdding(false)} onSuccess={handleAddSuccess} defaultRole={initialRole} />;
   if (mappingEmployee) return <MappingDinasLuar employee={mappingEmployee} onBack={() => setMappingEmployee(null)} />;
   if (mappingShiftEmployee) return <MappingShift employee={mappingShiftEmployee} onBack={() => setMappingShiftEmployee(null)} />;
   if (contractEmployee) return <ContractsEmployeeDetail employee={contractEmployee} onBack={() => setContractEmployee(null)} />;
@@ -1230,8 +1230,12 @@ export function AllEmployeesPage({ initialRole }: { initialRole?: string; key?: 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Pegawai</h1>
-            <p className="text-sm text-slate-400 mt-0.5">Kelola dan pantau seluruh pegawai</p>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              {initialRole === 'dokter' ? 'Data Dokter' : 'Pegawai'}
+            </h1>
+            <p className="text-sm text-slate-400 mt-0.5">
+              {initialRole === 'dokter' ? 'Kelola dan pantau seluruh data dokter' : 'Kelola dan pantau seluruh pegawai'}
+            </p>
           </div>
           <div className="flex items-center gap-2 relative" ref={exportDropdownRef}>
             <button 
@@ -1339,20 +1343,22 @@ export function AllEmployeesPage({ initialRole }: { initialRole?: string; key?: 
                 <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
 
-              <div className="relative">
-                <select 
-                  value={selectedRole}
-                  onChange={(e) => { setSelectedRole(e.target.value); setPage(1); }}
-                  className="appearance-none pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all focus:outline-none focus:border-indigo-400 min-w-[160px]"
-                >
-                  <option value="">Semua Role</option>
-                  {roles.map((r: any) => (
-                    <option key={r.id} value={r.name}>{r.name}</option>
-                  ))}
-                </select>
-                <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              </div>
+              {initialRole !== 'dokter' && (
+                <div className="relative">
+                  <select 
+                    value={selectedRole}
+                    onChange={(e) => { setSelectedRole(e.target.value); setPage(1); }}
+                    className="appearance-none pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-all focus:outline-none focus:border-indigo-400 min-w-[160px]"
+                  >
+                    <option value="">Semua Role</option>
+                    {roles.filter((r: any) => r.name !== 'dokter').map((r: any) => (
+                      <option key={r.id} value={r.name}>{r.name}</option>
+                    ))}
+                  </select>
+                  <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+              )}
 
               <div className="relative">
                 <select

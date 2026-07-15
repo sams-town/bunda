@@ -106,6 +106,21 @@ class UserService {
             });
         }
 
+        if (!query.role) {
+            const doctorUsers = await prisma.model_has_roles.findMany({
+                where: {
+                    roles: {
+                        name: "dokter"
+                    }
+                },
+                select: { model_id: true }
+            });
+            const doctorUserIds = doctorUsers.map(du => du.model_id);
+            if (doctorUserIds.length > 0) {
+                andConditions.push({ id: { notIn: doctorUserIds } });
+            }
+        }
+
         const where = { AND: andConditions };
 
         if (query.role) {
@@ -332,6 +347,21 @@ class UserService {
                     { kelurahan: { contains: search } },
                 ]
             });
+        }
+
+        if (!query.role) {
+            const doctorUsers = await prisma.model_has_roles.findMany({
+                where: {
+                    roles: {
+                        name: "dokter"
+                    }
+                },
+                select: { model_id: true }
+            });
+            const doctorUserIds = doctorUsers.map(du => du.model_id);
+            if (doctorUserIds.length > 0) {
+                andConditions.push({ id: { notIn: doctorUserIds } });
+            }
         }
 
         const where = { AND: andConditions };
