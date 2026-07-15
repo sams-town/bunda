@@ -22,6 +22,26 @@ export default defineConfig(({mode}) => {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
+
+      // Proxy API dan file requests ke backend (port 3000) agar same-origin → NO CORS
+      proxy: {
+        '/api': {
+          target: 'http://127.0.0.1:3000',
+          changeOrigin: true,
+        },
+        '/uploads': {
+          target: 'http://127.0.0.1:3000',
+          changeOrigin: true,
+        },
+        '/lemburs': {
+          target: 'http://127.0.0.1:3000',
+          changeOrigin: true,
+        },
+        '/beritas': {
+          target: 'http://127.0.0.1:3000',
+          changeOrigin: true,
+        },
+      },
     },
   };
 });
