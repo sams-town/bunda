@@ -250,7 +250,10 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
     if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
     const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
     const apiBase = import.meta.env.VITE_API_MEANDPAY;
-    const base = (apiData || apiBase || 'https://rsthb.id/apihris').replace(/\/api$/, '').replace(/\/$/, '');
+    let base = (apiData || apiBase || 'https://rsthb.id/apihris').replace(/\/api$/, '').replace(/\/$/, '');
+    if (!base.startsWith('http')) {
+      base = 'https://rsthb.id/apihris';
+    }
     return `${base}/uploads/${cleanPath}`;
   };
 
