@@ -1,6 +1,6 @@
 // server.js
 import express from "express";
-import cors from "cors";
+// import cors not needed — using manual CORS middleware
 import path from "path";
 import { fileURLToPath } from "url";
 import "dotenv/config";
@@ -12,24 +12,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow all origins (including null for local file access)
-    callback(null, true);
-  },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  credentials: true,
-  optionsSuccessStatus: 200,
-};
-
-app.use(cors(corsOptions));
-// Handle preflight for all routes
-app.options('*', cors(corsOptions));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
-// Manual CORS headers — ensures headers are set even if Nginx strips them
+// CORS — manual middleware, compatible with all Express versions
 app.use((req, res, next) => {
   const origin = req.headers.origin || '*';
   res.setHeader('Access-Control-Allow-Origin', origin);
@@ -41,6 +24,9 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Serve folder public/uploads agar bisa diakses public via url /uploads/...
 app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
