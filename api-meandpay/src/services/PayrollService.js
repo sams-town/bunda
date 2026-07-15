@@ -797,8 +797,14 @@ class PayrollService {
         }
 
         return await prisma.$transaction(async (tx) => {
-            // Get all active users
+            // Get all active users (excluding admins)
             const users = await tx.users.findMany({
+                where: {
+                    OR: [
+                        { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
+                        { is_admin: null }
+                    ]
+                },
                 select: { id: true, name: true, saldo_kasbon: true }
             });
 

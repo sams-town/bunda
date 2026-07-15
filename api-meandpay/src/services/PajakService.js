@@ -64,7 +64,10 @@ class PajakService {
 
         const users = await prisma.users.findMany({
             where: {
-                is_admin: { not: "1" }, // Non-admins usually
+                OR: [
+                    { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin', '1'] } },
+                    { is_admin: null }
+                ],
                 name: search ? { contains: search } : undefined
             },
             include: {
