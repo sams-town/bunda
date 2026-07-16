@@ -65,7 +65,7 @@ const emptyForm: EmployeeFormData = {
 };
 
 export function EditEmployeeForm({ employeeId, onBack, onSuccess }: EditEmployeeFormProps) {
-    const [master, setMaster] = useState({ lokasi: [], roles: [], jabatan: [], loading: true });
+    const [master, setMaster] = useState({ lokasi: [], roles: [], jabatan: [], statusPajak: [], loading: true });
     const [form, setForm] = useState<EmployeeFormData>(emptyForm);
     const [idLoading, setIdLoading] = useState(true);
 
@@ -128,7 +128,8 @@ export function EditEmployeeForm({ employeeId, onBack, onSuccess }: EditEmployee
             fetchM('lokasi', l => ({ value: String(l.id), label: l.nama_lokasi })),
             fetchM('roles', r => ({ value: r.name, label: r.name })),
             fetchM('jabatans', j => ({ value: String(j.id), label: j.nama_jabatan })),
-        ]).then(([lokasi, roles, jabatan]) => setMaster({ lokasi, roles, jabatan, loading: false }));
+            fetchM('status-pajak', s => ({ value: String(s.id), label: s.name })),
+        ]).then(([lokasi, roles, jabatan, statusPajak]) => setMaster({ lokasi, roles, jabatan, statusPajak, loading: false }));
 
         fetch(`${BASE_URL}/users/${employeeId}`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
@@ -143,6 +144,7 @@ export function EditEmployeeForm({ employeeId, onBack, onSuccess }: EditEmployee
                 masa_berlaku: toD(data.masa_berlaku), 
                 tanggal_mulai_pkwt: toD(data.tanggal_mulai_pkwt), 
                 tanggal_berakhir_pkwt: toD(data.tanggal_berakhir_pkwt), 
+                status_pajak_id: data.status_pajak_id ? String(data.status_pajak_id) : '',
                 role: data.roles?.[0] || '', 
                 password: '' 
             });
@@ -415,6 +417,16 @@ export function EditEmployeeForm({ employeeId, onBack, onSuccess }: EditEmployee
                                     <FormSearchSelect label="Divisi" name="jabatan_id" placeholder="Pilih Divisi" options={master.jabatan} value={form.jabatan_id} onChange={update} icon={Briefcase} required />
                                     <FormSelect label="Is Admin" name="is_admin" options={['admin', 'user']} value={form.is_admin} onChange={update} icon={Shield} required />
                                     <FormInput label="Nama Ibu Kandung" name="nama_ibu_kandung" icon={User} value={form.nama_ibu_kandung} onChange={update} required />
+                                    <FormSearchSelect 
+                                         label="Status Pajak" 
+                                         name="status_pajak_id" 
+                                         placeholder="Pilih Status Pajak" 
+                                         options={master.statusPajak} 
+                                         value={form.status_pajak_id} 
+                                         onChange={update} 
+                                         icon={FileText} 
+                                         required 
+                                     />
                                 </div>
                             </Card>
                             <Card>

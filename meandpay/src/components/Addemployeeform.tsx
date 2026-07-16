@@ -392,6 +392,16 @@ export function AddEmployeeForm({ onBack, onSuccess, defaultRole }: AddEmployeeF
                                     <FormSearchSelect label="Divisi" name="jabatan_id" placeholder="Pilih Divisi" options={master.jabatan} value={form.jabatan_id} onChange={handleChange} icon={Briefcase} required />
                                     <FormSelect label="Is Admin" name="is_admin" options={['admin', 'user']} value={form.is_admin} onChange={handleChange} icon={Shield} required />
                                     <FormInput label="Nama Ibu Kandung" name="nama_ibu_kandung" icon={User} value={form.nama_ibu_kandung} onChange={handleChange} required />
+                                    <FormSearchSelect 
+                                        label="Status Pajak" 
+                                        name="status_pajak_id" 
+                                        placeholder="Pilih Status Pajak" 
+                                        options={master.statusPajak} 
+                                        value={form.status_pajak_id} 
+                                        onChange={handleChange} 
+                                        icon={FileText} 
+                                        required 
+                                    />
                                 </div>
                             </Card>
                             <Card>
