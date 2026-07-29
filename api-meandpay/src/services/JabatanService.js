@@ -121,8 +121,23 @@ class JabatanService {
 
         if (!existing) return null;
 
-        await prisma.jabatans.delete({
-            where: { id: BigInt(id) },
+        await prisma.$transaction(async (tx) => {
+            // Putuskan relasi jabatan dari semua users (termasuk mantan pegawai)
+            await tx.users.updateMany({
+                where: { jabatan_id: BigInt(id) },
+                data: { jabatan_id: null }
+            });
+
+            // Putuskan relasi jabatan dari target_kinerja_teams jika ada
+            await tx.target_kinerja_teams.updateMany({
+                where: { jabatan_id: BigInt(id) },
+                data: { jabatan_id: null }
+            });
+
+            // Setelah semua relasi dilepaskan, barulah hapus jabatannya
+            await tx.jabatans.delete({
+                where: { id: BigInt(id) },
+            });
         });
 
         return true;
