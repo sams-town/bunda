@@ -238,6 +238,10 @@ class LemburService {
                     newStatus = "Disetujui Manager";
                 }
             } else if (isAdmin) {
+                const managerId = pemohon.jabatan?.manager;
+                if (managerId && existing.status !== "Disetujui Manager" && !isRejection) {
+                    throw new Error("Pengajuan ini harus disetujui oleh Manager terlebih dahulu.");
+                }
                 if (existing.status === "Disetujui Manager" || existing.status === "Pending" || existing.status === "Menunggu") {
                     newStatus = body.status || "Approved";
                     shouldFinalize = true;

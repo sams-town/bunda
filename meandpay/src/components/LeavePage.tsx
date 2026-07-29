@@ -182,7 +182,11 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
     }
 
     if (isCurrentUserAdmin) {
-      // Admin can approve if it is Pending / Menunggu or Disetujui Manager
+      // If employee has a manager, admin can only approve AFTER manager approves
+      if (managerId) {
+        return status === 'disetujui manager';
+      }
+      // If no manager, admin can approve directly
       return status === 'pending' || status === 'menunggu' || status === 'disetujui manager';
     }
 

@@ -174,10 +174,12 @@ export function OvertimeDataPage({ initialFilters }: { initialFilters?: { userId
       return status === 'pending' || status === 'menunggu';
     }
 
-    if (isCurrentUserAdmin) {
-      // Admin can approve if it is Pending / Menunggu or Disetujui Manager
-      return status === 'pending' || status === 'menunggu' || status === 'disetujui manager';
-    }
+      if (isCurrentUserAdmin) {
+        if (managerId) {
+          return status === 'disetujui manager';
+        }
+        return status === 'pending' || status === 'menunggu' || status === 'disetujui manager';
+      }
 
     return false;
   };

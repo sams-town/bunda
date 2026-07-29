@@ -172,6 +172,10 @@ class CutiService {
             if (isManager && (existing.status_cuti === "Pending" || existing.status_cuti === "Menunggu")) {
                 newStatus = "Disetujui Manager";
             } else if (isAdmin) {
+                const managerId = pemohon.jabatan?.manager;
+                if (managerId && existing.status_cuti !== "Disetujui Manager") {
+                    throw new Error("Pengajuan ini harus disetujui oleh Manager terlebih dahulu.");
+                }
                 if (existing.status_cuti === "Disetujui Manager" || existing.status_cuti === "Pending" || existing.status_cuti === "Menunggu") {
                     newStatus = "Diterima";
                     shouldFinalize = true;
