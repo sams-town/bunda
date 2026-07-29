@@ -239,8 +239,8 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
         <div className="relative z-10 flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-white/30 shadow-xl bg-white/20 flex items-center justify-center shrink-0">
-              {userData?.foto_karyawan ? (
-                <img src={formatPhotoUrl(userData.foto_karyawan)} className="w-full h-full object-cover" alt="Avatar" referrerPolicy="no-referrer" />
+              {(userData?.foto_karyawan || userData?.foto_face_recognition) ? (
+                <img src={formatPhotoUrl(userData.foto_karyawan || userData.foto_face_recognition)} className="w-full h-full object-cover" alt="Avatar" referrerPolicy="no-referrer" />
               ) : (
                 <User className="w-6 h-6 text-white" />
               )}

@@ -90,8 +90,8 @@ export function MobileProfilePage({ onLogout, settings }: { onLogout?: () => voi
         <div className="flex flex-col items-center relative z-10 text-center">
            <div className="relative">
               <div className="w-28 h-28 rounded-[2.8rem] border-[6px] border-white/20 backdrop-blur-sm shadow-2xl overflow-hidden bg-slate-100/10">
-                 {profile?.foto_karyawan ? (
-                   <img src={formatPhotoUrl(profile.foto_karyawan)} alt="Avatar" className="w-full h-full object-cover" />
+                 {(profile?.foto_karyawan || profile?.foto_face_recognition) ? (
+                   <img src={formatPhotoUrl(profile.foto_karyawan || profile.foto_face_recognition)} alt="Avatar" className="w-full h-full object-cover" />
                  ) : (
                    <div className="w-full h-full flex items-center justify-center text-indigo-100">
                       <User className="w-14 h-14 opacity-20" />
