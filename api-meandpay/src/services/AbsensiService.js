@@ -64,6 +64,24 @@ class AbsensiService {
             });
         }
 
+        const pegawaiKeluars = await prisma.pegawai_keluars.findMany({
+            where: { status: { in: ['APPROVED', 'DELETED'] } },
+            select: { user_id: true }
+        });
+        const excludedUserIds = pegawaiKeluars
+            .map((pk) => pk.user_id)
+            .filter((id) => id !== null && id !== undefined);
+
+        where.AND.push({ user_id: { notIn: [...excludedUserIds, 1n] } });
+        where.AND.push({
+            users: {
+                OR: [
+                    { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
+                    { is_admin: null }
+                ]
+            }
+        });
+
         const finalWhere = where.AND.length > 0 ? where : {};
 
         const [data, total] = await Promise.all([
