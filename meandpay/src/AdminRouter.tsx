@@ -81,7 +81,6 @@ import { DocumentsPage } from './components/DocumentsPage';
 import { SocialMediaPage } from './components/SocialMediaPage';
 import { SettingsPage } from './components/SettingsPage';
 import { ChangePasswordPage } from './components/ChangePasswordPage';
-import { PlaceholderPage } from './components/PlaceholderPage';
 import { FinancePayrollPage } from './components/FinancePayrollPage';
 import { FinanceStatusPajakPage } from './components/FinanceStatusPajakPage';
 import { FinanceKategoriReimbursementPage } from './components/FinanceKategoriReimbursementPage';
@@ -260,14 +259,55 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
   const fetchDashboardStats = async (month?: number, year?: number) => {
     try {
       let url = `${import.meta.env.VITE_API_MEANDPAY}/dashboard/stats`;
+      const targetMonth = month !== undefined ? month + 1 : calendarDate.getMonth() + 1;
+      const targetYear = year !== undefined ? year : calendarDate.getFullYear();
       if (month !== undefined && year !== undefined) {
-        url += `?month=${month + 1}&year=${year}`;
+        url += `?month=${targetMonth}&year=${targetYear}`;
       }
-      const res = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
+      
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+      
+      const res = await fetch(url, { headers });
       const j = await res.json();
-      if (j.success) setDashboardStats(j.data);
+      let stats = j.success ? j.data : {};
+
+      // Synchronize data from actual endpoints
+      try {
+        const usersRes = await fetch(`${import.meta.env.VITE_API_MEANDPAY}/users?limit=1`, { headers });
+        const usersJson = await usersRes.json();
+        if (usersJson.success) stats.total_pegawai = usersJson.meta?.total || usersJson.data?.length || 0;
+
+        const startDate = `${targetYear}-${String(targetMonth).padStart(2, '0')}-01`;
+        const lastDay = new Date(targetYear, targetMonth, 0).getDate();
+        const endDate = `${targetYear}-${String(targetMonth).padStart(2, '0')}-${lastDay}`;
+        
+        const absRes = await fetch(`${import.meta.env.VITE_API_MEANDPAY}/absensi?start_date=${startDate}&end_date=${endDate}&limit=10000`, { headers });
+        const absJson = await absRes.json();
+        
+        let masuk = 0, alfa = 0, cuti = 0, izin = 0, sakit = 0, lembur = 0, izin_telat = 0, izin_pulang_cepat = 0;
+        if (absJson.success && Array.isArray(absJson.data)) {
+          absJson.data.forEach((a: any) => {
+            const status = String(a.status).toLowerCase();
+            if (status === 'hadir' || status === 'masuk') masuk++;
+            if (status === 'alfa' || status === 'alpha') alfa++;
+            if (status === 'cuti') cuti++;
+            if (status === 'izin') izin++;
+            if (status === 'sakit') sakit++;
+            if (a.is_lembur || a.lembur) lembur++;
+            if (a.is_telat || a.terlambat) izin_telat++;
+            if (a.is_pulang_cepat || a.pulang_cepat) izin_pulang_cepat++;
+          });
+        }
+        
+        stats.attendance = {
+          ...stats.attendance,
+          masuk, alfa, cuti, izin, sakit, lembur, izin_telat, izin_pulang_cepat
+        };
+      } catch (e) {
+        console.error('Error syncing dashboard stats from endpoints:', e);
+      }
+
+      setDashboardStats(stats);
     } catch (e) {
       console.error('Error dashboard stats:', e);
     }
