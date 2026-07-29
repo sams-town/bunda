@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Plus, FileText, Download, Trash2, Clock, X, Loader2, FileUp, Calendar, User, Info, Pencil, AlertTriangle } from 'lucide-react';
+import { Search, Plus, FileText, Download, Trash2, Clock, X, Loader2, FileUp, Calendar, User, Info, Pencil, AlertTriangle, Folder, FolderOpen, ChevronDown, ChevronRight, Eye } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useToast } from './Toast';
 
@@ -32,6 +32,12 @@ export function DocumentsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editData, setEditData] = useState<Document | null>(null);
   const [deleteData, setDeleteData] = useState<Document | null>(null);
+
+  // Folders
+  const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
+  const toggleFolder = (employeeName: string) => {
+    setExpandedFolders(prev => prev.includes(employeeName) ? prev.filter(f => f !== employeeName) : [...prev, employeeName]);
+  };
 
   const fetchEmployees = async () => {
     try {
@@ -276,19 +282,33 @@ export function DocumentsPage() {
                   }, {})
                 ).map(([employeeName, docs]) => {
                   const typedDocs = docs as Document[];
+                  const isExpanded = expandedFolders.includes(employeeName);
                   return (
                     <React.Fragment key={employeeName}>
-                      <tr className="bg-indigo-50/20">
-                        <td colSpan={6} className="py-4 px-8 font-black text-xs text-indigo-600 uppercase tracking-widest border-y border-indigo-50/40">
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            <span>{employeeName} ({typedDocs.length} Dokumen)</span>
+                      <tr 
+                        onClick={() => toggleFolder(employeeName)}
+                        className="bg-slate-50/50 hover:bg-slate-100/50 cursor-pointer transition-colors group"
+                      >
+                        <td colSpan={6} className="py-4 px-8 border-y border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
+                              {isExpanded ? <FolderOpen className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
+                            </div>
+                            <span className="font-black text-sm text-slate-700 tracking-wide uppercase">
+                              {employeeName}
+                            </span>
+                            <span className="px-2.5 py-1 bg-white text-indigo-600 rounded-full text-[10px] font-black border border-indigo-100 shadow-sm">
+                              {typedDocs.length} DOKUMEN
+                            </span>
+                            <div className="ml-auto w-8 h-8 flex items-center justify-center text-slate-400 group-hover:text-indigo-500 transition-colors">
+                              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                            </div>
                           </div>
                         </td>
                       </tr>
-                      {typedDocs.map((item) => (
+                      {isExpanded && typedDocs.map((item) => (
                         <tr key={item.id} className="group hover:bg-slate-50/30 transition-all">
-                          <td className="py-6 px-8 pl-12">
+                          <td className="py-6 px-8 pl-16">
                             <div className="flex items-center gap-3">
                               <div className={cn(
                                 "w-10 h-10 rounded-[14px] flex items-center justify-center text-white font-black text-[10px] shadow-sm shrink-0",
@@ -319,23 +339,30 @@ export function DocumentsPage() {
                           <td className="py-6 px-8 pr-12">
                             <div className="flex items-center justify-end gap-2 transition-all translate-x-4 group-hover:translate-x-0">
                               <button
+                                onClick={() => handlePreview(item)}
+                                title="Lihat Dokumen"
+                                className="p-2.5 bg-white text-indigo-500 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-slate-100"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
                                 onClick={() => handleDownload(item)}
                                 title="Download"
-                                className="p-2.5 bg-white text-slate-400 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-slate-100"
+                                className="p-2.5 bg-white text-emerald-500 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm border border-slate-100"
                               >
                                 <Download className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => setEditData(item)}
                                 title="Edit"
-                                className="p-2.5 bg-white text-slate-400 rounded-xl hover:bg-amber-500 hover:text-white transition-all shadow-sm border border-slate-100"
+                                className="p-2.5 bg-white text-amber-500 rounded-xl hover:bg-amber-600 hover:text-white transition-all shadow-sm border border-slate-100"
                               >
                                 <Pencil className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => setDeleteData(item)}
                                 title="Hapus"
-                                className="p-2.5 bg-white text-slate-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm border border-slate-100"
+                                className="p-2.5 bg-white text-rose-500 rounded-xl hover:bg-rose-600 hover:text-white transition-all shadow-sm border border-slate-100"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
