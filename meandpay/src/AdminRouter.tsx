@@ -242,9 +242,6 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
     }
   };
 
-    }
-  };
-
   const fetchDashboardStats = async (month?: number, year?: number) => {
     try {
       let url = `${import.meta.env.VITE_API_MEANDPAY}/dashboard/stats`;
