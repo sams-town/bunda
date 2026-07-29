@@ -110,7 +110,7 @@ class UserService {
             const doctorUsers = await prisma.model_has_roles.findMany({
                 where: {
                     roles: {
-                        name: "dokter"
+                        name: { in: ["dokter", "bidan"] }
                     }
                 },
                 select: { model_id: true }
@@ -127,7 +127,7 @@ class UserService {
             const roleUsers = await prisma.model_has_roles.findMany({
                 where: {
                     roles: {
-                        name: query.role
+                        name: query.role === 'dokter' ? { in: ["dokter", "bidan"] } : query.role
                     }
                 },
                 select: { model_id: true }
@@ -353,7 +353,7 @@ class UserService {
             const doctorUsers = await prisma.model_has_roles.findMany({
                 where: {
                     roles: {
-                        name: "dokter"
+                        name: { in: ["dokter", "bidan"] }
                     }
                 },
                 select: { model_id: true }
@@ -370,7 +370,7 @@ class UserService {
             const roleUsers = await prisma.model_has_roles.findMany({
                 where: {
                     roles: {
-                        name: query.role
+                        name: query.role === 'dokter' ? { in: ["dokter", "bidan"] } : query.role
                     }
                 },
                 select: { model_id: true }
