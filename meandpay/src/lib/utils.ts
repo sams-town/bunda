@@ -9,15 +9,20 @@ export function formatPhotoUrl(url: string | null | undefined) {
   if (!url) return '';
   if (url.startsWith('blob:') || url.startsWith('data:')) return url;
   
-  const apiBase = (import.meta.env.VITE_API_MEANDPAY_DATA || '').replace(/\/$/, '');
+  const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
+  const apiBaseEnv = import.meta.env.VITE_API_MEANDPAY;
+  let apiBase = (apiData || apiBaseEnv || 'https://rsthb.id/apihris').replace(/\/api$/, '').replace(/\/$/, '');
+  
+  if (!apiBase.startsWith('http')) {
+    // If it's a relative path, use the current origin
+    apiBase = window.location.origin;
+  }
   
   let path = url;
   if (url.startsWith('http')) {
-    // If the URL is already from our production domain, return as is
     if (url.includes(apiBase) && !url.includes('localhost:4000')) {
       return url;
     }
-    // If it's localhost or some other domain, extract the path and point to production
     try {
       const parsed = new URL(url);
       path = parsed.pathname;
@@ -27,7 +32,7 @@ export function formatPhotoUrl(url: string | null | undefined) {
   }
   
   const cleanPath = path.replace(/^\//, '');
-  if (cleanPath.startsWith('uploads/') || cleanPath.startsWith('lemburs/') || cleanPath.startsWith('beritas/')) {
+  if (cleanPath.startsWith('uploads/') || cleanPath.startsWith('lemburs/') || cleanPath.startsWith('beritas/') || cleanPath.startsWith('cuti/')) {
     return `${apiBase}/${cleanPath}`;
   }
   

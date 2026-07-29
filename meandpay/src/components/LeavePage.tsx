@@ -18,7 +18,7 @@ import {
   CheckCircle,
   Check
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl } from '../lib/utils';
 import { useToast } from './Toast';
 import { AnimatePresence } from 'motion/react';
 import { AddLeave } from './AddLeave';
@@ -390,8 +390,8 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
                     <td className="py-6 px-8">
                       {item.foto_cuti ? (
                         <div className="w-12 h-16 rounded-lg bg-slate-100 overflow-hidden border border-slate-200 shadow-sm group/img relative mx-auto">
-                          <img src={item.foto_cuti} alt="Cuti" className="w-full h-full object-cover transition-transform group-hover/img:scale-110" referrerPolicy="no-referrer" />
-                          <a href={item.foto_cuti} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                          <img src={formatPhotoUrl(item.foto_cuti)} alt="Cuti" className="w-full h-full object-cover transition-transform group-hover/img:scale-110" referrerPolicy="no-referrer" />
+                          <a href={formatPhotoUrl(item.foto_cuti)} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                             <ImageIcon className="w-4 h-4 text-white" />
                           </a>
                         </div>

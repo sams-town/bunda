@@ -18,7 +18,7 @@ import {
   Download,
   User
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl } from '../lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from './Toast';
 
@@ -355,7 +355,7 @@ export function MobileLeavePage() {
       tanggal_akhir: end,
       alasan_cuti: item.alasan_cuti || ''
     });
-    setPhotoPreview(item.foto_cuti || null);
+    setPhotoPreview(item.foto_cuti ? formatPhotoUrl(item.foto_cuti) : null);
     setPhotoFile(null);
     setEditItem(item);
     setViewState('edit');
@@ -579,7 +579,7 @@ export function MobileLeavePage() {
                         {item.foto_cuti && (
                           <div className="mt-4 flex items-center gap-2 pt-4 border-t border-slate-100">
                              <ImageIcon className="w-4 h-4 text-indigo-400" />
-                             <a href={item.foto_cuti} target="_blank" rel="noopener noreferrer" className="text-[10px] font-black text-indigo-600 uppercase tracking-widest underline decoration-indigo-200 underline-offset-4">
+                             <a href={formatPhotoUrl(item.foto_cuti)} target="_blank" rel="noopener noreferrer" className="text-[10px] font-black text-indigo-600 uppercase tracking-widest underline decoration-indigo-200 underline-offset-4">
                                Lihat Lampiran Bukti
                              </a>
                           </div>
