@@ -11,7 +11,7 @@ export function formatPhotoUrl(url: string | null | undefined) {
   
   const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
   const apiBaseEnv = import.meta.env.VITE_API_MEANDPAY;
-  let apiBase = (apiData || apiBaseEnv || 'https://rsthb.id/apihris').replace(/\/api$/, '').replace(/\/$/, '');
+  let apiBase = (apiData || apiBaseEnv || 'https://hris.rsbundahalimah.com').replace(/\/api$/, '').replace(/\/$/, '');
   
   if (!apiBase.startsWith('http')) {
     // If it's a relative path, use the current origin
