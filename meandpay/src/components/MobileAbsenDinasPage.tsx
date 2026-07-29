@@ -16,7 +16,7 @@ import {
   FileText,
   Send,
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl, compressImage } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './Toast';
 
@@ -147,7 +147,16 @@ export function MobileAbsenDinasPage() {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d')?.drawImage(video, 0, 0);
-      setPhoto(canvas.toDataURL('image/jpeg', 0.85));
+      const rawDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+      // Compress immediately to max 800px width
+      compressImage(rawDataUrl, 800, 0.7)
+        .then(compressedUrl => setPhoto(compressedUrl))
+        .catch(err => {
+          console.error('Compression failed:', err);
+          setPhoto(rawDataUrl); // fallback
+        });
+        
       closeCamera();
     }
   };

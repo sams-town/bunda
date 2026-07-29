@@ -48,3 +48,45 @@ export function formatPhotoUrl(url: string | null | undefined) {
   }
   return `${apiBase}/uploads/${cleanPath}`;
 }
+
+export const compressImage = async (fileOrDataUrl: File | string, maxWidth = 800, quality = 0.7): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+      
+      if (width > maxWidth) {
+        height = Math.round((height * maxWidth) / width);
+        width = maxWidth;
+      }
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject('No canvas context');
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    
+    if (typeof fileOrDataUrl === 'string') {
+      img.src = fileOrDataUrl;
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(fileOrDataUrl);
+    }
+  });
+};
+
+export const compressImageFile = async (file: File, maxWidth = 800, quality = 0.7): Promise<File> => {
+  const dataUrl = await compressImage(file, maxWidth, quality);
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  return new File([blob], file.name || 'image.jpg', { type: 'image/jpeg' });
+};

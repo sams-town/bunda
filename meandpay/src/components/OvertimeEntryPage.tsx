@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MapPin, Camera, Clock, X, Loader2, ScanFace, CheckCircle2 } from 'lucide-react';
+import { compressImage } from '../lib/utils';
 import { useToast } from './Toast';
 
 export function OvertimeEntryPage() {
@@ -250,7 +251,14 @@ function WebcamModal({ onClose, onCapture }: { onClose: () => void, onCapture: (
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d')?.drawImage(video, 0, 0);
-    onCapture(canvas.toDataURL('image/jpeg'));
+    const rawDataUrl = canvas.toDataURL('image/jpeg');
+    
+    compressImage(rawDataUrl, 800, 0.7)
+      .then(compressedUrl => onCapture(compressedUrl))
+      .catch(err => {
+        console.error('Compression failed:', err);
+        onCapture(rawDataUrl); // fallback
+      });
   };
 
   return (

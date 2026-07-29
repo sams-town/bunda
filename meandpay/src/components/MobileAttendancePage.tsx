@@ -16,7 +16,7 @@ import {
   Map as MapIcon,
   Info
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 const BASE_URL = import.meta.env.VITE_API_MEANDPAY;
@@ -94,13 +94,6 @@ export function MobileAttendancePage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getPhotoUrl = (path: string | null) => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    const filename = path.split('/').pop();
-    return `${BASE_URL.replace('/api', '')}/uploads/${filename}`;
   };
 
   const filteredRecords = records.filter(record => {
@@ -289,7 +282,7 @@ export function MobileAttendancePage() {
                                <div className="flex gap-2">
                                   {record.foto_jam_absen && (
                                      <button className="relative w-10 h-10 rounded-lg overflow-hidden border border-slate-100 shadow-sm active:scale-90 transition-all">
-                                        <img src={getPhotoUrl(record.foto_jam_absen)!} className="w-full h-full object-cover" alt="" />
+                                        <img src={formatPhotoUrl(record.foto_jam_absen)} className="w-full h-full object-cover" alt="" />
                                         <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
                                            <Camera className="w-3 h-3 text-white drop-shadow-md" />
                                         </div>
@@ -340,7 +333,7 @@ export function MobileAttendancePage() {
                                <div className="flex gap-2">
                                   {record.foto_jam_pulang && (
                                      <button className="relative w-10 h-10 rounded-lg overflow-hidden border border-slate-100 shadow-sm active:scale-90 transition-all">
-                                        <img src={getPhotoUrl(record.foto_jam_pulang)!} className="w-full h-full object-cover" alt="" />
+                                        <img src={formatPhotoUrl(record.foto_jam_pulang)} className="w-full h-full object-cover" alt="" />
                                         <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
                                            <Camera className="w-3 h-3 text-white drop-shadow-md" />
                                         </div>

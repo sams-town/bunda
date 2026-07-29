@@ -10,7 +10,7 @@ import {
   AlertCircle,
   History
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 interface DinasData {
@@ -210,7 +210,7 @@ export function MobileHistoryDinasPage() {
                       {item.foto_jam_absen ? (
                         <div className="w-8 h-8 rounded-lg bg-slate-100 overflow-hidden border border-slate-200">
                           <img 
-                            src={`${import.meta.env.VITE_API_MEANDPAY.replace('/api', '')}/uploads/${item.foto_jam_absen.split('/').pop()}`} 
+                            src={formatPhotoUrl(item.foto_jam_absen)} 
                             className="w-full h-full object-cover"
                             alt="Foto"
                           />

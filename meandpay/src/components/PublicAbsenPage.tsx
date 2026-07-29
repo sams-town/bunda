@@ -6,7 +6,7 @@ import {
   AlertCircle, Fingerprint, ShieldCheck, X,
   Clock, RefreshCw, User,
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, compressImage } from '../lib/utils';
 
 const API = import.meta.env.VITE_API_MEANDPAY as string;
 
@@ -107,7 +107,13 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0);
-    setCaptured(canvas.toDataURL('image/jpeg', 0.92));
+    const rawDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    compressImage(rawDataUrl, 800, 0.7)
+      .then(compressedUrl => setCaptured(compressedUrl))
+      .catch(err => {
+        console.error('Compression failed:', err);
+        setCaptured(rawDataUrl); // fallback
+      });
   };
 
   const retake = () => {

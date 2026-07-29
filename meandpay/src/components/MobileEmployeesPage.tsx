@@ -15,7 +15,7 @@ import {
   TrendingUp,
   UserCheck
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 const BASE_URL = import.meta.env.VITE_API_MEANDPAY;
@@ -87,12 +87,7 @@ export function MobileEmployeesPage() {
     }, 500);
   };
 
-  const getPhotoUrl = (path: string | null) => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    const filename = path.includes('/') ? path.split('/').pop() : path;
-    return `${BASE_URL.replace('/api', '')}/uploads/${filename}`;
-  };
+
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-24">
@@ -173,7 +168,18 @@ export function MobileEmployeesPage() {
              <p className="text-sm font-black text-slate-400 tracking-tight">Tidak ada pegawai ditemukan</p>
           </div>
         ) : (
-          employees.map((emp, i) => (
+          employees.filter(emp => {
+            const currentUserStr = localStorage.getItem('user');
+            if (!currentUserStr) return false;
+            try {
+              const currentUser = JSON.parse(currentUserStr);
+              const isAdmin = currentUser.is_admin === 'admin' || currentUser.is_admin === 'superadmin' || currentUser.role === 'admin' || currentUser.role === 'superadmin';
+              if (isAdmin) return true;
+              return String(emp.id) === String(currentUser.id);
+            } catch (e) {
+              return false;
+            }
+          }).map((emp, i) => (
             <motion.div
               key={emp.id}
               initial={{ opacity: 0, y: 10 }}
@@ -190,7 +196,7 @@ export function MobileEmployeesPage() {
                   <div className="w-16 h-16 rounded-2xl bg-indigo-50 border-2 border-white shadow-xl overflow-hidden relative">
                     {emp.foto_karyawan ? (
                       <img 
-                        src={getPhotoUrl(emp.foto_karyawan)!} 
+                        src={formatPhotoUrl(emp.foto_karyawan)} 
                         className="w-full h-full object-cover"
                         alt={emp.name}
                       />

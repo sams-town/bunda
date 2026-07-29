@@ -18,7 +18,7 @@ import {
   Download,
   User
 } from 'lucide-react';
-import { cn, formatPhotoUrl } from '../lib/utils';
+import { cn, formatPhotoUrl, compressImageFile } from '../lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from './Toast';
 
@@ -323,13 +323,23 @@ export function MobileLeavePage() {
     return false;
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPhotoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setPhotoPreview(reader.result as string);
-      reader.readAsDataURL(file);
+      if (file.type.startsWith('image/')) {
+        try {
+          const compressed = await compressImageFile(file, 800, 0.7);
+          setPhotoFile(compressed);
+          const reader = new FileReader();
+          reader.onloadend = () => setPhotoPreview(reader.result as string);
+          reader.readAsDataURL(compressed);
+        } catch (err) {
+          console.error("Compression failed", err);
+          setPhotoFile(file);
+        }
+      } else {
+        setPhotoFile(file);
+      }
     }
   };
 

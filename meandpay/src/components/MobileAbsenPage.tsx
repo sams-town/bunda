@@ -16,7 +16,7 @@ import {
   RefreshCw,
   Map as MapIcon,
 } from 'lucide-react';
-import { cn, formatPhotoUrl } from '../lib/utils';
+import { cn, formatPhotoUrl, compressImage } from '../lib/utils';
 import { useToast } from './Toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -266,7 +266,16 @@ export function MobileAbsenPage() {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d')?.drawImage(video, 0, 0);
-      setPhoto(canvas.toDataURL('image/jpeg', 0.85));
+      const rawDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      
+      // Compress immediately to max 800px width
+      try {
+        const compressedUrl = await compressImage(rawDataUrl, 800, 0.7);
+        setPhoto(compressedUrl);
+      } catch (err) {
+        console.error('Compression failed:', err);
+        setPhoto(rawDataUrl); // fallback
+      }
       closeCamera();
     }
   };
