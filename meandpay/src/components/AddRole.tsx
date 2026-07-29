@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Save, ShieldCheck, CheckSquare, Square } from 'lucide-react';
-import { cn } from '../lib/utils';
+
 import { Card, SectionTitle, FormInput } from './common/FormUI';
 import Swal from 'sweetalert2';
 
@@ -98,8 +98,8 @@ export function AddRole({ onBack }: { onBack: () => void }) {
             <div className="grid grid-cols-4 gap-8">
                 <Card className="col-span-1 h-fit space-y-4">
                     <SectionTitle icon={ShieldCheck} title="Info Role" />
-                    <FormInput label="Nama Role" value={form.name} onChange={(n:any,v:any)=>setForm({...form,name:v})} />
-                    <FormInput label="Guard" value={form.guard_name} onChange={(n:any,v:any)=>setForm({...form,guard_name:v})} />
+                    <FormInput label="Nama Role" value={form.name} onChange={(n:string,v:string)=>setForm({...form,name:v})} />
+                    <FormInput label="Guard" value={form.guard_name} onChange={(n:string,v:string)=>setForm({...form,guard_name:v})} />
                 </Card>
 
                 <Card className="col-span-3 space-y-6">

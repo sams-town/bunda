@@ -13,9 +13,18 @@ class DashboardService {
         const currentMonthName = monthNames[month];
         const currentYear = year.toString();
 
+        const pegawaiKeluars = await prisma.pegawai_keluars.findMany({
+            where: { status: { in: ['APPROVED', 'DELETED'] } },
+            select: { user_id: true }
+        });
+        const excludedUserIds = pegawaiKeluars
+            .map((pk) => pk.user_id)
+            .filter((id) => id !== null && id !== undefined);
+
         // 1. Total Pegawai (Exclude Super Admins)
         const totalPegawai = await prisma.users.count({
             where: {
+                id: { notIn: [...excludedUserIds, 1n] },
                 OR: [
                     { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
                     { is_admin: null }
@@ -35,6 +44,7 @@ class DashboardService {
                     lte: endOfToday
                 },
                 users: {
+                    id: { notIn: [...excludedUserIds, 1n] },
                     OR: [
                         { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
                         { is_admin: null }
@@ -77,6 +87,7 @@ class DashboardService {
                     lte: endOfMonth
                 },
                 users: {
+                    id: { notIn: [...excludedUserIds, 1n] },
                     OR: [
                         { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
                         { is_admin: null }
@@ -139,7 +150,7 @@ class DashboardService {
         const dlUserIds = [...new Set(dinasLuars.map(dl => dl.user_id).filter(id => id !== null))];
         const dlUsers = await prisma.users.findMany({
             where: { 
-                id: { in: dlUserIds },
+                id: { in: dlUserIds, notIn: [...excludedUserIds, 1n] },
                 OR: [
                     { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
                     { is_admin: null }
@@ -175,7 +186,7 @@ class DashboardService {
         const cutiUserIds = [...new Set(approvedCutis.map(c => c.user_id).filter(id => id !== null))];
         const cutiUsers = await prisma.users.findMany({
             where: {
-                id: { in: cutiUserIds },
+                id: { in: cutiUserIds, notIn: [...excludedUserIds, 1n] },
                 OR: [
                     { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
                     { is_admin: null }
@@ -231,6 +242,7 @@ class DashboardService {
                 },
                 status: 'Approved',
                 karyawan: {
+                    id: { notIn: [...excludedUserIds, 1n] },
                     OR: [
                         { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
                         { is_admin: null }
@@ -258,6 +270,7 @@ class DashboardService {
         // 2.5 Birthdays (Exclude Super Admins)
         const allUsers = await prisma.users.findMany({
             where: { 
+                id: { notIn: [...excludedUserIds, 1n] },
                 tgl_lahir: { not: null },
                 OR: [
                     { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
