@@ -433,14 +433,14 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
                               className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all border border-slate-200">
                               Edit
                             </button>
-                            <button
-                              onClick={() => setDeletingId(item.id)}
-                              className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border border-slate-200"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
                           </>
                         )}
+                        <button
+                          onClick={() => setDeletingId(item.id)}
+                          className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border border-slate-200"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
                       </div>
                     </td>
                   </tr>
