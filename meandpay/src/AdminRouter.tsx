@@ -91,7 +91,7 @@ import { FinancePengajuanPage } from './components/FinancePengajuanPage';
 import { FinanceKasbonPage } from './components/FinanceKasbonPage';
 import { FinancePajakPage } from './components/FinancePajakPage';
 import FinanceSalarySlipPage from './components/FinanceSalarySlipPage';
-import { cn } from './lib/utils';
+import { cn, formatPhotoUrl } from './lib/utils';
 
 import { Page, PAGE_TO_PATH, PATH_TO_PAGE } from './lib/routes';
 
@@ -242,18 +242,7 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
     }
   };
 
-  const getFileUrl = (path: string | null) => {
-    if (!path) return null;
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    let cleanPath = path.replace(/^\//, '');
-    if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
-    const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
-    const apiBase = import.meta.env.VITE_API_MEANDPAY;
-    let base = (apiData || apiBase || 'https://rsthb.id/apihris').replace(/\/api$/, '').replace(/\/$/, '');
-    if (!base.startsWith('http')) {
-      base = 'https://rsthb.id/apihris';
     }
-    return `${base}/uploads/${cleanPath}`;
   };
 
   const fetchDashboardStats = async (month?: number, year?: number) => {
@@ -458,7 +447,7 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
         <div className={cn("p-8 flex items-center transition-all duration-300 shrink-0", isSidebarCollapsed ? "justify-center" : "gap-4")}>
           <div className="w-12 h-12 flex items-center justify-center shrink-0">
             <img
-              src={settings?.logo ? getFileUrl(settings.logo) : "https://picsum.photos/seed/logo/64/64"}
+              src={settings?.logo ? formatPhotoUrl(settings.logo) : "https://picsum.photos/seed/logo/64/64"}
               alt="Logo"
               className="w-10 h-10 object-contain"
             />

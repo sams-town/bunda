@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import { formatPhotoUrl } from '../lib/utils';
 import {
   Briefcase,
   User,
@@ -25,20 +26,6 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin, settings }: LoginPageProps) {
-  const getFileUrl = (path: string | null) => {
-    if (!path) return null;
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    let cleanPath = path.replace(/^\//, '');
-    if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
-    const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
-    const apiBase = import.meta.env.VITE_API_MEANDPAY;
-    let base = (apiData || apiBase || 'https://rsthb.id/apihris').replace(/\/api$/, '').replace(/\/$/, '');
-    if (!base.startsWith('http')) {
-      base = 'https://rsthb.id/apihris';
-    }
-    return `${base}/uploads/${cleanPath}`;
-  };
-
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -137,7 +124,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
               <div className="w-full h-full rounded-[14px] bg-white flex items-center justify-center overflow-hidden">
                 {settings?.logo ? (
                   <img 
-                    src={getFileUrl(settings.logo)} 
+                    src={formatPhotoUrl(settings.logo)} 
                     alt="Logo" 
                     className="w-8 h-8 object-contain" 
                     onError={(e) => {

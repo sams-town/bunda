@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Settings, Shield, Bell, Globe, Database, Key, HelpCircle, Loader2 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl } from '../lib/utils';
 import { useToast } from './Toast';
 
 export function SettingsPage() {
@@ -35,18 +35,7 @@ export function SettingsPage() {
     footer: ''
   });
 
-  const getFileUrl = (path: string | null) => {
-    if (!path) return null;
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    let cleanPath = path.replace(/^\//, '');
-    if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
-    const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
-    const apiBase = import.meta.env.VITE_API_MEANDPAY;
-    let base = (apiData || apiBase || 'https://rsthb.id/apihris').replace(/\/api$/, '').replace(/\/$/, '');
-    if (!base.startsWith('http')) {
-      base = 'https://rsthb.id/apihris';
     }
-    return `${base}/uploads/${cleanPath}`;
   };
 
   useEffect(() => {
@@ -78,11 +67,11 @@ export function SettingsPage() {
             footer: item.footer || ''
           });
           if (item.logo) {
-            setLogoPreview(getFileUrl(item.logo));
+            setLogoPreview(formatPhotoUrl(item.logo));
           }
-          if (item.file_form_cuti) setFormCutiPreview(getFileUrl(item.file_form_cuti));
-          if (item.file_form_lembur) setFormLemburPreview(getFileUrl(item.file_form_lembur));
-          if (item.file_slip_gaji) setSlipGajiPreview(getFileUrl(item.file_slip_gaji));
+          if (item.file_form_cuti) setFormCutiPreview(formatPhotoUrl(item.file_form_cuti));
+          if (item.file_form_lembur) setFormLemburPreview(formatPhotoUrl(item.file_form_lembur));
+          if (item.file_slip_gaji) setSlipGajiPreview(formatPhotoUrl(item.file_slip_gaji));
         }
       }
     } catch (err) {

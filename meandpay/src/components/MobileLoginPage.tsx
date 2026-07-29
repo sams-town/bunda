@@ -11,7 +11,7 @@ import {
   ChevronLeft,
   Loader2
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl } from '../lib/utils';
 
 interface MobileLoginPageProps {
   onLogin: () => void;
@@ -19,16 +19,6 @@ interface MobileLoginPageProps {
 }
 
 export function MobileLoginPage({ onLogin, settings }: MobileLoginPageProps) {
-  const getFileUrl = (path: string | null) => {
-    if (!path) return null;
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    let cleanPath = path.replace(/^\//, '');
-    if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
-    const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
-    const apiBase = import.meta.env.VITE_API_MEANDPAY;
-    const base = (apiData || apiBase || 'https://rsthb.id/apihris').replace(/\/api$/, '').replace(/\/$/, '');
-    return `${base}/uploads/${cleanPath}`;
-  };
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [username, setUsername] = useState('');
@@ -99,7 +89,7 @@ export function MobileLoginPage({ onLogin, settings }: MobileLoginPageProps) {
         >
           <div className="w-24 h-24 bg-white/20 backdrop-blur-xl rounded-[2.5rem] flex items-center justify-center mx-auto border border-white/30 shadow-2xl">
             {settings?.logo ? (
-              <img src={getFileUrl(settings.logo)} alt="Logo" className="w-14 h-14 object-contain" />
+              <img src={formatPhotoUrl(settings.logo)} alt="Logo" className="w-14 h-14 object-contain" />
             ) : (
               <Fingerprint className="w-12 h-12 text-white" />
             )}
