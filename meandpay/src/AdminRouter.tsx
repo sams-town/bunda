@@ -500,13 +500,7 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
               onClick={() => setCurrentPage('notifications')}
               badge={unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount.toString()) : undefined}
             />
-            <SidebarItem
-              icon={User}
-              label="My Profile"
-              active={currentPage === 'profile'}
-              collapsed={isSidebarCollapsed}
-              onClick={() => setCurrentPage('profile')}
-            />
+
 
             {isAdmin && (
               <>
