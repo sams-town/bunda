@@ -35,9 +35,6 @@ export function SettingsPage() {
     footer: ''
   });
 
-    }
-  };
-
   useEffect(() => {
     fetchSettings();
   }, []);
