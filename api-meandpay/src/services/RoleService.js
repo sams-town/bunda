@@ -182,8 +182,21 @@ class RoleService {
 
         if (!existing) return null;
 
-        await prisma.roles.delete({
-            where: { id: BigInt(id) },
+        await prisma.$transaction(async (tx) => {
+            // Hapus relasi dengan user
+            await tx.model_has_roles.deleteMany({
+                where: { role_id: BigInt(id) }
+            });
+            
+            // Hapus relasi dengan permissions
+            await tx.role_has_permissions.deleteMany({
+                where: { role_id: BigInt(id) }
+            });
+            
+            // Hapus role
+            await tx.roles.delete({
+                where: { id: BigInt(id) },
+            });
         });
 
         return true;
