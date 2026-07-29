@@ -44,7 +44,7 @@ import {
   TrendingUp,
   X
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl } from '../lib/utils';
 
 const BASE_URL = import.meta.env.VITE_API_MEANDPAY;
 
@@ -240,7 +240,7 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-white/30 shadow-xl bg-white/20 flex items-center justify-center shrink-0">
               {userData?.foto_karyawan ? (
-                <img src={userData.foto_karyawan} className="w-full h-full object-cover" alt="Avatar" referrerPolicy="no-referrer" />
+                <img src={formatPhotoUrl(userData.foto_karyawan)} className="w-full h-full object-cover" alt="Avatar" referrerPolicy="no-referrer" />
               ) : (
                 <User className="w-6 h-6 text-white" />
               )}

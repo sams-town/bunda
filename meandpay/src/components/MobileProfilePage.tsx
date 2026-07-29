@@ -1,26 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  ChevronLeft, 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  LogOut, 
-  Loader2,
-  Camera,
-  ShieldCheck,
-  CreditCard,
-  Briefcase,
-  ChevronRight,
-  TrendingDown,
-  TrendingUp,
-  CalendarDays,
-  Coins,
-  Receipt,
-  Info
-} from 'lucide-react';
-import { cn } from '../lib/utils';
+import { ChevronLeft, Camera, LogOut, User, Mail, Phone, MapPin, Briefcase, CalendarDays, ShieldCheck, TrendingDown, TrendingUp, Info, Receipt, Coins, Loader2 } from 'lucide-react';
+import { cn, formatPhotoUrl } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 
 const BASE_URL = import.meta.env.VITE_API_MEANDPAY;
@@ -110,7 +91,7 @@ export function MobileProfilePage({ onLogout, settings }: { onLogout?: () => voi
            <div className="relative">
               <div className="w-28 h-28 rounded-[2.8rem] border-[6px] border-white/20 backdrop-blur-sm shadow-2xl overflow-hidden bg-slate-100/10">
                  {profile?.foto_karyawan ? (
-                   <img src={profile.foto_karyawan} alt="Avatar" className="w-full h-full object-cover" />
+                   <img src={formatPhotoUrl(profile.foto_karyawan)} alt="Avatar" className="w-full h-full object-cover" />
                  ) : (
                    <div className="w-full h-full flex items-center justify-center text-indigo-100">
                       <User className="w-14 h-14 opacity-20" />
