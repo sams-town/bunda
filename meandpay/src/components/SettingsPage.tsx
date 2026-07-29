@@ -21,6 +21,9 @@ export function SettingsPage() {
   const [slipGajiFile, setSlipGajiFile] = useState<File | null>(null);
   const [slipGajiPreview, setSlipGajiPreview] = useState<string | null>(null);
 
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -110,13 +113,41 @@ export function SettingsPage() {
         fd.append('slip_gaji', slipGajiFile);
       }
 
+      if (newPassword) {
+        if (newPassword !== confirmPassword) {
+          addToast({ type: 'error', message: 'Konfirmasi password tidak cocok' });
+          setSaving(false);
+          return;
+        }
+        try {
+          const passRes = await fetch(`${import.meta.env.VITE_API_MEANDPAY}/me`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ password: newPassword })
+          });
+          const passJson = await passRes.json();
+          if (!passJson.success) {
+            addToast({ type: 'error', message: passJson.message || 'Gagal mengubah password admin' });
+            setSaving(false);
+            return;
+          }
+        } catch (e) {
+          addToast({ type: 'error', message: 'Terdapat masalah server saat mengubah password' });
+          setSaving(false);
+          return;
+        }
+      }
+
       const url = settingId
         ? `${import.meta.env.VITE_API_MEANDPAY}/settings/${settingId}`
         : `${import.meta.env.VITE_API_MEANDPAY}/settings`;
 
         console.log('url',url)
 
-      const method = settingId ? 'PUT' : 'POST';
+      const method = 'POST'; // Use POST for both to avoid multipart PUT issues in some environments
 
       const res = await fetch(url, {
         method,
@@ -226,34 +257,26 @@ export function SettingsPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Alamat</label>
-                <textarea
-                  value={formData.alamat}
-                  onChange={(e) => setFormData({ ...formData, alamat: e.target.value })}
-                  placeholder="Bogor"
-                  className="w-full px-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all min-h-[100px]"
-                />
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-slate-50">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telfon</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                    <Key className="w-3 h-3" /> Ganti Password Admin
+                  </label>
                   <input
-                    type="text"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="628988531672"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Masukkan password baru"
                     className="w-full px-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nomor Whatsapp (untuk notifikasi - berawalan 62)</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Konfirmasi Password Baru</label>
                   <input
-                    type="text"
-                    value={formData.whatsapp}
-                    onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                    placeholder="628988531672"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Ketik ulang password baru"
                     className="w-full px-6 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                   />
                 </div>
