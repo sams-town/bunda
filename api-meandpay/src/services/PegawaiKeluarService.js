@@ -8,13 +8,18 @@ class PegawaiKeluarService {
         const search = query.search || "";
         const where = search
             ? {
-                OR: [
-                    { jenis: { contains: search } },
-                    { alasan: { contains: search } },
-                    { status: { contains: search } },
-                ],
+                AND: [
+                    { status: { not: 'DELETED' } },
+                    {
+                        OR: [
+                            { jenis: { contains: search } },
+                            { alasan: { contains: search } },
+                            { status: { contains: search } },
+                        ]
+                    }
+                ]
             }
-            : {};
+            : { status: { not: 'DELETED' } };
         
         const [data, total] = await Promise.all([
             prisma.pegawai_keluars.findMany({
@@ -158,7 +163,10 @@ class PegawaiKeluarService {
         });
         if (!existing) return null;
 
-        await prisma.pegawai_keluars.delete({ where: { id: BigInt(id) } });
+        await prisma.pegawai_keluars.update({ 
+            where: { id: BigInt(id) },
+            data: { status: 'DELETED' }
+        });
         return true;
     }
 
