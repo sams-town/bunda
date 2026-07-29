@@ -33,8 +33,18 @@ export function formatPhotoUrl(url: string | null | undefined) {
   
   const cleanPath = path.replace(/^\//, '');
   if (cleanPath.startsWith('uploads/') || cleanPath.startsWith('lemburs/') || cleanPath.startsWith('beritas/') || cleanPath.startsWith('cuti/')) {
+    // Determine if we need to inject /api/ before the static folder
+    // If apiBase doesn't end with /api, we prepend /api so Nginx proxies it to backend
+    const hasApiSuffix = import.meta.env.VITE_API_MEANDPAY?.endsWith('/api');
+    if (hasApiSuffix && !apiBase.endsWith('/api')) {
+      return `${apiBase}/api/${cleanPath}`;
+    }
     return `${apiBase}/${cleanPath}`;
   }
   
+  const hasApiSuffix = import.meta.env.VITE_API_MEANDPAY?.endsWith('/api');
+  if (hasApiSuffix && !apiBase.endsWith('/api')) {
+    return `${apiBase}/api/uploads/${cleanPath}`;
+  }
   return `${apiBase}/uploads/${cleanPath}`;
 }

@@ -33,6 +33,11 @@ app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
 app.use("/lemburs", express.static(path.join(__dirname, "../public/lemburs")));
 app.use("/beritas", express.static(path.join(__dirname, "../public/beritas")));
 
+// Mount under /api as well, so Nginx proxy passes these correctly
+app.use("/api/uploads", express.static(path.join(__dirname, "../public/uploads")));
+app.use("/api/lemburs", express.static(path.join(__dirname, "../public/lemburs")));
+app.use("/api/beritas", express.static(path.join(__dirname, "../public/beritas")));
+
 app.use("/api", apiRoutes);
 
 // Error handling middleware for Multer
