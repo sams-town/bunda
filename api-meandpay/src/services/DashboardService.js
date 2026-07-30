@@ -24,11 +24,7 @@ class DashboardService {
         // 1. Total Pegawai (Exclude Super Admins)
         const totalPegawai = await prisma.users.count({
             where: {
-                id: { notIn: [...excludedUserIds, 1n] },
-                OR: [
-                    { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
-                    { is_admin: null }
-                ]
+                id: { notIn: [...excludedUserIds, 1n] }
             }
         });
 
@@ -44,11 +40,7 @@ class DashboardService {
                     lte: endOfToday
                 },
                 users: {
-                    id: { notIn: [...excludedUserIds, 1n] },
-                    OR: [
-                        { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
-                        { is_admin: null }
-                    ]
+                    id: { notIn: [...excludedUserIds, 1n] }
                 }
             }
         });
@@ -87,11 +79,7 @@ class DashboardService {
                     lte: endOfMonth
                 },
                 users: {
-                    id: { notIn: [...excludedUserIds, 1n] },
-                    OR: [
-                        { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
-                        { is_admin: null }
-                    ]
+                    id: { notIn: [...excludedUserIds, 1n] }
                 }
             },
             include: {
@@ -150,11 +138,7 @@ class DashboardService {
         const dlUserIds = [...new Set(dinasLuars.map(dl => dl.user_id).filter(id => id !== null))];
         const dlUsers = await prisma.users.findMany({
             where: { 
-                id: { in: dlUserIds, notIn: [...excludedUserIds, 1n] },
-                OR: [
-                    { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
-                    { is_admin: null }
-                ]
+                id: { in: dlUserIds, notIn: [...excludedUserIds, 1n] }
             },
             select: { id: true, name: true }
         });
@@ -186,11 +170,7 @@ class DashboardService {
         const cutiUserIds = [...new Set(approvedCutis.map(c => c.user_id).filter(id => id !== null))];
         const cutiUsers = await prisma.users.findMany({
             where: {
-                id: { in: cutiUserIds, notIn: [...excludedUserIds, 1n] },
-                OR: [
-                    { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
-                    { is_admin: null }
-                ]
+                id: { in: cutiUserIds, notIn: [...excludedUserIds, 1n] }
             },
             select: { id: true, name: true }
         });
@@ -242,11 +222,7 @@ class DashboardService {
                 },
                 status: 'Approved',
                 karyawan: {
-                    id: { notIn: [...excludedUserIds, 1n] },
-                    OR: [
-                        { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
-                        { is_admin: null }
-                    ]
+                    id: { notIn: [...excludedUserIds, 1n] }
                 }
             },
             include: {
@@ -271,11 +247,7 @@ class DashboardService {
         const allUsers = await prisma.users.findMany({
             where: { 
                 id: { notIn: [...excludedUserIds, 1n] },
-                tgl_lahir: { not: null },
-                OR: [
-                    { is_admin: { notIn: ['admin', 'superadmin', 'super_admin', 'super admin'] } },
-                    { is_admin: null }
-                ]
+                tgl_lahir: { not: null }
             },
             select: { name: true, tgl_lahir: true }
         });

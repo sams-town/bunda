@@ -1,0 +1,1 @@
+const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function main() { console.log('Total:', await prisma.users.count()); console.log('Keluars:', await prisma.pegawai_keluars.count({ where: { status: { in: ['APPROVED', 'DELETED'] } } })); } main().catch(console.error).finally(() => prisma.$disconnect());
