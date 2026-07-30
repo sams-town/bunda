@@ -24,7 +24,7 @@ class DashboardService {
         // 1. Total Pegawai (Exclude Super Admins)
         const totalPegawai = await prisma.users.count({
             where: {
-                id: { notIn: [...excludedUserIds, 1n] }
+                id: { notIn: [...excludedUserIds, 1062n] }
             }
         });
 
@@ -40,7 +40,7 @@ class DashboardService {
                     lte: endOfToday
                 },
                 users: {
-                    id: { notIn: [...excludedUserIds, 1n] }
+                    id: { notIn: [...excludedUserIds, 1062n] }
                 }
             }
         });
@@ -79,7 +79,7 @@ class DashboardService {
                     lte: endOfMonth
                 },
                 users: {
-                    id: { notIn: [...excludedUserIds, 1n] }
+                    id: { notIn: [...excludedUserIds, 1062n] }
                 }
             },
             include: {
@@ -138,7 +138,7 @@ class DashboardService {
         const dlUserIds = [...new Set(dinasLuars.map(dl => dl.user_id).filter(id => id !== null))];
         const dlUsers = await prisma.users.findMany({
             where: { 
-                id: { in: dlUserIds, notIn: [...excludedUserIds, 1n] }
+                id: { in: dlUserIds, notIn: [...excludedUserIds, 1062n] }
             },
             select: { id: true, name: true }
         });
@@ -170,7 +170,7 @@ class DashboardService {
         const cutiUserIds = [...new Set(approvedCutis.map(c => c.user_id).filter(id => id !== null))];
         const cutiUsers = await prisma.users.findMany({
             where: {
-                id: { in: cutiUserIds, notIn: [...excludedUserIds, 1n] }
+                id: { in: cutiUserIds, notIn: [...excludedUserIds, 1062n] }
             },
             select: { id: true, name: true }
         });
@@ -222,7 +222,7 @@ class DashboardService {
                 },
                 status: 'Approved',
                 karyawan: {
-                    id: { notIn: [...excludedUserIds, 1n] }
+                    id: { notIn: [...excludedUserIds, 1062n] }
                 }
             },
             include: {
@@ -246,7 +246,7 @@ class DashboardService {
         // 2.5 Birthdays (Exclude Super Admins)
         const allUsers = await prisma.users.findMany({
             where: { 
-                id: { notIn: [...excludedUserIds, 1n] },
+                id: { notIn: [...excludedUserIds, 1062n] },
                 tgl_lahir: { not: null }
             },
             select: { name: true, tgl_lahir: true }
