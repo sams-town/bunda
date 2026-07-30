@@ -39,6 +39,46 @@ import { authMiddleware } from "../middleware/authMiddleware.js";
 import { upload, createUploadMiddleware } from "../middleware/uploadMiddleware.js";
 const router = express.Router();
 
+import prisma from "../config/prisma.js";
+router.get("/debug-db", async (req, res) => {
+    try {
+        const totalUsers = await prisma.users.count();
+        const totalPk = await prisma.pegawai_keluars.count();
+        const pkActive = await prisma.pegawai_keluars.count({ where: { status: { in: ['APPROVED', 'DELETED'] } } });
+        const pks = await prisma.pegawai_keluars.findMany({ select: { user_id: true, status: true }, take: 15 });
+        
+        const excludedUserIds = (await prisma.pegawai_keluars.findMany({
+            where: { status: { in: ['APPROVED', 'DELETED'] } },
+            select: { user_id: true }
+        })).map((pk) => pk.user_id).filter((id) => id !== null && id !== undefined);
+
+        const dashboardTotalPegawai = await prisma.users.count({
+            where: { id: { notIn: [...excludedUserIds, 1n] } }
+        });
+        
+        const allUsers = await prisma.users.findMany({
+            where: { id: { notIn: [...excludedUserIds, 1n] } },
+            select: { id: true, name: true, is_admin: true, status_kerja: true },
+            take: 15
+        });
+
+        const serializeBigInt = (obj) => JSON.parse(JSON.stringify(obj, (key, value) => typeof value === 'bigint' ? value.toString() : value));
+
+        res.json(serializeBigInt({
+            totalUsers,
+            totalPk,
+            pkActive,
+            dashboardTotalPegawai,
+            excludedUserIdsCount: excludedUserIds.length,
+            excludedIds: excludedUserIds,
+            sampleUsersNotExcluded: allUsers,
+            samplePk: pks
+        }));
+    } catch(err) {
+        res.status(500).json({ error: err.message, stack: err.stack });
+    }
+});
+
 // ========================
 // AUTH ROUTES
 // ========================
