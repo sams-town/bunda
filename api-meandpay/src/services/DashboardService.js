@@ -21,10 +21,22 @@ class DashboardService {
             .map((pk) => pk.user_id)
             .filter((id) => id !== null && id !== undefined);
 
-        // 1. Total Pegawai (Exclude Super Admins)
+        const doctorUsers = await prisma.model_has_roles.findMany({
+            where: { roles: { name: { in: ["dokter", "bidan"] } } },
+            select: { model_id: true }
+        });
+        const doctorUserIds = doctorUsers.map(du => du.model_id);
+
+        // 1. Total Pegawai (Exclude Super Admins and Doctors)
         const totalPegawai = await prisma.users.count({
             where: {
-                id: { notIn: [...excludedUserIds, 1062n] }
+                id: { notIn: [...excludedUserIds, 1062n, ...doctorUserIds] }
+            }
+        });
+
+        const totalDokter = await prisma.users.count({
+            where: {
+                id: { in: doctorUserIds, notIn: [...excludedUserIds, 1062n] }
             }
         });
 
@@ -345,6 +357,7 @@ class DashboardService {
 
         return {
             total_pegawai: totalPegawai,
+            total_dokter: totalDokter,
             attendance: attendanceStats,
             calendar_events: uniqueEvents,
             finance: serializeBigInt({

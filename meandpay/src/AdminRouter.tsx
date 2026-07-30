@@ -17,6 +17,7 @@ import {
   UserMinus,
   Clock,
   Briefcase,
+  Stethoscope,
   MapPin,
   Database,
   Calendar as CalendarIcon,
@@ -351,6 +352,7 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
 
     const cards = [
       <HRStatCard key="staff" title="Total Pegawai" value={dashboardStats?.total_pegawai || '0'} icon={Users} color="text-orange-600" bg="bg-orange-50" />,
+      <HRStatCard key="dokter" title="Total Dokter" value={dashboardStats?.total_dokter || '0'} icon={Stethoscope} color="text-indigo-600" bg="bg-indigo-50" />,
       <HRStatCard key="masuk" title="Masuk" value={dashboardStats?.attendance?.masuk || '0'} icon={Database} color="text-emerald-600" bg="bg-emerald-50" />,
       <HRStatCard key="alfa" title="Alfa" value={dashboardStats?.attendance?.alfa || '0'} icon={UserX} color="text-rose-600" bg="bg-rose-50" />,
       <HRStatCard key="cuti" title="Cuti" value={dashboardStats?.attendance?.cuti || '0'} icon={CalendarIcon} color="text-amber-600" bg="bg-amber-50" />,
