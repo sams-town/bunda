@@ -80,25 +80,25 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
       icon: Shield, 
       label: 'Absensi Aman & Terverifikasi', 
       desc: 'Sistem absensi dilengkapi dengan Face Recognition dan pelacakan GPS akurat.',
-      color: 'text-emerald-400',
-      bg: 'bg-emerald-500/10',
-      border: 'group-hover:border-emerald-500/30'
+      color: 'text-[#34959E]',
+      bg: 'bg-[#34959E]/20',
+      border: 'group-hover:border-[#34959E]/40'
     },
     { 
       icon: CreditCard, 
       label: 'Payroll Otomatis & Transparan', 
       desc: 'Kalkulasi gaji, tunjangan, dan potongan BPJS secara real-time dan akurat.',
-      color: 'text-indigo-400',
-      bg: 'bg-indigo-500/10',
-      border: 'group-hover:border-indigo-500/30'
+      color: 'text-[#Fb9917]',
+      bg: 'bg-[#Fb9917]/20',
+      border: 'group-hover:border-[#Fb9917]/40'
     },
     { 
       icon: Calendar, 
       label: 'Manajemen Cuti & Izin Efisien', 
       desc: 'Pengajuan cuti, sakit, dan izin lembur langsung diproses dengan alur persetujuan cepat.',
-      color: 'text-teal-400',
-      bg: 'bg-teal-500/10',
-      border: 'group-hover:border-teal-500/30'
+      color: 'text-[#990000]',
+      bg: 'bg-[#990000]/20',
+      border: 'group-hover:border-[#990000]/40'
     },
   ];
 
@@ -120,7 +120,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
         >
           {/* Brand Header */}
           <div className="flex items-center gap-3.5 mb-10">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-teal-500 p-0.5 shadow-lg shadow-indigo-500/20 flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#34959E] to-[#Fb9917] p-0.5 shadow-lg shadow-[#34959E]/20 flex items-center justify-center shrink-0">
               <div className="w-full h-full rounded-[14px] bg-white flex items-center justify-center overflow-hidden">
                 {settings?.logo ? (
                   <img 
@@ -138,7 +138,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
                 <div 
                   id="logo-fallback" 
                   style={{ display: settings?.logo ? 'none' : 'flex' }}
-                  className="w-full h-full flex items-center justify-center bg-gradient-to-tr from-indigo-50 to-teal-50 text-indigo-600"
+                  className="w-full h-full flex items-center justify-center bg-gradient-to-tr from-indigo-50 to-teal-50 text-[#34959E]"
                 >
                   <Activity className="w-5 h-5 animate-pulse" />
                 </div>
@@ -148,7 +148,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
               <span className="text-xl font-extrabold tracking-tight text-slate-800 block leading-tight">
                 {settings?.name || 'RS Bunda Halimah'}
               </span>
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] bg-gradient-to-r from-indigo-600 to-teal-500 bg-clip-text text-transparent">
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#34959E]">
                 HRIS PLATFORM
               </span>
             </div>
@@ -189,7 +189,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
                 Username
               </label>
               <div className="relative group">
-                <User className="absolute left-4.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-indigo-600 transition-colors pointer-events-none" />
+                <User className="absolute left-4.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-[#34959E] transition-colors pointer-events-none" />
                 <input
                   type="text"
                   required
@@ -197,7 +197,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Masukkan username Anda"
-                  className="w-full pl-12 pr-5 py-4 bg-slate-50 hover:bg-slate-100/50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100/50 transition-all text-slate-800 font-semibold text-sm placeholder:text-slate-300"
+                  className="w-full pl-12 pr-5 py-4 bg-slate-50 hover:bg-slate-100/50 border border-slate-200 focus:border-[#34959E] focus:bg-white rounded-2xl outline-none focus:ring-4 focus:ring-[#34959E]/20 transition-all text-slate-800 font-semibold text-sm placeholder:text-slate-300"
                 />
               </div>
             </div>
@@ -208,7 +208,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
                 Password
               </label>
               <div className="relative group">
-                <Lock className="absolute left-4.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-indigo-600 transition-colors pointer-events-none" />
+                <Lock className="absolute left-4.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 group-focus-within:text-[#34959E] transition-colors pointer-events-none" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
@@ -216,7 +216,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-12 py-4 bg-slate-50 hover:bg-slate-100/50 border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100/50 transition-all text-slate-800 font-semibold text-sm placeholder:text-slate-300"
+                  className="w-full pl-12 pr-12 py-4 bg-slate-50 hover:bg-slate-100/50 border border-slate-200 focus:border-[#34959E] focus:bg-white rounded-2xl outline-none focus:ring-4 focus:ring-[#34959E]/20 transition-all text-slate-800 font-semibold text-sm placeholder:text-slate-300"
                 />
                 <button
                   type="button"
@@ -233,7 +233,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
               type="submit"
               disabled={isLoading}
               whileTap={{ scale: 0.985 }}
-              className="w-full py-4 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-2xl font-bold text-sm tracking-wide flex items-center justify-center gap-2.5 transition-all disabled:opacity-60 group shadow-lg shadow-indigo-600/20 active:scale-[0.99] mt-3"
+              className="w-full py-4 bg-[#34959E] hover:bg-[#34959E]/90 text-white rounded-2xl font-bold text-sm tracking-wide flex items-center justify-center gap-2.5 transition-all disabled:opacity-60 group shadow-lg shadow-[#34959E]/30 active:scale-[0.99] mt-3"
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -265,7 +265,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
                 whileHover={{ y: -2, scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/absen-masuk')}
-                className="flex items-center gap-3.5 p-3.5 bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-2xl shadow-lg shadow-emerald-500/10 transition-all text-left"
+                className="flex items-center gap-3.5 p-3.5 bg-[#34959E] hover:bg-[#34959E]/90 text-white rounded-2xl shadow-lg shadow-[#34959E]/20 transition-all text-left"
               >
                 <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center shrink-0">
                   <LogIn className="w-5 h-5" />
@@ -281,7 +281,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
                 whileHover={{ y: -2, scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => navigate('/absen-keluar')}
-                className="flex items-center gap-3.5 p-3.5 bg-gradient-to-br from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white rounded-2xl shadow-lg shadow-rose-500/10 transition-all text-left"
+                className="flex items-center gap-3.5 p-3.5 bg-[#990000] hover:bg-[#990000]/90 text-white rounded-2xl shadow-lg shadow-[#990000]/20 transition-all text-left"
               >
                 <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center shrink-0">
                   <LogOut className="w-5 h-5" />
@@ -332,13 +332,13 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
               transition={{ delay: 0.3, duration: 0.5 }}
             >
               <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4.5 py-1.5 mb-8 backdrop-blur-md">
-                <div className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
-                <span className="text-[10px] font-black uppercase tracking-wider text-teal-300">Modern HR Ecosystem</span>
+                <div className="w-2 h-2 rounded-full bg-[#Fb9917] animate-ping" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-[#Fb9917]">Modern HR Ecosystem</span>
               </div>
 
               <h2 className="text-4xl xl:text-5xl font-black mb-6 leading-[1.15] tracking-tight text-white">
                 Kelola Layanan SDM <br />
-                <span className="bg-gradient-to-r from-teal-300 to-indigo-300 bg-clip-text text-transparent">Lebih Efisien</span> <br />
+                <span className="text-[#Fb9917]">Lebih Efisien</span> <br />
                 Secara Terintegrasi.
               </h2>
               <p className="text-slate-300 text-sm xl:text-base mb-12 font-medium leading-relaxed">
@@ -360,7 +360,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
                     <Icon className={`w-5.5 h-5.5 ${color}`} />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white mb-1 group-hover:text-teal-200 transition-colors">{label}</h3>
+                    <h3 className="text-sm font-bold text-white mb-1 group-hover:text-[#Fb9917] transition-colors">{label}</h3>
                     <p className="text-xs text-slate-400 font-medium leading-relaxed">{desc}</p>
                   </div>
                 </motion.div>
