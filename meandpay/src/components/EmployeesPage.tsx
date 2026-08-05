@@ -1587,7 +1587,7 @@ export function EmployeesPage() {
             <button onClick={() => setShowShiftPage(true)} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
               <Clock className="w-4 h-4 text-violet-500" /> Shift
             </button>
-            <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]">
+            <button onClick={() => setIsAdding(true)} className="flex items-center gap-2 px-5 py-2.5 bg-[#34959E] hover:bg-[#34959E]/90 text-white text-sm font-semibold rounded-xl shadow-lg shadow-[#34959E]/30 transition-all active:scale-[0.98]">
               <Plus className="w-4 h-4" /> Tambah Pegawai
             </button>
           </div>
@@ -1598,8 +1598,8 @@ export function EmployeesPage() {
           {[
             { label: 'Total Pegawai', value: meta.total, icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
             { label: 'Aktif', value: meta.total, icon: UserCheck, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-            { label: 'Cuti', value: '-', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-            { label: 'Baru Bulan Ini', value: '-', icon: TrendingUp, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100' },
+            { label: 'Cuti', value: '-', icon: Clock, color: 'text-[#Fb9917]', bg: 'bg-[#Fb9917]/10', border: 'border-[#Fb9917]/20' },
+            { label: 'Baru Bulan Ini', value: '-', icon: TrendingUp, color: 'text-[#Fb9917]', bg: 'bg-[#Fb9917]/10', border: 'border-[#Fb9917]/20' },
           ].map(({ label, value, icon: Icon, color, bg, border }) => (
             <div key={label} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
               <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border', bg, border)}>
@@ -1776,7 +1776,7 @@ export function EmployeesPage() {
                       </td>
                       <td className="py-3.5 px-4">
                         <span className={cn('inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold border whitespace-nowrap uppercase tracking-wider',
-                          emp.has_dokumen ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100')}>
+                          emp.has_dokumen ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-[#990000]/10 text-[#990000] border-[#990000]/20')}>
                           {emp.has_dokumen ? '✓ Ada' : '✗ Belum'}
                         </span>
                       </td>

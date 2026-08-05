@@ -440,7 +440,7 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
       <motion.aside
         initial={false}
         animate={{ width: isSidebarCollapsed ? 100 : 288 }}
-        className="bg-[#1A1C1E] text-white flex flex-col sticky top-0 h-screen overflow-hidden shadow-[20px_0_40px_rgba(0,0,0,0.2)] z-50 shrink-0 border-r border-white/5"
+        className="bg-[#F5F5F5] text-slate-800 flex flex-col sticky top-0 h-screen overflow-hidden shadow-[20px_0_40px_rgba(0,0,0,0.2)] z-50 shrink-0 border-r border-slate-200"
       >
         {/* Fixed Header */}
         <div className={cn("p-8 flex items-center transition-all duration-300 shrink-0", isSidebarCollapsed ? "justify-center" : "gap-4")}>
@@ -457,7 +457,7 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
             >
-              <span className="text-2xl font-black tracking-tighter block bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent italic">
+              <span className="text-2xl font-black tracking-tighter block text-[#34959E] italic">
                 {settings?.name?.split(' ')[0] || 'HRIS'}
               </span>
               <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] -mt-1 block">
@@ -470,7 +470,7 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
         {/* Scrollable Menu */}
         <div className="px-4 py-2 flex-1 overflow-y-auto scrollbar-hide">
           <div className="mb-4 px-4">
-            {!isSidebarCollapsed && <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Main Menusss</p>}
+            {!isSidebarCollapsed && <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Main Menusss</p>}
           </div>
           <nav className="space-y-1.5">
             <SidebarItem
@@ -602,20 +602,20 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
                 className={cn(
                   "w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group relative overflow-hidden",
                   ['attendance', 'data-attendance', 'attendance-dinas', 'data-dinas'].includes(currentPage)
-                    ? "bg-white/10 text-white shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]"
-                    : "text-white/40 hover:text-white hover:bg-white/5",
+                    ? "bg-[#34959E]/10 text-[#34959E] shadow-[inset_0_0_20px_rgba(52,149,158,0.05)]"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
                   isSidebarCollapsed ? "justify-center" : ""
                 )}
               >
                 {['attendance', 'absen', 'data-attendance', 'attendance-dinas', 'data-dinas'].includes(currentPage) && (
-                  <motion.div layoutId="active-pill" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#F97316] rounded-r-full shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
+                  <motion.div layoutId="active-pill" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#34959E] rounded-r-full shadow-[0_0_15px_rgba(52,149,158,0.4)]" />
                 )}
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
-                    ['attendance', 'absen', 'data-attendance', 'attendance-dinas', 'data-dinas'].includes(currentPage) ? "bg-[#F97316]/20 shadow-inner" : "bg-white/5 group-hover:bg-white/10"
+                    ['attendance', 'absen', 'data-attendance', 'attendance-dinas', 'data-dinas'].includes(currentPage) ? "bg-[#34959E]/20 shadow-inner" : "bg-slate-100 group-hover:bg-slate-200"
                   )}>
-                    <Clock className={cn("w-4 h-4 transition-colors", ['attendance', 'absen', 'data-attendance', 'attendance-dinas', 'data-dinas'].includes(currentPage) ? "text-[#F97316]" : "text-white/40 group-hover:text-white")} />
+                    <Clock className={cn("w-4 h-4 transition-colors", ['attendance', 'absen', 'data-attendance', 'attendance-dinas', 'data-dinas'].includes(currentPage) ? "text-[#34959E]" : "text-slate-400 group-hover:text-slate-700")} />
                   </div>
                   {!isSidebarCollapsed && <span>Absensi</span>}
                 </div>
@@ -628,7 +628,7 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden mt-1 space-y-1 ml-4 border-l border-white/5"
+                    className="overflow-hidden mt-1 space-y-1 ml-4 border-l border-slate-200"
                   >
                     <SidebarSubItem label="Absen Masuk/Pulang" onClick={() => setCurrentPage('absen')} active={currentPage === 'absen' || location.pathname === '/absen_admin'} />
 
@@ -649,20 +649,20 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
                 className={cn(
                   "w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group relative overflow-hidden",
                   ['overtime-entry', 'overtime-data'].includes(currentPage)
-                    ? "bg-white/10 text-white shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]"
-                    : "text-white/40 hover:text-white hover:bg-white/5",
+                    ? "bg-[#34959E]/10 text-[#34959E] shadow-[inset_0_0_20px_rgba(52,149,158,0.05)]"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
                   isSidebarCollapsed ? "justify-center" : ""
                 )}
               >
                 {['overtime-entry', 'overtime-data'].includes(currentPage) && (
-                  <motion.div layoutId="active-pill" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#F97316] rounded-r-full shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
+                  <motion.div layoutId="active-pill" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#34959E] rounded-r-full shadow-[0_0_15px_rgba(52,149,158,0.4)]" />
                 )}
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
-                    ['overtime-entry', 'overtime-data'].includes(currentPage) ? "bg-[#F97316]/20 shadow-inner" : "bg-white/5 group-hover:bg-white/10"
+                    ['overtime-entry', 'overtime-data'].includes(currentPage) ? "bg-[#34959E]/20 shadow-inner" : "bg-slate-100 group-hover:bg-slate-200"
                   )}>
-                    <TrendingUp className={cn("w-4 h-4 transition-colors", ['overtime-entry', 'overtime-data'].includes(currentPage) ? "text-[#F97316]" : "text-white/40 group-hover:text-white")} />
+                    <TrendingUp className={cn("w-4 h-4 transition-colors", ['overtime-entry', 'overtime-data'].includes(currentPage) ? "text-[#34959E]" : "text-slate-400 group-hover:text-slate-700")} />
                   </div>
                   {!isSidebarCollapsed && <span>Overtime</span>}
                 </div>
@@ -675,7 +675,7 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden mt-1 space-y-1 ml-4 border-l border-white/5"
+                    className="overflow-hidden mt-1 space-y-1 ml-4 border-l border-slate-200"
                   >
                     <SidebarSubItem label="Lembur" onClick={() => setCurrentPage('overtime-entry')} active={currentPage === 'overtime-entry'} />
                     <SidebarSubItem label="Data Lembur" onClick={() => setCurrentPage('overtime-data')} active={currentPage === 'overtime-data'} />
@@ -691,20 +691,20 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
                 className={cn(
                   "w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group relative overflow-hidden",
                   ['visit', 'visit-dokter', 'visit-kunjungan', 'visit-penugasan', 'visit-rapat', 'kinerja-jenis', 'kinerja-laporan', 'kinerja-pegawai', 'kinerja-laporan-kerja'].includes(currentPage)
-                    ? "bg-white/10 text-white shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]"
-                    : "text-white/40 hover:text-white hover:bg-white/5",
+                    ? "bg-[#34959E]/10 text-[#34959E] shadow-[inset_0_0_20px_rgba(52,149,158,0.05)]"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
                   isSidebarCollapsed ? "justify-center" : ""
                 )}
               >
                 {['visit', 'visit-dokter', 'visit-kunjungan', 'visit-penugasan', 'visit-rapat', 'kinerja-jenis', 'kinerja-laporan', 'kinerja-pegawai', 'kinerja-laporan-kerja'].includes(currentPage) && (
-                  <motion.div layoutId="active-pill" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#F97316] rounded-r-full shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
+                  <motion.div layoutId="active-pill" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#34959E] rounded-r-full shadow-[0_0_15px_rgba(52,149,158,0.4)]" />
                 )}
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
-                    ['visit', 'visit-dokter', 'visit-kunjungan', 'visit-penugasan', 'visit-rapat', 'kinerja-jenis', 'kinerja-laporan', 'kinerja-pegawai', 'kinerja-laporan-kerja'].includes(currentPage) ? "bg-[#F97316]/20 shadow-inner" : "bg-white/5 group-hover:bg-white/10"
+                    ['visit', 'visit-dokter', 'visit-kunjungan', 'visit-penugasan', 'visit-rapat', 'kinerja-jenis', 'kinerja-laporan', 'kinerja-pegawai', 'kinerja-laporan-kerja'].includes(currentPage) ? "bg-[#34959E]/20 shadow-inner" : "bg-slate-100 group-hover:bg-slate-200"
                   )}>
-                    <Activity className={cn("w-4 h-4 transition-colors", ['visit', 'visit-dokter', 'visit-kunjungan', 'visit-penugasan', 'visit-rapat', 'kinerja-jenis', 'kinerja-laporan', 'kinerja-pegawai', 'kinerja-laporan-kerja'].includes(currentPage) ? "text-[#F97316]" : "text-white/40 group-hover:text-white")} />
+                    <Activity className={cn("w-4 h-4 transition-colors", ['visit', 'visit-dokter', 'visit-kunjungan', 'visit-penugasan', 'visit-rapat', 'kinerja-jenis', 'kinerja-laporan', 'kinerja-pegawai', 'kinerja-laporan-kerja'].includes(currentPage) ? "text-[#34959E]" : "text-slate-400 group-hover:text-slate-700")} />
                   </div>
                   {!isSidebarCollapsed && <span>Visit & Kinerja</span>}
                 </div>
@@ -717,7 +717,7 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden mt-1 space-y-1 ml-4 border-l border-white/5"
+                    className="overflow-hidden mt-1 space-y-1 ml-4 border-l border-slate-200"
                   >
                     <SidebarSubItem label="Patroli Petugas Security" onClick={() => setCurrentPage('visit-dokter')} active={currentPage === 'visit-dokter'} />
                     <SidebarSubItem label="Kunjungan" onClick={() => setCurrentPage('visit-kunjungan')} active={currentPage === 'visit-kunjungan'} />
@@ -750,20 +750,20 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
                   className={cn(
                     "w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group relative overflow-hidden",
                     ['finance-payroll', 'finance-pajak', 'finance-kasbon', 'finance-reimbursement', 'finance-kategori-reimbursement', 'finance-pengajuan', 'finance-status-pajak', 'finance-target-kinerja', 'finance-detail-target'].includes(currentPage)
-                      ? "bg-white/10 text-white shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]"
-                      : "text-white/40 hover:text-white hover:bg-white/5",
+                      ? "bg-[#34959E]/10 text-[#34959E] shadow-[inset_0_0_20px_rgba(52,149,158,0.05)]"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-100",
                     isSidebarCollapsed ? "justify-center" : ""
                   )}
                 >
                   {['finance-payroll', 'finance-pajak', 'finance-kasbon', 'finance-reimbursement', 'finance-kategori-reimbursement', 'finance-pengajuan', 'finance-status-pajak', 'finance-target-kinerja', 'finance-detail-target'].includes(currentPage) && (
-                    <motion.div layoutId="active-pill" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#F97316] rounded-r-full shadow-[0_0_15px_rgba(249,115,22,0.8)]" />
+                    <motion.div layoutId="active-pill" className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#34959E] rounded-r-full shadow-[0_0_15px_rgba(52,149,158,0.4)]" />
                   )}
                   <div className="flex items-center gap-3">
                     <div className={cn(
                       "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
-                      ['finance-payroll', 'finance-pajak', 'finance-kasbon', 'finance-reimbursement', 'finance-kategori-reimbursement', 'finance-pengajuan', 'finance-status-pajak', 'finance-target-kinerja', 'finance-detail-target'].includes(currentPage) ? "bg-[#F97316]/20 shadow-inner" : "bg-white/5 group-hover:bg-white/10"
+                      ['finance-payroll', 'finance-pajak', 'finance-kasbon', 'finance-reimbursement', 'finance-kategori-reimbursement', 'finance-pengajuan', 'finance-status-pajak', 'finance-target-kinerja', 'finance-detail-target'].includes(currentPage) ? "bg-[#34959E]/20 shadow-inner" : "bg-slate-100 group-hover:bg-slate-200"
                     )}>
-                      <DollarSign className={cn("w-4 h-4 transition-colors", ['finance-payroll', 'finance-pajak', 'finance-kasbon', 'finance-reimbursement', 'finance-kategori-reimbursement', 'finance-pengajuan', 'finance-status-pajak', 'finance-target-kinerja', 'finance-detail-target'].includes(currentPage) ? "text-[#F97316]" : "text-white/40 group-hover:text-white")} />
+                      <DollarSign className={cn("w-4 h-4 transition-colors", ['finance-payroll', 'finance-pajak', 'finance-kasbon', 'finance-reimbursement', 'finance-kategori-reimbursement', 'finance-pengajuan', 'finance-status-pajak', 'finance-target-kinerja', 'finance-detail-target'].includes(currentPage) ? "text-[#34959E]" : "text-slate-400 group-hover:text-slate-700")} />
                     </div>
                     {!isSidebarCollapsed && <span>Keuangan & Target</span>}
                   </div>
@@ -776,7 +776,7 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden mt-1 space-y-1 ml-4 border-l border-white/5"
+                      className="overflow-hidden mt-1 space-y-1 ml-4 border-l border-slate-200"
                     >
                       {hasPermission('payroll.view') && <SidebarSubItem label="Payroll" onClick={() => setCurrentPage('finance-payroll')} active={currentPage === 'finance-payroll'} />}
                       {hasPermission('pajak.view') && <SidebarSubItem label="Pajak" onClick={() => setCurrentPage('finance-pajak')} active={currentPage === 'finance-pajak'} />}
@@ -818,15 +818,15 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
         </div>
 
         {/* Fixed Footer */}
-        <div className="p-6 border-t border-white/5 shrink-0 bg-[#1A1C1E]">
+        <div className="p-6 border-t border-slate-200 shrink-0 bg-[#F5F5F5]">
           <button
             onClick={handleLogout}
             className={cn(
-              "w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-sm font-bold text-white/40 hover:bg-rose-500/10 hover:text-rose-400 transition-all group relative overflow-hidden",
+              "w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-sm font-bold text-slate-500 hover:bg-rose-500/10 hover:text-rose-600 transition-all group relative overflow-hidden",
               isSidebarCollapsed ? "justify-center" : ""
             )}
           >
-            <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-rose-500/20 transition-colors shrink-0 border border-white/5 group-hover:border-rose-500/20">
+            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center group-hover:bg-rose-500/20 transition-colors shrink-0 border border-slate-200 group-hover:border-rose-500/20">
               <LogOut className="w-4 h-4" />
             </div>
             {!isSidebarCollapsed && <span className="tracking-tight">Sign Out</span>}
@@ -1438,23 +1438,23 @@ function SidebarItem({ icon: Icon, label, active = false, badge = undefined, col
         className={cn(
           "w-full flex items-center px-4 py-3.5 rounded-2xl text-sm font-bold transition-all group relative overflow-hidden",
           active
-            ? 'bg-white/10 text-white shadow-[inset_0_0_20px_rgba(255,255,255,0.05)]'
-            : 'text-white/40 hover:text-white hover:bg-white/5',
+            ? 'bg-[#34959E]/10 text-[#34959E] shadow-[inset_0_0_20px_rgba(52,149,158,0.05)]'
+            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100',
           collapsed ? "justify-center" : "justify-between"
         )}
       >
         {active && (
           <motion.div
             layoutId="active-pill"
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#F97316] rounded-r-full shadow-[0_0_15px_rgba(249,115,22,0.8)]"
+            className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#34959E] rounded-r-full shadow-[0_0_15px_rgba(52,149,158,0.4)]"
           />
         )}
         <div className="flex items-center gap-3">
           <div className={cn(
             "w-8 h-8 rounded-xl flex items-center justify-center transition-all",
-            active ? "bg-[#F97316]/20 shadow-inner" : "bg-white/5 group-hover:bg-white/10"
+            active ? "bg-[#34959E]/20 shadow-inner" : "bg-slate-100 group-hover:bg-slate-200"
           )}>
-            <Icon className={cn("w-4 h-4 transition-colors shrink-0", active ? "text-[#F97316]" : "text-white/40 group-hover:text-white")} />
+            <Icon className={cn("w-4 h-4 transition-colors shrink-0", active ? "text-[#34959E]" : "text-slate-400 group-hover:text-slate-700")} />
           </div>
           {!collapsed && <span className="tracking-tight">{label}</span>}
         </div>
@@ -1479,18 +1479,18 @@ function SidebarSubItem({ label, onClick, active }: { label: string, onClick?: (
       onClick={onClick}
       className={cn(
         "w-full flex items-center gap-3 px-8 py-2.5 text-xs font-bold transition-all relative group",
-        active ? "text-[#F97316]" : "text-white/30 hover:text-white"
+        active ? "text-[#34959E]" : "text-slate-500 hover:text-slate-900"
       )}
     >
       <div className={cn(
         "w-1.5 h-1.5 rounded-full transition-all",
-        active ? "bg-[#F97316] shadow-[0_0_8px_rgba(249,115,22,0.8)] scale-125" : "bg-white/10 group-hover:bg-white/30"
+        active ? "bg-[#34959E] shadow-[0_0_8px_rgba(52,149,158,0.4)] scale-125" : "bg-slate-300 group-hover:bg-slate-400"
       )}></div>
       <span className="tracking-tight">{label}</span>
       {active && (
         <motion.div
           layoutId="sub-active-line"
-          className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-[#F97316] rounded-l-full"
+          className="absolute right-0 top-1/2 -translate-y-1/2 w-0.5 h-4 bg-[#34959E] rounded-l-full"
         />
       )}
     </button>
