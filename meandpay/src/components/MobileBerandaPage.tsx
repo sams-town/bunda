@@ -58,16 +58,7 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
     return jam;
   };
 
-  const getFileUrl = (path: string | null) => {
-    if (!path) return null;
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    let cleanPath = path.replace(/^\//, '');
-    if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
-    const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
-    const apiBase = import.meta.env.VITE_API_MEANDPAY;
-    const base = (apiData || apiBase || 'https://hris.rsbundahalimah.com').replace(/\/api$/, '').replace(/\/$/, '');
-    return `${base}/uploads/${cleanPath}`;
-  };
+
   const navigate = useNavigate();
   const [userData, setUserData] = useState<any>(null);
   const [isAllMenuOpen, setIsAllMenuOpen] = useState(false);
@@ -253,7 +244,7 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
           <div className="relative flex items-center gap-2">
             {settings?.logo && (
               <div className="w-11 h-11 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
-                <img src={getFileUrl(settings.logo)} className="w-6 h-6 object-contain" alt="Company Logo" />
+                <img src={formatPhotoUrl(settings.logo)} className="w-6 h-6 object-contain" alt="Company Logo" />
               </div>
             )}
             <button 
