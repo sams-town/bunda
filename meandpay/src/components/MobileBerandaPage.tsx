@@ -151,47 +151,47 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
   };
 
   const layananObj = [
-    { label: 'Absensi',       icon: Fingerprint,   color: 'from-indigo-500 to-indigo-600', path: '/absen', perm: '' },
-    { label: 'Cuti & Izin',   icon: Calendar,       color: 'from-sky-500 to-sky-600',      path: '/leave', perm: '' },
-    { label: 'Dinas Luar',    icon: Navigation,     color: 'from-amber-500 to-amber-600',  path: '/attendance-dinas', perm: '' },
-    { label: 'Lembur',        icon: Zap,            color: 'from-yellow-400 to-orange-500',path: '/overtime-entry', perm: '' },
-    { label: 'Lokasi',        icon: MapPin,         color: 'from-rose-500 to-pink-600',    path: '/locations', perm: 'lokasi-kantor.view' },
-    { label: 'Password',      icon: Lock,           color: 'from-slate-600 to-slate-700',  path: '/change-password', perm: '' },
-    { label: 'Pegawai',       icon: Users,          color: 'from-teal-500 to-emerald-600', path: '/employees', perm: 'pegawai.view' },
-    { label: 'Lainnya',       icon: LayoutGrid,     color: 'from-violet-500 to-purple-600',path: '#', perm: '' },
+    { label: 'Absensi',       icon: Fingerprint,   color: 'from-[#34959E] to-[#287B83]', path: '/absen', perm: '' },
+    { label: 'Cuti & Izin',   icon: Calendar,       color: 'from-[#FB9917] to-[#D97706]',      path: '/leave', perm: '' },
+    { label: 'Dinas Luar',    icon: Navigation,     color: 'from-[#287B83] to-[#1E5C62]',  path: '/attendance-dinas', perm: '' },
+    { label: 'Lembur',        icon: Zap,            color: 'from-[#FB9917] to-[#D97706]',path: '/overtime-entry', perm: '' },
+    { label: 'Lokasi',        icon: MapPin,         color: 'from-[#990000] to-[#7A0000]',    path: '/locations', perm: 'lokasi-kantor.view' },
+    { label: 'Password',      icon: Lock,           color: 'from-[#64748B] to-[#475569]',  path: '/change-password', perm: '' },
+    { label: 'Pegawai',       icon: Users,          color: 'from-[#34959E] to-[#287B83]', path: '/employees', perm: 'pegawai.view' },
+    { label: 'Lainnya',       icon: LayoutGrid,     color: 'from-[#64748B] to-[#475569]',path: '#', perm: '' },
   ];
 
   const allMenusObj = [
-    { label: 'Absensi',            icon: QrCode,        color: 'bg-sky-50 text-sky-600',       path: '/absen', perm: '' },
-    { label: 'Kartu Pegawai',      icon: CreditCard,    color: 'bg-slate-50 text-slate-600',   path: '#', perm: '' },
-    { label: 'Cuti & Izin',        icon: Wifi,          color: 'bg-blue-50 text-blue-600',     path: '/leave', perm: '' },
-    { label: 'Dinas Luar',         icon: FileText,      color: 'bg-amber-50 text-amber-600',   path: '/attendance-dinas', perm: '' },
-    { label: 'Lembur',             icon: Zap,           color: 'bg-yellow-50 text-yellow-600', path: '/overtime-entry', perm: '' },
-    { label: 'Request Location',   icon: MapIcon,       color: 'bg-orange-50 text-orange-600', path: '/locations', perm: 'lokasi-kantor.view' },
-    { label: 'Change Password',    icon: Lock,          color: 'bg-indigo-50 text-indigo-600', path: '/change-password', perm: '' },
-    { label: 'Pegawai',            icon: Users,         color: 'bg-teal-50 text-teal-600',     path: '/employees', perm: 'pegawai.view' },
-    { label: 'Payroll',            icon: DollarSign,    color: 'bg-sky-50 text-sky-600',       path: '#', perm: 'payroll.view' },
-    { label: 'Dokumen',            icon: FileStack,     color: 'bg-amber-50 text-amber-600',   path: '/documents', perm: 'dokumen.view' },
-    { label: 'Kasbon',             icon: Wallet,        color: 'bg-blue-50 text-blue-600',     path: '/finance-kasbon', perm: 'kasbon.view' },
-    { label: 'History Absen',      icon: History,       color: 'bg-indigo-50 text-indigo-600', path: '/attendance', perm: '' },
-    { label: 'History Dinas',      icon: Calendar,      color: 'bg-rose-50 text-rose-600',     path: '/data-dinas', perm: '' },
-    { label: 'History Lembur',     icon: Activity,      color: 'bg-orange-50 text-orange-600', path: '/overtime-data', perm: '' },
-    { label: 'Euforia',            icon: Sparkles,      color: 'bg-teal-50 text-teal-600',     path: '#', perm: '' },
-    { label: 'Pengajuan Absensi',  icon: FilePlus,      color: 'bg-blue-50 text-blue-600',     path: '#', perm: '' },
-    { label: 'Reimbursement',      icon: HandCoins,     color: 'bg-emerald-50 text-emerald-600',path: '/finance-reimbursement', perm: 'reimbursement.view' },
-    { label: 'Pengajuan Keuangan', icon: Banknote,      color: 'bg-blue-50 text-blue-600',     path: '/finance-pengajuan', perm: 'list-pengajuan-keuangan.view' },
-    { label: 'Kunjungan',          icon: Navigation,    color: 'bg-amber-50 text-amber-600',   path: '/visit-kunjungan', perm: '' },
-    { label: 'Kinerja Pegawai',    icon: Briefcase,     color: 'bg-sky-50 text-sky-600',       path: '/kinerja-pegawai', perm: 'kinerja-pegawai.view' },
-    { label: 'Penugasan',          icon: ClipboardList, color: 'bg-indigo-50 text-indigo-600', path: '/visit-penugasan', perm: '' },
-    { label: 'Rapat Kerja',        icon: Presentation,  color: 'bg-rose-50 text-rose-600',     path: '/visit-rapat', perm: '' },
-    { label: 'Pegawai Keluar',     icon: UserMinus,     color: 'bg-rose-50 text-rose-600',     path: '/resignations', perm: 'exit.view' },
-    { label: 'Visit Dokter',       icon: Stethoscope,   color: 'bg-sky-50 text-sky-600',       path: '/visit-dokter', perm: '' },
-    { label: 'Data Visit Dokter',  icon: FileSearch,    color: 'bg-emerald-50 text-emerald-600',path: '#', perm: 'data-patroli.view' },
-    { label: 'Target Kinerja',     icon: Target,        color: 'bg-orange-50 text-orange-600', path: '/finance-target-kinerja', perm: 'target-kinerja.view' },
-    { label: 'Laporan Kerja',      icon: ClipboardCheck,color: 'bg-blue-50 text-blue-600',     path: '/kinerja-laporan-kerja', perm: 'laporan-kerja.view' },
-    { label: 'Profile',            icon: User,          color: 'bg-rose-50 text-rose-600',     path: '/profile', perm: '' },
-    { label: 'Petunjuk',           icon: Book,          color: 'bg-amber-50 text-amber-600',   path: '#', perm: 'petunjuk.view' },
-    { label: 'Logout',             icon: LogOut,        color: 'bg-rose-50 text-rose-600',     path: 'logout', perm: '' },
+    { label: 'Absensi',            icon: QrCode,        color: 'bg-[#EEF8F8] text-[#34959E]',       path: '/absen', perm: '' },
+    { label: 'Kartu Pegawai',      icon: CreditCard,    color: 'bg-white text-slate-600',   path: '#', perm: '' },
+    { label: 'Cuti & Izin',        icon: Wifi,          color: 'bg-[#EEF8F8] text-[#34959E]',     path: '/leave', perm: '' },
+    { label: 'Dinas Luar',         icon: FileText,      color: 'bg-[#FFF4E5] text-[#FB9917]',   path: '/attendance-dinas', perm: '' },
+    { label: 'Lembur',             icon: Zap,           color: 'bg-[#FFF4E5] text-[#FB9917]', path: '/overtime-entry', perm: '' },
+    { label: 'Request Location',   icon: MapIcon,       color: 'bg-[#FFF4E5] text-[#FB9917]', path: '/locations', perm: 'lokasi-kantor.view' },
+    { label: 'Change Password',    icon: Lock,          color: 'bg-[#EEF8F8] text-[#34959E]', path: '/change-password', perm: '' },
+    { label: 'Pegawai',            icon: Users,         color: 'bg-[#EEF8F8] text-[#34959E]',     path: '/employees', perm: 'pegawai.view' },
+    { label: 'Payroll',            icon: DollarSign,    color: 'bg-[#EEF8F8] text-[#34959E]',       path: '#', perm: 'payroll.view' },
+    { label: 'Dokumen',            icon: FileStack,     color: 'bg-[#FFF4E5] text-[#FB9917]',   path: '/documents', perm: 'dokumen.view' },
+    { label: 'Kasbon',             icon: Wallet,        color: 'bg-[#EEF8F8] text-[#34959E]',     path: '/finance-kasbon', perm: 'kasbon.view' },
+    { label: 'History Absen',      icon: History,       color: 'bg-[#EEF8F8] text-[#34959E]', path: '/attendance', perm: '' },
+    { label: 'History Dinas',      icon: Calendar,      color: 'bg-[#FFF0F0] text-[#990000]',     path: '/data-dinas', perm: '' },
+    { label: 'History Lembur',     icon: Activity,      color: 'bg-[#FFF4E5] text-[#FB9917]', path: '/overtime-data', perm: '' },
+    { label: 'Euforia',            icon: Sparkles,      color: 'bg-[#EEF8F8] text-[#34959E]',     path: '#', perm: '' },
+    { label: 'Pengajuan Absensi',  icon: FilePlus,      color: 'bg-[#EEF8F8] text-[#34959E]',     path: '#', perm: '' },
+    { label: 'Reimbursement',      icon: HandCoins,     color: 'bg-[#EEF8F8] text-[#34959E]',path: '/finance-reimbursement', perm: 'reimbursement.view' },
+    { label: 'Pengajuan Keuangan', icon: Banknote,      color: 'bg-[#EEF8F8] text-[#34959E]',     path: '/finance-pengajuan', perm: 'list-pengajuan-keuangan.view' },
+    { label: 'Kunjungan',          icon: Navigation,    color: 'bg-[#FFF4E5] text-[#FB9917]',   path: '/visit-kunjungan', perm: '' },
+    { label: 'Kinerja Pegawai',    icon: Briefcase,     color: 'bg-[#EEF8F8] text-[#34959E]',       path: '/kinerja-pegawai', perm: 'kinerja-pegawai.view' },
+    { label: 'Penugasan',          icon: ClipboardList, color: 'bg-[#EEF8F8] text-[#34959E]', path: '/visit-penugasan', perm: '' },
+    { label: 'Rapat Kerja',        icon: Presentation,  color: 'bg-[#FFF0F0] text-[#990000]',     path: '/visit-rapat', perm: '' },
+    { label: 'Pegawai Keluar',     icon: UserMinus,     color: 'bg-[#FFF0F0] text-[#990000]',     path: '/resignations', perm: 'exit.view' },
+    { label: 'Visit Dokter',       icon: Stethoscope,   color: 'bg-[#EEF8F8] text-[#34959E]',       path: '/visit-dokter', perm: '' },
+    { label: 'Data Visit Dokter',  icon: FileSearch,    color: 'bg-[#EEF8F8] text-[#34959E]',path: '#', perm: 'data-patroli.view' },
+    { label: 'Target Kinerja',     icon: Target,        color: 'bg-[#FFF4E5] text-[#FB9917]', path: '/finance-target-kinerja', perm: 'target-kinerja.view' },
+    { label: 'Laporan Kerja',      icon: ClipboardCheck,color: 'bg-[#EEF8F8] text-[#34959E]',     path: '/kinerja-laporan-kerja', perm: 'laporan-kerja.view' },
+    { label: 'Profile',            icon: User,          color: 'bg-[#FFF0F0] text-[#990000]',     path: '/profile', perm: '' },
+    { label: 'Petunjuk',           icon: Book,          color: 'bg-[#FFF4E5] text-[#FB9917]',   path: '#', perm: 'petunjuk.view' },
+    { label: 'Logout',             icon: LogOut,        color: 'bg-[#FFF0F0] text-[#990000]',     path: 'logout', perm: '' },
   ];
 
   const layanan = layananObj.filter(m => hasPermission(m.perm));
@@ -217,10 +217,10 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
   const dateStr = currentTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-[#F0F4FF] pb-28 font-sans">
+    <div className="min-h-screen bg-[#F8FAFC] pb-28 font-sans">
 
       {/* ─── HERO HEADER ─── */}
-      <div className="relative bg-gradient-to-br from-indigo-700 via-indigo-600 to-violet-600 pt-14 pb-32 px-6 overflow-hidden">
+      <div className="relative bg-gradient-to-b from-white to-[#F8FAFC] pt-14 pb-32 px-6 overflow-hidden">
         {/* Decorative blobs */}
         <div className="absolute -top-16 -right-16 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-400/20 rounded-full blur-3xl" />
@@ -229,31 +229,31 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
         {/* Top Row */}
         <div className="relative z-10 flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-white/30 shadow-xl bg-white/20 flex items-center justify-center shrink-0">
+            <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-[#E2E8F0] shadow-sm bg-white flex items-center justify-center shrink-0">
               {(userData?.foto_karyawan || userData?.foto_face_recognition) ? (
                 <img src={formatPhotoUrl(userData.foto_karyawan || userData.foto_face_recognition)} className="w-full h-full object-cover" alt="Avatar" referrerPolicy="no-referrer" />
               ) : (
-                <User className="w-6 h-6 text-white" />
+                <User className="w-6 h-6 text-[#64748B]" />
               )}
             </div>
             <div>
-              <p className="text-white/60 text-[10px] font-black uppercase tracking-widest">{greeting()}</p>
-              <h1 className="text-white text-base font-black tracking-tight leading-tight">{userData?.name || 'Pengguna'}</h1>
+              <p className="text-[#64748B] text-[10px] font-black uppercase tracking-widest">{greeting()}</p>
+              <h1 className="text-[#0F172A] text-base font-black tracking-tight leading-tight">{userData?.name || 'Pengguna'}</h1>
             </div>
           </div>
           <div className="relative flex items-center gap-2">
             {settings?.logo && (
-              <div className="w-11 h-11 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20">
+              <div className="w-11 h-11 bg-white shadow-sm rounded-2xl flex items-center justify-center border border-[#E2E8F0]">
                 <img src={formatPhotoUrl(settings.logo)} className="w-6 h-6 object-contain" alt="Company Logo" />
               </div>
             )}
             <button 
               onClick={() => navigate('/notifications')}
-              className="relative w-11 h-11 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20 active:scale-95 transition-all"
+              className="relative w-11 h-11 bg-white shadow-sm rounded-2xl flex items-center justify-center border border-[#E2E8F0] active:scale-95 transition-all"
             >
-              <Bell className="w-5 h-5 text-white" />
+              <Bell className="w-5 h-5 text-[#34959E]" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-rose-500 text-white text-[9px] font-black rounded-full border-2 border-[#545CEB] flex items-center justify-center shadow-lg">
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-[#FFF0F0]0 text-white text-[9px] font-black rounded-full border-2 border-[#545CEB] flex items-center justify-center shadow-lg">
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
@@ -263,10 +263,10 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
 
         {/* Live Clock */}
         <div className="relative z-10 text-center mt-2">
-          <p className="text-white text-5xl font-black tracking-tight tabular-nums drop-shadow-lg">
+          <p className="text-[#34959E] text-5xl font-black tracking-tight tabular-nums drop-shadow-lg">
             {timeStr}
           </p>
-          <p className="text-white/50 text-[11px] font-bold mt-2 uppercase tracking-widest">{dateStr}</p>
+          <p className="text-[#64748B] text-[11px] font-bold mt-2 uppercase tracking-widest">{dateStr}</p>
         </div>
       </div>
 
@@ -276,13 +276,13 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white rounded-[2.5rem] shadow-2xl shadow-indigo-500/10 p-6 border border-white"
+          className="bg-white rounded-[24px] shadow-[0_10px_30px_rgba(15,23,42,0.06)] p-6 border border-[#E2E8F0]"
         >
           <div className="grid grid-cols-3 gap-2 divide-x divide-slate-100">
             {/* Jam Kerja (Shift) */}
             <div className="flex flex-col items-center text-center px-2">
-              <div className="w-9 h-9 bg-indigo-50 rounded-xl flex items-center justify-center mb-2">
-                <Clock className="w-4 h-4 text-indigo-500" />
+              <div className="w-9 h-9 bg-[#EEF8F8] rounded-xl flex items-center justify-center mb-2">
+                <Clock className="w-4 h-4 text-[#34959E]" />
               </div>
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Jam Kerja</p>
               <p className="text-[11px] font-black text-slate-800">
@@ -294,17 +294,17 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
             <div className="flex flex-col items-center text-center px-2">
               <div className={cn(
                 "w-9 h-9 rounded-xl flex items-center justify-center mb-2",
-                absenData?.jam_absen ? 'bg-emerald-50' : 'bg-slate-50'
+                absenData?.jam_absen ? 'bg-[#EEF8F8]' : 'bg-white'
               )}>
                 <Fingerprint className={cn(
                   "w-4 h-4",
-                  absenData?.jam_absen ? 'text-emerald-500' : 'text-slate-400'
+                  absenData?.jam_absen ? 'text-[#34959E]' : 'text-slate-400'
                 )} />
               </div>
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Jam Masuk</p>
               <p className={cn(
                 "text-[11px] font-black",
-                absenData?.jam_absen ? 'text-emerald-600' : 'text-slate-400'
+                absenData?.jam_absen ? 'text-[#34959E]' : 'text-slate-400'
               )}>
                 {formatJam(absenData?.jam_absen)}
               </p>
@@ -313,17 +313,17 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
             <div className="flex flex-col items-center text-center px-2">
               <div className={cn(
                 "w-9 h-9 rounded-xl flex items-center justify-center mb-2",
-                absenData?.jam_pulang ? 'bg-rose-50' : 'bg-slate-50'
+                absenData?.jam_pulang ? 'bg-[#FFF0F0]' : 'bg-white'
               )}>
                 <TrendingUp className={cn(
                   "w-4 h-4",
-                  absenData?.jam_pulang ? 'text-rose-500' : 'text-slate-400'
+                  absenData?.jam_pulang ? 'text-[#990000]' : 'text-slate-400'
                 )} />
               </div>
               <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Jam Pulang</p>
               <p className={cn(
                 "text-[11px] font-black",
-                absenData?.jam_pulang ? 'text-rose-600' : 'text-slate-400'
+                absenData?.jam_pulang ? 'text-[#990000]' : 'text-slate-400'
               )}>
                 {formatJam(absenData?.jam_pulang)}
               </p>
@@ -333,11 +333,11 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
           {/* Finance Quick Stats */}
           <div className="mt-5 pt-5 border-t border-slate-50 grid grid-cols-3 gap-3">
             {[
-              { label: 'Payroll', icon: DollarSign, color: 'text-indigo-500 bg-indigo-50', value: null, path: '/payroll' },
-              { label: 'Reimburse', icon: HandCoins, color: 'text-emerald-500 bg-emerald-50', value: `Rp ${Number(userData?.saldo_kasbon || 0).toLocaleString('id-ID')}`, path: '/finance-reimbursement' },
-              { label: 'Kasbon', icon: Wallet, color: 'text-amber-500 bg-amber-50', value: 'Rp 0', path: '/finance-kasbon' },
+              { label: 'Payroll', icon: DollarSign, color: 'text-[#34959E] bg-[#EEF8F8]', value: null, path: '/payroll' },
+              { label: 'Reimburse', icon: HandCoins, color: 'text-[#34959E] bg-[#EEF8F8]', value: `Rp ${Number(userData?.saldo_kasbon || 0).toLocaleString('id-ID')}`, path: '/finance-reimbursement' },
+              { label: 'Kasbon', icon: Wallet, color: 'text-[#FB9917] bg-[#FFF4E5]', value: 'Rp 0', path: '/finance-kasbon' },
             ].map((item, i) => (
-              <button key={i} onClick={() => navigate(item.path)} className="flex flex-col items-center gap-2 p-3 bg-slate-50/60 rounded-2xl border border-slate-100 active:scale-95 transition-all">
+              <button key={i} onClick={() => navigate(item.path)} className="flex flex-col items-center gap-2 p-3 bg-white rounded-2xl border border-[#E2E8F0] active:scale-95 transition-all">
                 <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', item.color)}>
                   <item.icon className="w-5 h-5" />
                 </div>
@@ -357,16 +357,16 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
           transition={{ delay: 0.2 }}
           whileTap={{ scale: 0.97 }}
           onClick={() => navigate('/absen')}
-          className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 rounded-[2rem] p-6 flex items-center justify-between shadow-xl shadow-indigo-500/25 overflow-hidden relative"
+          className="w-full bg-gradient-to-r from-[#34959E] to-[#287B83] rounded-[24px] p-6 flex items-center justify-between shadow-xl shadow-[0_10px_30px_rgba(52,149,158,0.25)] overflow-hidden relative"
         >
           <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full" />
           <div className="absolute right-4 bottom-0 w-20 h-20 bg-white/5 rounded-full" />
           <div className="relative z-10">
-            <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">Mulai Hari Ini</p>
+            <p className="text-[10px] font-black text-[#64748B] uppercase tracking-widest mb-1">Mulai Hari Ini</p>
             <p className="text-lg font-black text-white tracking-tight">Rekam Kehadiran</p>
           </div>
           <div className="relative z-10 w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-lg">
-            <Fingerprint className="w-8 h-8 text-indigo-600" />
+            <Fingerprint className="w-8 h-8 text-[#34959E]" />
           </div>
         </motion.button>
       </div>
@@ -377,7 +377,7 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
           <h2 className="text-base font-black text-slate-800 tracking-tight">Layanan Cepat</h2>
           <button
             onClick={() => setIsAllMenuOpen(true)}
-            className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1"
+            className="text-[10px] font-black text-[#34959E] uppercase tracking-widest flex items-center gap-1"
           >
             Semua <ChevronRight className="w-3 h-3" />
           </button>
@@ -410,16 +410,16 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
       <div className="mt-8 px-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-black text-slate-800 tracking-tight">Aktivitas Terakhir</h2>
-          <button onClick={() => navigate('/attendance')} className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1">
+          <button onClick={() => navigate('/attendance')} className="text-[10px] font-black text-[#34959E] uppercase tracking-widest flex items-center gap-1">
             Lihat <ArrowUpRight className="w-3 h-3" />
           </button>
         </div>
 
         <div className="space-y-3">
           {[
-            { label: 'Riwayat Absensi', path: '/attendance', icon: History, color: 'bg-indigo-50 text-indigo-600', desc: 'Lihat log masuk & pulang' },
-            { label: 'Riwayat Dinas', path: '/data-dinas', icon: Navigation, color: 'bg-amber-50 text-amber-600', desc: 'Laporan perjalanan dinas' },
-            { label: 'Riwayat Lembur', path: '/overtime-data', icon: Zap, color: 'bg-orange-50 text-orange-600', desc: 'Catatan jam lembur' },
+            { label: 'Riwayat Absensi', path: '/attendance', icon: History, color: 'bg-[#EEF8F8] text-[#34959E]', desc: 'Lihat log masuk & pulang' },
+            { label: 'Riwayat Dinas', path: '/data-dinas', icon: Navigation, color: 'bg-[#FFF4E5] text-[#FB9917]', desc: 'Laporan perjalanan dinas' },
+            { label: 'Riwayat Lembur', path: '/overtime-data', icon: Zap, color: 'bg-[#FFF4E5] text-[#FB9917]', desc: 'Catatan jam lembur' },
           ].map((item, i) => (
             <motion.button
               key={i}
@@ -427,7 +427,7 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 + i * 0.05 }}
               onClick={() => navigate(item.path)}
-              className="w-full bg-white rounded-[1.75rem] p-5 flex items-center gap-4 shadow-sm border border-slate-100 active:scale-[0.98] transition-all"
+              className="w-full bg-white rounded-[24px] p-5 flex items-center gap-4 shadow-sm border border-[#E2E8F0] active:scale-[0.98] transition-all"
             >
               <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner", item.color)}>
                 <item.icon className="w-6 h-6" />
@@ -450,7 +450,7 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 400 }}
-            className="fixed inset-0 z-[200] bg-[#F0F4FF] flex flex-col"
+            className="fixed inset-0 z-[200] bg-[#F8FAFC] flex flex-col"
           >
             {/* Modal Header */}
             <div className="bg-gradient-to-br from-indigo-700 to-violet-600 pt-14 pb-8 px-6 relative overflow-hidden">
@@ -462,7 +462,7 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
                 </div>
                 <button
                   onClick={() => setIsAllMenuOpen(false)}
-                  className="w-11 h-11 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/20"
+                  className="w-11 h-11 bg-white shadow-sm rounded-2xl flex items-center justify-center border border-[#E2E8F0]"
                 >
                   <X className="w-5 h-5 text-white" />
                 </button>
@@ -486,7 +486,7 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
                     className="flex flex-col items-center gap-2"
                   >
                     <div className={cn(
-                      "w-14 h-14 rounded-[1.25rem] flex items-center justify-center shadow-sm border border-white",
+                      "w-14 h-14 rounded-[1.25rem] flex items-center justify-center shadow-sm border border-[#E2E8F0]",
                       item.color
                     )}>
                       <item.icon className="w-6 h-6" />
