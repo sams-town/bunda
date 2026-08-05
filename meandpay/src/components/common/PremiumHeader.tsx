@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { Menu, Search, Bell, Sun, User, Settings, LogOut } from 'lucide-react';
 import { cn, formatPhotoUrl } from '../../lib/utils';
 import { Page } from '../../lib/routes';
@@ -28,7 +28,14 @@ export function PremiumHeader({
   previewNotifications, handleMarkRead, currentPage
 }: PremiumHeaderProps) {
   
-  const today = new Intl.DateTimeFormat('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+  const today = new Intl.DateTimeFormat('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' }).format(new Date());
+
+  const currentHour = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Jakarta"})).getHours();
+  let greeting = "Good Evening";
+  if (currentHour >= 5 && currentHour < 12) greeting = "Good Morning";
+  else if (currentHour >= 12 && currentHour < 15) greeting = "Good Afternoon";
+  else if (currentHour >= 15 && currentHour < 18) greeting = "Good Afternoon"; // Can also use Sore
+  else if (currentHour >= 0 && currentHour < 5) greeting = "Good Night";
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-[#E2E8F0] px-8 py-5 shadow-sm">
@@ -49,7 +56,7 @@ export function PremiumHeader({
               <span className="text-[#34959E]">{currentPage.replace('-', ' ')}</span>
             </div>
             <h1 className="text-2xl font-extrabold text-[#0F172A] tracking-tight">
-              Good Morning, {user?.name?.split(' ')[0] || 'Admin'} <span className="animate-bounce inline-block">👋</span>
+              {greeting}, {user?.name?.split(' ')[0] || 'Admin'} <span className="animate-bounce inline-block">👋</span>
             </h1>
           </div>
         </div>

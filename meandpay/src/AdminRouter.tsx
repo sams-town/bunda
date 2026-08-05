@@ -42,10 +42,9 @@ import {
   AlertCircle,
   FileCheck,
   UserX,
-  UserPlus,
-  Stethoscope
+  UserPlus
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { NotificationsPage } from './components/NotificationsPage';
 import { ProfilePage } from './components/ProfilePage';
 import { EmployeesPage } from './components/EmployeesPage';

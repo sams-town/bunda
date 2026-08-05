@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import {
   LayoutDashboard, Bell, Users, Stethoscope, UserMinus, Clock, Briefcase, MapPin, Database,
   Calendar, CreditCard, ShieldCheck, FileText, Settings, User, LogOut, ChevronRight
