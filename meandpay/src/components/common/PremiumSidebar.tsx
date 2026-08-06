@@ -2,7 +2,8 @@ import React from 'react';
 import { motion } from 'motion/react';
 import {
   LayoutDashboard, Bell, Users, Stethoscope, UserMinus, Clock, Briefcase, MapPin, Database,
-  Calendar, CreditCard, ShieldCheck, FileText, Settings, User, LogOut, ChevronRight
+  Calendar, CreditCard, ShieldCheck, FileText, Settings, User, LogOut, ChevronRight,
+  Wallet, TrendingUp, Package, FileCheck
 } from 'lucide-react';
 import { cn, formatPhotoUrl } from '../../lib/utils';
 import { Page } from '../../lib/routes';
@@ -167,8 +168,91 @@ export function PremiumSidebar({
           {hasPermission('cuti.view') && (
             <SidebarItem icon={Calendar} label="Cuti & Izin" active={currentPage === 'leave'} onClick={() => setCurrentPage('leave')} isCollapsed={isSidebarCollapsed} />
           )}
+        </div>
 
+        <div className="mb-6">
+          {!isSidebarCollapsed && <div className="px-8 mb-3 text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Waktu & Shift</div>}
+          
+          <SidebarItem icon={Clock} label="Lembur" active={['overtime-entry', 'overtime-data'].includes(currentPage)} onClick={() => setIsOvertimeOpen(!isOvertimeOpen)} hasChevron isCollapsed={isSidebarCollapsed} />
+          {isOvertimeOpen && !isSidebarCollapsed && (
+            <div className="mb-2 relative before:absolute before:left-8 before:top-0 before:bottom-0 before:w-[1px] before:bg-slate-200">
+               <SidebarSubItem label="Input Lembur" onClick={() => setCurrentPage('overtime-entry')} active={currentPage === 'overtime-entry'} />
+               {hasPermission('lembur.view') && <SidebarSubItem label="Data Lembur" onClick={() => setCurrentPage('overtime-data')} active={currentPage === 'overtime-data'} />}
+            </div>
+          )}
+
+          {hasPermission('shift.view') && (
+            <SidebarItem icon={Calendar} label="Manajemen Shift" active={currentPage === 'shift'} onClick={() => setCurrentPage('shift')} isCollapsed={isSidebarCollapsed} />
+          )}
+        </div>
+
+        <div className="mb-6">
+          {!isSidebarCollapsed && <div className="px-8 mb-3 text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Kunjungan & Penugasan</div>}
+          
+          <SidebarItem icon={MapPin} label="Kunjungan" active={['visit-dokter', 'visit-kunjungan', 'visit-penugasan', 'visit-rapat'].includes(currentPage)} onClick={() => setIsVisitOpen(!isVisitOpen)} hasChevron isCollapsed={isSidebarCollapsed} />
+          {isVisitOpen && !isSidebarCollapsed && (
+             <div className="mb-2 relative before:absolute before:left-8 before:top-0 before:bottom-0 before:w-[1px] before:bg-slate-200">
+                <SidebarSubItem label="Visit Dokter" onClick={() => setCurrentPage('visit-dokter')} active={currentPage === 'visit-dokter'} />
+                <SidebarSubItem label="Kunjungan" onClick={() => setCurrentPage('visit-kunjungan')} active={currentPage === 'visit-kunjungan'} />
+                <SidebarSubItem label="Penugasan Kerja" onClick={() => setCurrentPage('visit-penugasan')} active={currentPage === 'visit-penugasan'} />
+                <SidebarSubItem label="Rapat" onClick={() => setCurrentPage('visit-rapat')} active={currentPage === 'visit-rapat'} />
+             </div>
+          )}
+        </div>
+
+        <div className="mb-6">
+          {!isSidebarCollapsed && <div className="px-8 mb-3 text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Keuangan</div>}
+          
           <SidebarItem icon={CreditCard} label="Payroll" active={currentPage === 'finance-payroll'} onClick={() => setCurrentPage('finance-payroll')} isCollapsed={isSidebarCollapsed} />
+          
+          <SidebarItem icon={Wallet} label="Keuangan" active={['finance-pajak', 'finance-kasbon', 'finance-reimbursement', 'finance-kategori-reimbursement', 'finance-pengajuan', 'finance-status-pajak', 'finance-target-kinerja', 'finance-detail-target'].includes(currentPage)} onClick={() => setIsFinanceOpen(!isFinanceOpen)} hasChevron isCollapsed={isSidebarCollapsed} />
+          {isFinanceOpen && !isSidebarCollapsed && (
+             <div className="mb-2 relative before:absolute before:left-8 before:top-0 before:bottom-0 before:w-[1px] before:bg-slate-200">
+                {hasPermission('finance.view') && (
+                  <>
+                    <SidebarSubItem label="Pajak / PPh 21" onClick={() => setCurrentPage('finance-pajak')} active={currentPage === 'finance-pajak'} />
+                    <SidebarSubItem label="Kasbon" onClick={() => setCurrentPage('finance-kasbon')} active={currentPage === 'finance-kasbon'} />
+                    <SidebarSubItem label="Reimbursement" onClick={() => setCurrentPage('finance-reimbursement')} active={currentPage === 'finance-reimbursement'} />
+                    <SidebarSubItem label="Kategori Reimbursement" onClick={() => setCurrentPage('finance-kategori-reimbursement')} active={currentPage === 'finance-kategori-reimbursement'} />
+                    <SidebarSubItem label="Pengajuan" onClick={() => setCurrentPage('finance-pengajuan')} active={currentPage === 'finance-pengajuan'} />
+                    <SidebarSubItem label="Status Pajak" onClick={() => setCurrentPage('finance-status-pajak')} active={currentPage === 'finance-status-pajak'} />
+                    <SidebarSubItem label="Target Kinerja" onClick={() => setCurrentPage('finance-target-kinerja')} active={currentPage === 'finance-target-kinerja'} />
+                  </>
+                )}
+             </div>
+          )}
+        </div>
+
+        <div className="mb-6">
+          {!isSidebarCollapsed && <div className="px-8 mb-3 text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Operasional</div>}
+          
+          {hasPermission('kinerja.view') && (
+            <SidebarItem icon={TrendingUp} label="Kinerja" active={['kinerja-jenis', 'kinerja-laporan', 'kinerja-pegawai', 'kinerja-laporan-kerja'].includes(currentPage)} onClick={() => setCurrentPage('kinerja-pegawai')} isCollapsed={isSidebarCollapsed} />
+          )}
+
+          {hasPermission('inventory.view') && (
+            <SidebarItem icon={Package} label="Inventory" active={currentPage === 'inventory'} onClick={() => setCurrentPage('inventory')} isCollapsed={isSidebarCollapsed} />
+          )}
+
+          {hasPermission('dokumen.view') && (
+            <SidebarItem icon={FileText} label="Dokumen" active={currentPage === 'documents'} onClick={() => setCurrentPage('documents')} isCollapsed={isSidebarCollapsed} />
+          )}
+
+          {hasPermission('kontrak.view') && (
+            <SidebarItem icon={FileCheck} label="Kontrak Pegawai" active={currentPage === 'contracts'} onClick={() => setCurrentPage('contracts')} isCollapsed={isSidebarCollapsed} />
+          )}
+
+          {isAdmin && (
+             <SidebarItem icon={Database} label="Rekap Data" active={currentPage === 'data-recap'} onClick={() => setCurrentPage('data-recap')} isCollapsed={isSidebarCollapsed} />
+          )}
+        </div>
+
+        <div className="mb-6">
+          {!isSidebarCollapsed && <div className="px-8 mb-3 text-[10px] font-bold text-[#64748B] uppercase tracking-wider">Sistem</div>}
+          
+          {isAdmin && (
+             <SidebarItem icon={Settings} label="Pengaturan" active={currentPage === 'settings'} onClick={() => setCurrentPage('settings')} isCollapsed={isSidebarCollapsed} />
+          )}
         </div>
       </div>
 
