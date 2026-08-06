@@ -138,7 +138,7 @@ class UserService {
             prisma.users.findMany({
                 where,
                 skip,
-                // take: limit,
+                take: limit,
                 orderBy: { id: "desc" },
                 include: { jabatan: true, lokasi: true, status_pajak: true },
             }),
