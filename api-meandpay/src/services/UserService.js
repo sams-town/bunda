@@ -117,7 +117,7 @@ class UserService {
 
         const where = { AND: andConditions };
 
-        if (query.role) {
+        if (query.role && query.role !== 'all') {
             const roleUsers = await prisma.model_has_roles.findMany({
                 where: {
                     roles: {
@@ -354,7 +354,7 @@ class UserService {
 
         const where = { AND: andConditions };
 
-        if (query.role) {
+        if (query.role && query.role !== 'all') {
             const roleUsers = await prisma.model_has_roles.findMany({
                 where: {
                     roles: {

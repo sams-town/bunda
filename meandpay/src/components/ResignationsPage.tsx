@@ -234,7 +234,7 @@ export function ResignationsPage() {
       let page = 1;
       let totalPages = 1;
       do {
-        const res = await fetch(`${import.meta.env.VITE_API_MEANDPAY}/users?page=${page}&limit=100`);
+        const res = await fetch(`${import.meta.env.VITE_API_MEANDPAY}/users?page=${page}&limit=100&role=all`);
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) {
           allEmployees = [
