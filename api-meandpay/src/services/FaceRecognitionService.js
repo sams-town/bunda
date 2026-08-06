@@ -82,7 +82,7 @@ class FaceRecognitionService {
         }
 
         let bestMatch = null;
-        let bestDistance = 0.45; // tightened threshold from 0.55 to 0.45
+        let bestDistance = 0.55; // threshold adjusted from 0.45 to 0.55
 
         for (const user of users) {
             if (!user.foto_face_recognition) continue;
@@ -169,7 +169,7 @@ class FaceRecognitionService {
 
         try {
             const distance = faceapi.euclideanDistance(incomingDesc, userDesc);
-            const threshold = 0.45; // tightened threshold
+            const threshold = 0.55; // threshold adjusted
             
             if (distance < threshold) {
                 return { isMatch: true, distance };
@@ -190,7 +190,7 @@ class FaceRecognitionService {
             if (!desc2) return { isMatch: false, error: "Tidak ditemukan wajah pada input" };
 
             const distance = faceapi.euclideanDistance(desc1, desc2);
-            return { isMatch: distance < 0.45, distance };
+            return { isMatch: distance < 0.55, distance };
         } catch (error) {
             return { isMatch: false, error: error.message };
         }
