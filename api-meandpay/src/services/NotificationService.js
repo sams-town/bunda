@@ -177,9 +177,10 @@ class NotificationService {
         try {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const thirtyDaysLater = new Date();
-            thirtyDaysLater.setDate(today.getDate() + 30);
-            thirtyDaysLater.setHours(23, 59, 59, 999);
+            const targetDate = new Date();
+            // Setting 3 bulan (90 hari) sebelum kontrak habis
+            targetDate.setDate(today.getDate() + 90);
+            targetDate.setHours(23, 59, 59, 999);
 
             // 1. Fetch admins
             const admins = await prisma.users.findMany({
@@ -208,7 +209,7 @@ class NotificationService {
             const expiringContracts = await prisma.kontraks.findMany({
                 where: {
                     tanggal_selesai: {
-                        lte: thirtyDaysLater
+                        lte: targetDate
                     }
                 }
             });
@@ -270,7 +271,7 @@ class NotificationService {
             const expiringPKWTUsers = await prisma.users.findMany({
                 where: {
                     tanggal_berakhir_pkwt: {
-                        lte: thirtyDaysLater
+                        lte: targetDate
                     }
                 },
                 select: { id: true, name: true, tanggal_berakhir_pkwt: true }
