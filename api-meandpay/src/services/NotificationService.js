@@ -3,6 +3,7 @@ import prisma from "../config/prisma.js";
 class NotificationService {
     async getAll(query = {}) {
         await this.checkExpiringContracts();
+        await this.checkUpcomingBirthdays();
         const search = query.search || "";
         const notifiableId = query.notifiable_id;
         const where = {};
@@ -279,20 +280,19 @@ class NotificationService {
 
             for (const employee of expiringPKWTUsers) {
                 if (!employee.tanggal_berakhir_pkwt) continue;
-                const tglSelesaiStr = formatDate(employee.tanggal_berakhir_pkwt);
-                const msg = `PKWT ${employee.name} akan berakhir pada ${tglSelesaiStr}`;
-                const employeeIdStr = employee.id.toString();
+                const tglBerakhirStr = formatDate(employee.tanggal_berakhir_pkwt);
+                const msg = `Kontrak PKWT ${employee.name} akan berakhir pada ${tglBerakhirStr}`;
+                const userIdStr = employee.id.toString();
 
                 for (const admin of admins) {
-                    // Check if notification already exists for this employee and expiration date
                     const existingNotif = await prisma.notifications.findFirst({
                         where: {
-                            type: 'Kontrak Berakhir',
+                            type: 'Kontrak PKWT Berakhir',
                             notifiable_id: admin.id,
                             data: {
                                 AND: [
-                                    { contains: `"pkwt_user_id":"${employeeIdStr}"` },
-                                    { contains: `"tanggal_selesai":"${employee.tanggal_berakhir_pkwt.toISOString()}"` }
+                                    { contains: `"user_id":"${userIdStr}"` },
+                                    { contains: `"tanggal_berakhir_pkwt":"${employee.tanggal_berakhir_pkwt.toISOString()}"` }
                                 ]
                             }
                         }
@@ -301,14 +301,13 @@ class NotificationService {
                     if (!existingNotif) {
                         await prisma.notifications.create({
                             data: {
-                                type: 'Kontrak Berakhir',
+                                type: 'Kontrak PKWT Berakhir',
                                 notifiable_type: 'App\\Models\\User',
                                 notifiable_id: admin.id,
                                 data: JSON.stringify({
                                     message: msg,
-                                    pkwt_user_id: employeeIdStr,
-                                    user_id: employeeIdStr,
-                                    tanggal_selesai: employee.tanggal_berakhir_pkwt
+                                    user_id: userIdStr,
+                                    tanggal_berakhir_pkwt: employee.tanggal_berakhir_pkwt
                                 }),
                                 created_at: new Date(),
                                 updated_at: new Date()
@@ -317,8 +316,100 @@ class NotificationService {
                     }
                 }
             }
-        } catch (err) {
-            console.error("Gagal melakukan pengecekan kontrak berakhir:", err.message);
+
+        } catch (error) {
+            console.error("Error checking expiring contracts:", error);
+        }
+    }
+
+    async checkUpcomingBirthdays() {
+        try {
+            const today = new Date();
+            const tomorrow = new Date();
+            tomorrow.setDate(today.getDate() + 1);
+            
+            const targetMonth = tomorrow.getMonth() + 1;
+            const targetDay = tomorrow.getDate();
+            const targetYear = tomorrow.getFullYear();
+
+            // Fetch admins
+            const admins = await prisma.users.findMany({
+                where: {
+                    OR: [
+                        { is_admin: 'admin' },
+                        { is_admin: 'superadmin' },
+                        { id: 1n }
+                    ]
+                },
+                select: { id: true }
+            });
+
+            if (admins.length === 0) return;
+
+            // Fetch users with birthdays
+            const allUsers = await prisma.users.findMany({
+                where: { tgl_lahir: { not: null } },
+                select: { id: true, name: true, tgl_lahir: true }
+            });
+
+            for (const u of allUsers) {
+                try {
+                    const parts = u.tgl_lahir.includes('-') ? u.tgl_lahir.split('-') : u.tgl_lahir.split('/');
+                    if (parts.length === 3) {
+                        let bDay, bMonth;
+                        if (parts[0].length === 4) { // YYYY-MM-DD
+                            bMonth = parseInt(parts[1]);
+                            bDay = parseInt(parts[2]);
+                        } else { // DD-MM-YYYY
+                            bDay = parseInt(parts[0]);
+                            bMonth = parseInt(parts[1]);
+                        }
+
+                        if (bMonth === targetMonth && bDay === targetDay) {
+                            const msg = `Besok adalah ulang tahun ${u.name}!`;
+                            const userIdStr = u.id.toString();
+
+                            for (const admin of admins) {
+                                // Check if notification already exists for this year's birthday
+                                const existingNotif = await prisma.notifications.findFirst({
+                                    where: {
+                                        type: 'Ulang Tahun Karyawan',
+                                        notifiable_id: admin.id,
+                                        data: {
+                                            AND: [
+                                                { contains: `"user_id":"${userIdStr}"` },
+                                                { contains: `"year":${targetYear}` }
+                                            ]
+                                        }
+                                    }
+                                });
+
+                                if (!existingNotif) {
+                                    await prisma.notifications.create({
+                                        data: {
+                                            type: 'Ulang Tahun Karyawan',
+                                            notifiable_type: 'App\\Models\\User',
+                                            notifiable_id: admin.id,
+                                            data: JSON.stringify({
+                                                message: msg,
+                                                user_id: userIdStr,
+                                                year: targetYear
+                                            }),
+                                            created_at: new Date(),
+                                            updated_at: new Date()
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error parsing birthday for user:", u.name, e);
+                }
+            }
+
+        } catch (error) {
+            console.error("Error checking upcoming birthdays:", error);
         }
     }
 
