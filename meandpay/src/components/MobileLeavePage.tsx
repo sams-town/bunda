@@ -16,11 +16,13 @@ import {
   UploadCloud,
   Save,
   Download,
-  User
+  User,
+  Printer
 } from 'lucide-react';
 import { cn, formatPhotoUrl, compressImageFile } from '../lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from './Toast';
+import { generateLeaveFormPDF } from '../lib/pdfLeaveForm';
 
 const BASE_URL = import.meta.env.VITE_API_MEANDPAY;
 
@@ -50,6 +52,21 @@ export function MobileLeavePage() {
   const [viewState, setViewState] = useState<'list' | 'add' | 'edit'>('list');
   const [editItem, setEditItem] = useState<any | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDownloadForm = async (leave: any) => {
+    await generateLeaveFormPDF({
+      tanggal_pengajuan: new Date(leave.created_at || leave.tanggal).toLocaleDateString('id-ID'),
+      nama: leave.pemohon?.name || leave.users?.name || userData?.name || '-',
+      nik: '.......',
+      departemen: '.......',
+      tanggal_mulai_kerja: '.......',
+      dari_tanggal: new Date(leave.tanggal).toLocaleDateString('id-ID'),
+      sampai_tanggal: new Date(leave.tanggal).toLocaleDateString('id-ID'),
+      jumlah_hari: '1', 
+      alasan_cuti: leave.alasan_cuti || '-',
+      jenis_cuti: leave.nama_cuti || 'Cuti Tahunan',
+    });
+  };
 
   // Form State
   const [formData, setFormData] = useState({
@@ -638,6 +655,14 @@ export function MobileLeavePage() {
                             </div>
                           )
                         )}
+
+                        <button 
+                          onClick={() => handleDownloadForm(item)}
+                          className="mt-4 w-full py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 border border-indigo-100"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          Unduh Form PDF
+                        </button>
                       </div>
                     </motion.div>
                   );

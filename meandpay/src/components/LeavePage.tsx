@@ -16,13 +16,15 @@ import {
   Filter,
   Loader2,
   CheckCircle,
-  Check
+  Check,
+  Printer
 } from 'lucide-react';
 import { cn, formatPhotoUrl } from '../lib/utils';
 import { useToast } from './Toast';
 import { AnimatePresence } from 'motion/react';
 import { AddLeave } from './AddLeave';
 import { EditLeave } from './EditLeave';
+import { generateLeaveFormPDF } from '../lib/pdfLeaveForm';
 
 interface Leave {
   id: string;
@@ -159,6 +161,26 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDownloadForm = async (leave: Leave) => {
+    const employee = employees.find(e => e.id?.toString() === leave.user_id?.toString());
+    
+    // For date difference
+    const d1 = new Date(leave.tanggal);
+    
+    await generateLeaveFormPDF({
+      tanggal_pengajuan: new Date(leave.created_at || leave.tanggal).toLocaleDateString('id-ID'),
+      nama: leave.pemohon?.name || '-',
+      nik: (employee as any)?.nik || '.......',
+      departemen: (employee as any)?.departemen || '.......',
+      tanggal_mulai_kerja: (employee as any)?.tanggal_mulai_kerja ? new Date((employee as any).tanggal_mulai_kerja).toLocaleDateString('id-ID') : '.......',
+      dari_tanggal: new Date(leave.tanggal).toLocaleDateString('id-ID'),
+      sampai_tanggal: new Date(leave.tanggal).toLocaleDateString('id-ID'),
+      jumlah_hari: '1', 
+      alasan_cuti: leave.alasan_cuti || '-',
+      jenis_cuti: leave.nama_cuti || 'Cuti Tahunan',
+    });
   };
 
   const getManagerForUser = (userId: string) => {
@@ -440,6 +462,13 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
                           className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border border-slate-200"
                         >
                           <Trash2 className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadForm(item)}
+                          title="Unduh Form Cuti"
+                          className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all border border-slate-200"
+                        >
+                          <Printer className="w-3 h-3" />
                         </button>
                       </div>
                     </td>
