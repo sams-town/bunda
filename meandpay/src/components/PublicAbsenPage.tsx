@@ -6,7 +6,7 @@ import {
   AlertCircle, Fingerprint, ShieldCheck, X,
   Clock, RefreshCw, User,
 } from 'lucide-react';
-import { cn, compressImage } from '../lib/utils';
+import { cn, compressImage, formatPhotoUrl } from '../lib/utils';
 
 const API = import.meta.env.VITE_API_MEANDPAY as string;
 
@@ -19,16 +19,6 @@ interface PublicAbsenPageProps {
 }
 
 export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
-  const getFileUrl = (path: string | null) => {
-    if (!path) return null;
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    let cleanPath = path.replace(/^\//, '');
-    if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
-    const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
-    const apiBase = import.meta.env.VITE_API_MEANDPAY;
-    const base = (apiData || apiBase || 'https://hris.rsbundahalimah.com').replace(/\/api$/, '').replace(/\/$/, '');
-    return `${base}/uploads/${cleanPath}`;
-  };
   const navigate = useNavigate();
 
   const [step, setStep] = useState<Step>('scan');
@@ -236,7 +226,7 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
 
           <div className="text-center">
             {settings?.logo && (
-              <img src={getFileUrl(settings.logo)} className="w-8 h-8 object-contain mx-auto mb-1" alt="Logo" />
+              <img src={formatPhotoUrl(settings.logo)} className="w-8 h-8 object-contain mx-auto mb-1" alt="Logo" />
             )}
             <h1 className="text-white font-black text-base tracking-tight">
               {isKeluar ? 'Absen Keluar' : 'Absen Masuk'}
@@ -463,7 +453,7 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
                 >
                   <div className="w-14 h-14 bg-indigo-50 border border-indigo-100 rounded-2xl overflow-hidden shrink-0">
                     {resultData?.foto_karyawan ? (
-                      <img src={resultData.foto_karyawan.startsWith('http') ? resultData.foto_karyawan : `${API.replace('/api', '')}/uploads/${resultData.foto_karyawan}`} alt="" className="w-full h-full object-cover" />
+                      <img src={formatPhotoUrl(resultData.foto_karyawan)} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <User className="w-6 h-6 m-auto mt-4 text-indigo-300" />
                     )}
