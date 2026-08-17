@@ -4,6 +4,7 @@ class NotificationService {
     async getAll(query = {}) {
         await this.checkExpiringContracts();
         await this.checkUpcomingBirthdays();
+        await this.checkExpiringSIP();
         const search = query.search || "";
         const notifiableId = query.notifiable_id;
         const where = {};
@@ -413,6 +414,92 @@ class NotificationService {
         }
     }
 
+    async checkExpiringSIP() {
+        try {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const targetDate = new Date();
+            // Setting 6 bulan sebelum masa berlaku SIP habis
+            targetDate.setMonth(today.getMonth() + 6);
+            targetDate.setHours(23, 59, 59, 999);
+
+            // Fetch admins
+            const admins = await prisma.users.findMany({
+                where: {
+                    OR: [
+                        { is_admin: 'admin' },
+                        { is_admin: 'superadmin' },
+                        { id: 1n }
+                    ]
+                },
+                select: { id: true }
+            });
+
+            if (admins.length === 0) return;
+
+            const formatDate = (date) => {
+                if (!date) return '';
+                const d = new Date(date);
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                return `${day}-${month}-${year}`;
+            };
+
+            // Scan expiring SIP in users table
+            const expiringSIPUsers = await prisma.users.findMany({
+                where: {
+                    masa_berlaku: {
+                        lte: targetDate
+                    }
+                },
+                select: { id: true, name: true, masa_berlaku: true }
+            });
+
+            for (const employee of expiringSIPUsers) {
+                if (!employee.masa_berlaku) continue;
+                const masaBerlakuStr = formatDate(employee.masa_berlaku);
+                const msg = `Masa berlaku SIP/STR ${employee.name} akan berakhir pada ${masaBerlakuStr}`;
+                const userIdStr = employee.id.toString();
+
+                for (const admin of admins) {
+                    const existingNotif = await prisma.notifications.findFirst({
+                        where: {
+                            type: 'SIP Berakhir',
+                            notifiable_id: admin.id,
+                            data: {
+                                AND: [
+                                    { contains: `"user_id":"${userIdStr}"` },
+                                    { contains: `"masa_berlaku":"${employee.masa_berlaku.toISOString()}"` }
+                                ]
+                            }
+                        }
+                    });
+
+                    if (!existingNotif) {
+                        await prisma.notifications.create({
+                            data: {
+                                type: 'SIP Berakhir',
+                                notifiable_type: 'App\\Models\\User',
+                                notifiable_id: admin.id,
+                                data: JSON.stringify({
+                                    message: msg,
+                                    user_id: userIdStr,
+                                    masa_berlaku: employee.masa_berlaku
+                                }),
+                                created_at: new Date(),
+                                updated_at: new Date()
+                            }
+                        });
+                    }
+                }
+            }
+
+        } catch (error) {
+            console.error("Error checking expiring SIP:", error);
+        }
+    }
+}
     serialize(record) {
         const serialized = {};
         for (const [key, value] of Object.entries(record)) {
