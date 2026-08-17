@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Save, X, Calendar, User, FileText, ImageIcon, Loader2, Download } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl } from '../lib/utils';
 import { Card, SectionTitle, FormInput, FormSelect, Field, Toast } from './common/FormUI';
 
 interface AddLeaveProps {
@@ -16,16 +16,7 @@ export function AddLeave({ onBack }: AddLeaveProps) {
     const [templateUrl, setTemplateUrl] = useState<string | null>(null);
     const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-    const getFileUrl = (path: string | null) => {
-        if (!path) return null;
-        if (path.startsWith('http') || path.startsWith('blob:')) return path;
-        let cleanPath = path.replace(/^\//, '');
-        if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
-        const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
-        const apiBase = import.meta.env.VITE_API_MEANDPAY;
-        const base = (apiData || apiBase || 'https://hris.rsbundahalimah.com').replace(/\/api$/, '').replace(/\/$/, '');
-        return `${base}/uploads/${cleanPath}`;
-    };
+    // getFileUrl removed in favor of formatPhotoUrl
 
     useEffect(() => {
         fetch(`${import.meta.env.VITE_API_MEANDPAY}/users`, {
@@ -38,7 +29,7 @@ export function AddLeave({ onBack }: AddLeaveProps) {
             .then(r => r.json())
             .then(j => {
                 const item = Array.isArray(j.data) ? j.data[0] : j.data;
-                if (item?.file_form_cuti) setTemplateUrl(getFileUrl(item.file_form_cuti));
+                if (item?.file_form_cuti) setTemplateUrl(formatPhotoUrl(item.file_form_cuti));
             })
             .catch(() => { });
     }, []);
