@@ -1126,13 +1126,25 @@ function FaceRecognitionModal({ employee, onClose, onSuccess, addToast, updateTo
     if (!videoRef.current || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const video = videoRef.current;
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-    canvas.getContext('2d')?.drawImage(video, 0, 0);
-    const base64Image = canvas.toDataURL('image/jpeg');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Fix: Video ditampilkan dengan scale-x-[-1] (mirror) di CSS.
+    // Canvas harus di-flip juga agar foto yang tersimpan TIDAK mirror (natural orientation).
+    // Dengan flip ini, foto registrasi dan foto absensi akan konsisten.
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+    }
+
+    const base64Image = canvas.toDataURL('image/jpeg', 0.9);
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
     onClose();
-    const toastId = addToast({ type: 'loading', title: 'Face Recognition', message: 'Sedang memproses foto...' });
+    const toastId = addToast({ type: 'loading', title: 'Face Recognition', message: 'Sedang memvalidasi dan memproses foto wajah...' });
     try {
       const res = await fetch(`${BASE_URL}/users/${employee.id}/face-recognition`, {
         method: 'POST',
@@ -1141,14 +1153,19 @@ function FaceRecognitionModal({ employee, onClose, onSuccess, addToast, updateTo
       });
       const json = await res.json();
       if (json.success) {
-        updateToast(toastId, { type: 'success', title: 'Berhasil', message: json.message || 'Face recognition berhasil diperbarui' });
+        updateToast(toastId, { type: 'success', title: 'Registrasi Berhasil', message: json.message || 'Wajah berhasil diregistrasi dan diverifikasi.' });
         onSuccess?.();
+      } else {
+        // Tampilkan pesan spesifik dari backend, bukan pesan generik
+        const errorMsg = json.message || 'Gagal memproses face recognition';
+        const hint = json.hint ? `\n${json.hint}` : '';
+        updateToast(toastId, { type: 'error', title: 'Registrasi Gagal', message: `${errorMsg}${hint}` });
       }
-      else updateToast(toastId, { type: 'error', title: 'Gagal', message: json.message || 'Gagal memproses face recognition' });
     } catch (err: any) {
-      updateToast(toastId, { type: 'error', title: 'Error', message: err.message || 'Terjadi kesalahan sistem' });
+      updateToast(toastId, { type: 'error', title: 'Error Koneksi', message: err.message || 'Terjadi kesalahan sistem saat menghubungi server.' });
     }
   };
+
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
