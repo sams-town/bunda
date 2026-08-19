@@ -499,7 +499,7 @@ class NotificationService {
             console.error("Error checking expiring SIP:", error);
         }
     }
-}
+
     serialize(record) {
         const serialized = {};
         for (const [key, value] of Object.entries(record)) {

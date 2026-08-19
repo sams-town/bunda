@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, Search, Bell, Sun, User, Settings, LogOut } from 'lucide-react';
+import { Menu, Search, Bell, Sun, Cloud, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, User, Settings, LogOut } from 'lucide-react';
 import { cn, formatPhotoUrl } from '../../lib/utils';
 import { Page } from '../../lib/routes';
 
@@ -21,6 +21,20 @@ interface PremiumHeaderProps {
   currentPage: string;
 }
 
+// WMO Weather Code mapping
+const getWeatherInfo = (code: number): { label: string; Icon: any; bg: string; color: string } => {
+  if (code === 0) return { label: 'Cerah', Icon: Sun, bg: 'bg-orange-50', color: 'text-orange-500' };
+  if (code <= 3) return { label: 'Berawan', Icon: Cloud, bg: 'bg-slate-100', color: 'text-slate-500' };
+  if (code <= 48) return { label: 'Berkabut', Icon: Cloud, bg: 'bg-slate-100', color: 'text-slate-400' };
+  if (code <= 57) return { label: 'Gerimis', Icon: CloudDrizzle, bg: 'bg-blue-50', color: 'text-blue-400' };
+  if (code <= 67) return { label: 'Hujan', Icon: CloudRain, bg: 'bg-blue-50', color: 'text-blue-500' };
+  if (code <= 77) return { label: 'Salju', Icon: CloudSnow, bg: 'bg-cyan-50', color: 'text-cyan-500' };
+  if (code <= 82) return { label: 'Hujan Lebat', Icon: CloudRain, bg: 'bg-blue-100', color: 'text-blue-600' };
+  if (code <= 86) return { label: 'Hujan Salju', Icon: CloudSnow, bg: 'bg-cyan-100', color: 'text-cyan-600' };
+  if (code <= 99) return { label: 'Badai Petir', Icon: CloudLightning, bg: 'bg-yellow-50', color: 'text-yellow-600' };
+  return { label: 'Cerah', Icon: Sun, bg: 'bg-orange-50', color: 'text-orange-500' };
+};
+
 export function PremiumHeader({
   user, isSidebarCollapsed, setIsSidebarCollapsed, unreadCount,
   isNotificationsOpen, setIsNotificationsOpen, isProfileMenuOpen,
@@ -36,6 +50,35 @@ export function PremiumHeader({
   else if (currentHour >= 12 && currentHour < 15) greeting = "Good Afternoon";
   else if (currentHour >= 15 && currentHour < 18) greeting = "Good Afternoon"; // Can also use Sore
   else if (currentHour >= 0 && currentHour < 5) greeting = "Good Night";
+
+  // Weather state
+  const [temperature, setTemperature] = useState<number | null>(null);
+  const [weatherCode, setWeatherCode] = useState<number>(0);
+
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        // Batam coordinates: 1.0456, 104.0305
+        const res = await fetch(
+          'https://api.open-meteo.com/v1/forecast?latitude=1.0456&longitude=104.0305&current=temperature_2m,weather_code&timezone=Asia%2FJakarta'
+        );
+        const data = await res.json();
+        if (data.current) {
+          setTemperature(Math.round(data.current.temperature_2m));
+          setWeatherCode(data.current.weather_code);
+        }
+      } catch (err) {
+        console.error('Failed to fetch weather:', err);
+      }
+    };
+
+    fetchWeather();
+    const interval = setInterval(fetchWeather, 30 * 60 * 1000); // Refresh every 30 minutes
+    return () => clearInterval(interval);
+  }, []);
+
+  const weather = getWeatherInfo(weatherCode);
+  const WeatherIcon = weather.Icon;
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-[#E2E8F0] px-8 py-5 shadow-sm">
@@ -80,11 +123,13 @@ export function PremiumHeader({
         <div className="flex items-center gap-6">
           
           <div className="hidden md:flex items-center gap-3 pr-6 border-r border-[#E2E8F0]">
-            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
-              <Sun className="w-5 h-5 text-orange-500" />
+            <div className={`w-10 h-10 rounded-xl ${weather.bg} flex items-center justify-center`}>
+              <WeatherIcon className={`w-5 h-5 ${weather.color}`} />
             </div>
             <div>
-               <p className="text-[13px] font-bold text-[#0F172A]">Batam, 29°C</p>
+               <p className="text-[13px] font-bold text-[#0F172A]">
+                 Batam, {temperature !== null ? `${temperature}°C` : '...'}
+               </p>
                <p className="text-[11px] font-medium text-[#64748B]">{today}</p>
             </div>
           </div>
