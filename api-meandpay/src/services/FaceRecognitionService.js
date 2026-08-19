@@ -313,6 +313,88 @@ class FaceRecognitionService {
         return { valid: true };
     }
 
+    /**
+     * Cross-verify dua foto absensi (check-in vs check-out) untuk memastikan
+     * wajah yang sama. Digunakan saat absen pulang untuk memvalidasi bahwa
+     * orang yang check-out adalah orang yang sama yang check-in.
+     * @param {string} checkInPhotoPath - absolute path ke foto check-in
+     * @param {string} checkOutPhotoPath - absolute path ke foto check-out
+     * @returns {{ isMatch: boolean, distance?: number, error?: string, failReason?: string }}
+     */
+    async crossVerifyFaces(checkInPhotoPath, checkOutPhotoPath) {
+        await this.loadModels();
+
+        const THRESHOLD = 0.45;
+        const logPrefix = '[FaceRecognition][crossVerify]';
+
+        console.log(`${logPrefix} Membandingkan foto check-in vs check-out`);
+        console.log(`${logPrefix} Check-in : ${checkInPhotoPath}`);
+        console.log(`${logPrefix} Check-out: ${checkOutPhotoPath}`);
+
+        // Validasi file check-in ada
+        if (!fs.existsSync(checkInPhotoPath)) {
+            console.error(`${logPrefix} File foto check-in tidak ditemukan: ${checkInPhotoPath}`);
+            return {
+                isMatch: false,
+                error: "File foto check-in tidak ditemukan di server untuk cross-verification.",
+                failReason: FACE_FAIL_REASON.REFERENCE_FILE_NOT_FOUND
+            };
+        }
+
+        // Ekstrak descriptor dari foto check-in
+        const checkInDesc = await this.getFaceDescriptor(checkInPhotoPath, 'crossVerify/checkIn');
+        if (!checkInDesc) {
+            console.warn(`${logPrefix} Wajah tidak terdeteksi di foto check-in. Skipping cross-verify.`);
+            // Jika foto check-in tidak bisa dibaca, kita skip cross-verify
+            // (verifikasi terhadap referensi sudah cukup sebagai fallback)
+            return { isMatch: true, distance: null, skipped: true };
+        }
+        if (checkInDesc.error) {
+            console.warn(`${logPrefix} Foto check-in gagal: ${checkInDesc.error}. Skipping cross-verify.`);
+            return { isMatch: true, distance: null, skipped: true };
+        }
+
+        // Ekstrak descriptor dari foto check-out (foto yang baru diambil)
+        const checkOutDesc = await this.getFaceDescriptor(checkOutPhotoPath, 'crossVerify/checkOut');
+        if (!checkOutDesc) {
+            return {
+                isMatch: false,
+                error: "Wajah tidak terdeteksi pada foto absensi pulang.",
+                failReason: FACE_FAIL_REASON.FACE_NOT_DETECTED
+            };
+        }
+        if (checkOutDesc.error) {
+            return {
+                isMatch: false,
+                error: checkOutDesc.error,
+                failReason: checkOutDesc.failReason
+            };
+        }
+
+        try {
+            const distance = faceapi.euclideanDistance(checkInDesc, checkOutDesc);
+            console.log(`${logPrefix} Distance check-in vs check-out: ${distance.toFixed(4)} | Threshold: ${THRESHOLD} | Match: ${distance < THRESHOLD ? 'YES' : 'NO'}`);
+
+            if (distance < THRESHOLD) {
+                return { isMatch: true, distance };
+            }
+
+            return {
+                isMatch: false,
+                distance,
+                error: `Wajah saat pulang tidak cocok dengan wajah saat masuk (score: ${(1 - distance).toFixed(2)}).`,
+                failReason: FACE_FAIL_REASON.FACE_NO_MATCH
+            };
+        } catch (err) {
+            console.error(`${logPrefix} Error saat cross-verify:`, err.message);
+            return {
+                isMatch: false,
+                error: "Terjadi kesalahan teknis saat membandingkan wajah check-in dan check-out.",
+                failReason: FACE_FAIL_REASON.SYSTEM_ERROR
+            };
+        }
+    }
+
     // Backward compatibility
     async compareFaces(referencePath, incomingPath) {
         try {

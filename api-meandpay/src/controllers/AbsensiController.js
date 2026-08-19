@@ -115,58 +115,55 @@ class AbsensiController {
 
                 console.log(`[AbsenWajah] User ditemukan: ${user.name} (ID:${user.id}), foto_face_recognition: ${user.foto_face_recognition || 'NULL'}`);
 
-                // Verify face for this specific user
-                if (user.lock_face === "0" || user.lock_face === 0) {
-                    console.log(`[AbsenWajah] Bypassing face recognition untuk ${user.name} (lock_face=0)`);
-                } else {
-                    const verifyResult = await faceRecognitionService.verifyUserFace(incomingPath, user);
+                // Verifikasi wajah SELALU dijalankan di endpoint storeWajah
+                // (lock_face hanya berlaku untuk mode absen non-wajah seperti QR/manual)
+                const verifyResult = await faceRecognitionService.verifyUserFace(incomingPath, user);
 
-                    if (!verifyResult.isMatch) {
-                        // Pesan yang berbeda berdasarkan PENYEBAB kegagalan — bukan generik
-                        let userMessage;
-                        switch (verifyResult.failReason) {
-                            case FACE_FAIL_REASON.FACE_NOT_DETECTED:
-                                userMessage = `Absensi gagal: Wajah tidak terdeteksi pada foto yang diambil. Pastikan pencahayaan cukup dan wajah Anda terlihat jelas.`;
-                                break;
-                            case FACE_FAIL_REASON.FACE_TOO_SMALL:
-                                userMessage = `Absensi gagal: Wajah terlalu jauh dari kamera. Silakan mendekat dan coba lagi.`;
-                                break;
-                            case FACE_FAIL_REASON.MULTIPLE_FACES:
-                                userMessage = `Absensi gagal: Terdeteksi lebih dari satu wajah. Pastikan hanya Anda yang berada di depan kamera.`;
-                                break;
-                            case FACE_FAIL_REASON.REFERENCE_NO_URL:
-                                userMessage = `Absensi gagal: Data wajah ${user.name} belum diregistrasi. Silakan hubungi admin untuk melakukan rekam wajah.`;
-                                break;
-                            case FACE_FAIL_REASON.REFERENCE_FILE_NOT_FOUND:
-                                userMessage = `Absensi gagal: File foto referensi wajah ${user.name} tidak ditemukan di server. Silakan hubungi admin untuk melakukan rekam wajah ulang.`;
-                                break;
-                            case FACE_FAIL_REASON.REFERENCE_FACE_INVALID:
-                                userMessage = `Absensi gagal: Foto referensi wajah ${user.name} tidak valid (wajah tidak terdeteksi di foto referensi). Silakan hubungi admin untuk melakukan rekam wajah ulang.`;
-                                break;
-                            case FACE_FAIL_REASON.FACE_NO_MATCH:
-                                userMessage = `Absensi gagal: Wajah yang terdeteksi tidak cocok dengan data referensi ${user.name}.`;
-                                break;
-                            case FACE_FAIL_REASON.SYSTEM_ERROR:
-                                userMessage = `Absensi gagal: Terjadi kesalahan sistem saat memverifikasi wajah. Silakan coba lagi.`;
-                                break;
-                            default:
-                                userMessage = verifyResult.error || `Absensi gagal. Verifikasi wajah tidak berhasil untuk ${user.name}.`;
-                        }
-
-                        console.error(`[AbsenWajah] ❌ Verifikasi gagal untuk ${user.name}: failReason=${verifyResult.failReason}, distance=${verifyResult.distance}`);
-
-                        return res.status(400).json({ 
-                            success: false, 
-                            message: userMessage,
-                            failReason: verifyResult.failReason,
-                            distance: verifyResult.distance,
-                            detail: verifyResult.error
-                        });
+                if (!verifyResult.isMatch) {
+                    // Pesan yang berbeda berdasarkan PENYEBAB kegagalan — bukan generik
+                    let userMessage;
+                    switch (verifyResult.failReason) {
+                        case FACE_FAIL_REASON.FACE_NOT_DETECTED:
+                            userMessage = `Absensi gagal: Wajah tidak terdeteksi pada foto yang diambil. Pastikan pencahayaan cukup dan wajah Anda terlihat jelas.`;
+                            break;
+                        case FACE_FAIL_REASON.FACE_TOO_SMALL:
+                            userMessage = `Absensi gagal: Wajah terlalu jauh dari kamera. Silakan mendekat dan coba lagi.`;
+                            break;
+                        case FACE_FAIL_REASON.MULTIPLE_FACES:
+                            userMessage = `Absensi gagal: Terdeteksi lebih dari satu wajah. Pastikan hanya Anda yang berada di depan kamera.`;
+                            break;
+                        case FACE_FAIL_REASON.REFERENCE_NO_URL:
+                            userMessage = `Absensi gagal: Data wajah ${user.name} belum diregistrasi. Silakan hubungi admin untuk melakukan rekam wajah.`;
+                            break;
+                        case FACE_FAIL_REASON.REFERENCE_FILE_NOT_FOUND:
+                            userMessage = `Absensi gagal: File foto referensi wajah ${user.name} tidak ditemukan di server. Silakan hubungi admin untuk melakukan rekam wajah ulang.`;
+                            break;
+                        case FACE_FAIL_REASON.REFERENCE_FACE_INVALID:
+                            userMessage = `Absensi gagal: Foto referensi wajah ${user.name} tidak valid (wajah tidak terdeteksi di foto referensi). Silakan hubungi admin untuk melakukan rekam wajah ulang.`;
+                            break;
+                        case FACE_FAIL_REASON.FACE_NO_MATCH:
+                            userMessage = `Absensi gagal: Wajah yang terdeteksi tidak cocok dengan data referensi ${user.name}.`;
+                            break;
+                        case FACE_FAIL_REASON.SYSTEM_ERROR:
+                            userMessage = `Absensi gagal: Terjadi kesalahan sistem saat memverifikasi wajah. Silakan coba lagi.`;
+                            break;
+                        default:
+                            userMessage = verifyResult.error || `Absensi gagal. Verifikasi wajah tidak berhasil untuk ${user.name}.`;
                     }
 
-                    console.log(`[AbsenWajah] ✅ Verifikasi wajah berhasil untuk ${user.name}. Distance: ${verifyResult.distance?.toFixed(4)}`);
-                    matchResult.distance = verifyResult.distance;
+                    console.error(`[AbsenWajah] ❌ Verifikasi gagal untuk ${user.name}: failReason=${verifyResult.failReason}, distance=${verifyResult.distance}`);
+
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: userMessage,
+                        failReason: verifyResult.failReason,
+                        distance: verifyResult.distance,
+                        detail: verifyResult.error
+                    });
                 }
+
+                console.log(`[AbsenWajah] ✅ Verifikasi wajah berhasil untuk ${user.name}. Distance: ${verifyResult.distance?.toFixed(4)}`);
+                matchResult.distance = verifyResult.distance;
             } else {
                 console.log("[AbsenWajah] Identifikasi user via face matching (mode publik)...");
                 const allUsers = await userService.getAllForFaceRecognition();
@@ -342,7 +339,32 @@ class AbsensiController {
                 return res.status(400).json({ success: false, message: "Absensi gagal. Izin lokasi (GPS) wajib aktif untuk melakukan absensi pada shift ini." });
             }
 
-            // 4. Update Database
+            // 4. Cross-verify: Saat pulang, pastikan wajah sama dengan saat masuk
+            if (tipe_absen === 'pulang' && shiftRecord.foto_jam_absen) {
+                const checkInPhotoPath = path.join(ROOT_DIR, "public", shiftRecord.foto_jam_absen.startsWith('/') ? shiftRecord.foto_jam_absen.substring(1) : shiftRecord.foto_jam_absen);
+                console.log(`[AbsenWajah] 🔄 Cross-verify wajah check-in vs check-out untuk ${user.name}`);
+
+                const crossResult = await faceRecognitionService.crossVerifyFaces(checkInPhotoPath, incomingPath);
+
+                if (!crossResult.isMatch) {
+                    console.error(`[AbsenWajah] ❌ Cross-verify GAGAL untuk ${user.name}: ${crossResult.error}`);
+                    return res.status(400).json({
+                        success: false,
+                        message: `Absensi pulang gagal: Wajah saat pulang tidak cocok dengan wajah saat masuk. Pastikan yang absen pulang adalah orang yang sama yang absen masuk.`,
+                        failReason: crossResult.failReason,
+                        distance: crossResult.distance,
+                        detail: crossResult.error
+                    });
+                }
+
+                if (crossResult.skipped) {
+                    console.warn(`[AbsenWajah] ⚠️ Cross-verify di-skip (foto check-in tidak bisa diproses). Lanjut berdasarkan verifikasi referensi.`);
+                } else {
+                    console.log(`[AbsenWajah] ✅ Cross-verify berhasil untuk ${user.name}. Distance: ${crossResult.distance?.toFixed(4)}`);
+                }
+            }
+
+            // 5. Update Database
             const updatePayload = {
                 user_id: user.id.toString()
             };
