@@ -123,7 +123,7 @@ export function MobileNotificationsPage() {
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
-      await fetch(`${import.meta.env.VITE_API_MEANDPAY}/notifications/${notificationId}/clear`, {
+      await fetch(`${import.meta.env.VITE_API_MEANDPAY}/notifications/${notificationId}/read`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
@@ -137,7 +137,7 @@ export function MobileNotificationsPage() {
     try {
       const unreadNotifications = notifications.filter(n => n.unread);
       await Promise.all(unreadNotifications.map(n =>
-        fetch(`${import.meta.env.VITE_API_MEANDPAY}/notifications/${n.id}/clear`, {
+        fetch(`${import.meta.env.VITE_API_MEANDPAY}/notifications/${n.id}/read`, {
           method: 'PUT',
           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
         })
