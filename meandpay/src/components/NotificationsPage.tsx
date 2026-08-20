@@ -63,10 +63,17 @@ export function NotificationsPage({ onNavigate, onRefreshCount }: NotificationsP
           }
 
           const isUnread = Number(item.notifiable_id) === Number(user.id);
-          const fromName = parsedData.from || 'System';
+          const fromName = parsedData.from || item.user?.name || 'System';
 
           // Use foto_karyawan if available, otherwise fallback to ui-avatars
-          const fotoKaryawan = item.user?.foto_karyawan;
+          let fotoKaryawan = item.user?.foto_karyawan;
+          
+          // Fix if database stored absolute URL with wrong domain/localhost
+          if (fotoKaryawan && fotoKaryawan.includes('/uploads/')) {
+            const pathParts = fotoKaryawan.split('/uploads/');
+            fotoKaryawan = `${import.meta.env.VITE_API_MEANDPAY}/uploads/${pathParts[1]}`;
+          }
+
           const avatarUrl = fotoKaryawan
             ? fotoKaryawan
             : `https://ui-avatars.com/api/?name=${encodeURIComponent(fromName)}&background=random`;

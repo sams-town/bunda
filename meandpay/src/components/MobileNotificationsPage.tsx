@@ -64,9 +64,16 @@ export function MobileNotificationsPage() {
           }
 
           const isUnread = Number(item.notifiable_id) === Number(user.id);
-          const fromName = parsedData.from || 'System';
+          const fromName = parsedData.from || item.user?.name || 'System';
 
-          const fotoKaryawan = item.user?.foto_karyawan;
+          // Use foto_karyawan if available, otherwise fallback to ui-avatars
+          let fotoKaryawan = item.user?.foto_karyawan;
+          
+          if (fotoKaryawan && fotoKaryawan.includes('/uploads/')) {
+            const pathParts = fotoKaryawan.split('/uploads/');
+            fotoKaryawan = `${import.meta.env.VITE_API_MEANDPAY}/uploads/${pathParts[1]}`;
+          }
+
           const avatarUrl = fotoKaryawan
             ? fotoKaryawan
             : `https://ui-avatars.com/api/?name=${encodeURIComponent(fromName)}&background=random`;
@@ -76,12 +83,7 @@ export function MobileNotificationsPage() {
             type: determineType(parsedData.message),
             title: determineTitle(parsedData.message, fromName),
             message: parsedData.message || 'You have a new notification',
-            time: new Date(item.created_at).toLocaleDateString('id-ID', { 
-              day: 'numeric', 
-              month: 'short', 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            }),
+            time: new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
             user: {
               name: fromName,
               avatar: avatarUrl
