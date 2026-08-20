@@ -239,12 +239,10 @@ class NotificationService {
                             where: {
                                 type: 'Kontrak Berakhir',
                                 notifiable_id: admin.id,
-                                data: {
-                                    AND: [
-                                        { contains: `"contract_id":"${contractIdStr}"` },
-                                        { contains: `"tanggal_selesai":"${contract.tanggal_selesai.toISOString()}"` }
-                                    ]
-                                }
+                                AND: [
+                                    { data: { contains: `"contract_id":"${contractIdStr}"` } },
+                                    { data: { contains: `"tanggal_selesai":"${contract.tanggal_selesai.toISOString()}"` } }
+                                ]
                             }
                         });
 
@@ -290,12 +288,10 @@ class NotificationService {
                         where: {
                             type: 'Kontrak PKWT Berakhir',
                             notifiable_id: admin.id,
-                            data: {
-                                AND: [
-                                    { contains: `"user_id":"${userIdStr}"` },
-                                    { contains: `"tanggal_berakhir_pkwt":"${employee.tanggal_berakhir_pkwt.toISOString()}"` }
-                                ]
-                            }
+                            AND: [
+                                { data: { contains: `"user_id":"${userIdStr}"` } },
+                                { data: { contains: `"tanggal_berakhir_pkwt":"${employee.tanggal_berakhir_pkwt.toISOString()}"` } }
+                            ]
                         }
                     });
 
@@ -376,12 +372,10 @@ class NotificationService {
                                     where: {
                                         type: 'Ulang Tahun Karyawan',
                                         notifiable_id: admin.id,
-                                        data: {
-                                            AND: [
-                                                { contains: `"user_id":"${userIdStr}"` },
-                                                { contains: `"year":${targetYear}` }
-                                            ]
-                                        }
+                                        AND: [
+                                            { data: { contains: `"user_id":"${userIdStr}"` } },
+                                            { data: { contains: `"year":${targetYear}` } }
+                                        ]
                                     }
                                 });
 
@@ -467,12 +461,10 @@ class NotificationService {
                         where: {
                             type: 'SIP Berakhir',
                             notifiable_id: admin.id,
-                            data: {
-                                AND: [
-                                    { contains: `"user_id":"${userIdStr}"` },
-                                    { contains: `"masa_berlaku":"${employee.masa_berlaku.toISOString()}"` }
-                                ]
-                            }
+                            AND: [
+                                { data: { contains: `"user_id":"${userIdStr}"` } },
+                                { data: { contains: `"masa_berlaku":"${employee.masa_berlaku.toISOString()}"` } }
+                            ]
                         }
                     });
 
