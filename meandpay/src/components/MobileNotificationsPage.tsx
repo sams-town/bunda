@@ -286,6 +286,9 @@ export function MobileNotificationsPage() {
                       className="w-12 h-12 rounded-2xl object-cover shadow-md"
                       alt="avatar"
                       referrerPolicy="no-referrer"
+                      onError={(e) => {
+                        e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(notif.user?.name || 'System')}&background=random`;
+                      }}
                     />
                     <div className={cn(
                       "absolute -bottom-1 -right-1 w-6 h-6 rounded-lg flex items-center justify-center border-2 border-white shadow-sm",

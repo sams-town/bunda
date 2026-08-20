@@ -295,6 +295,9 @@ export function NotificationsPage({ onNavigate, onRefreshCount }: NotificationsP
                         alt={notification.user.name}
                         className="w-14 h-14 rounded-2xl object-cover shadow-lg"
                         referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(notification.user.name)}&background=random`;
+                        }}
                       />
                       <div className={cn(
                         "absolute -bottom-1 -right-1 w-6 h-6 rounded-lg flex items-center justify-center border-2 border-white shadow-sm",
