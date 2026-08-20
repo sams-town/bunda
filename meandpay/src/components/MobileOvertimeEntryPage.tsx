@@ -30,7 +30,7 @@ export function MobileOvertimeEntryPage() {
   const [formData, setFormData] = useState({
     tanggal: new Date().toISOString().split('T')[0],
     jam_lembur: '',
-    lama_lembur: '',
+    jam_selesai: '',
     keterangan: '',
     id_manager: ''
   });
@@ -152,8 +152,8 @@ export function MobileOvertimeEntryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.jam_lembur || !formData.lama_lembur || !formData.id_manager || !locationState) {
-      return addToast({ type: 'warning', title: 'Data Kurang', message: 'Jam, durasi, manager, dan lokasi wajib diisi.' });
+    if (!formData.jam_lembur || !formData.jam_selesai || !formData.id_manager || !locationState) {
+      return addToast({ type: 'warning', title: 'Data Kurang', message: 'Jam, manager, dan lokasi wajib diisi.' });
     }
 
     try {
@@ -181,7 +181,7 @@ export function MobileOvertimeEntryPage() {
       fd.append('lokasi_id', String(lokasi_id));
       fd.append('tanggal', formData.tanggal);
       fd.append('jam_masuk', `${formData.tanggal} ${formData.jam_lembur}`);
-      fd.append('lama_lembur', String(formData.lama_lembur));
+      fd.append('jam_keluar', `${formData.tanggal} ${formData.jam_selesai}`);
       fd.append('keterangan', formData.keterangan);
       fd.append('id_manager', String(formData.id_manager));
       fd.append('lat_masuk', String(locationState.lat));
@@ -301,14 +301,13 @@ export function MobileOvertimeEntryPage() {
             </div>
 
             <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Durasi (Jam)</label>
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Jam Selesai</label>
                <div className="relative">
-                  <Timer className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-500" />
+                  <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-500" />
                   <input 
-                    type="number" 
-                    placeholder="Contoh: 2"
-                    value={formData.lama_lembur}
-                    onChange={(e) => setFormData({...formData, lama_lembur: e.target.value})}
+                    type="time" 
+                    value={formData.jam_selesai}
+                    onChange={(e) => setFormData({...formData, jam_selesai: e.target.value})}
                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-6 font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all"
                   />
                </div>

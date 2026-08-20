@@ -73,9 +73,8 @@ export function AddOvertime({ onBack }: AddOvertimeProps) {
                 },
                 body: JSON.stringify({
                     ...formData,
-                    // Map to existing API structure if needed
                     jam_masuk: `${formData.tanggal} ${formData.jam_mulai}`,
-                    jam_pulang: `${formData.tanggal} ${formData.jam_selesai}`,
+                    jam_keluar: `${formData.tanggal} ${formData.jam_selesai}`,
                     keterangan: formData.alasan
                 })
             });
