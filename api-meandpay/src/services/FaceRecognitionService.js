@@ -324,7 +324,9 @@ class FaceRecognitionService {
     async crossVerifyFaces(checkInPhotoPath, checkOutPhotoPath) {
         await this.loadModels();
 
-        const THRESHOLD = 0.45;
+        // Tingkatkan threshold ke 0.55 karena verifikasi utama terhadap foto profil sudah dilakukan
+        // Ini memberi toleransi lebih terhadap perbedaan pencahayaan/kondisi foto pagi vs sore
+        const THRESHOLD = 0.55;
         const logPrefix = '[FaceRecognition][crossVerify]';
 
         console.log(`${logPrefix} Membandingkan foto check-in vs check-out`);
