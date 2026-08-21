@@ -263,66 +263,66 @@ class FaceRecognitionService {
     async verifyUserFace(incomingPath, user) {
         await acquireSlot(); // Tunggu slot tersedia (max 2 paralel)
         try {
-        await this.loadModels();
+            await this.loadModels();
 
-        const userName = user.name || `user#${user.id}`;
+            const userName = user.name || `user#${user.id}`;
+            const THRESHOLD = 0.45;
 
-        const THRESHOLD = 0.45;
+            console.log(`[FaceRecognition][verifyUserFace] ===== Verifikasi ${userName} (ID:${user.id}) =====`);
+            console.log(`[FaceRecognition][verifyUserFace] Foto absensi: ${incomingPath}`);
+            console.log(`[FaceRecognition][verifyUserFace] foto_face_recognition DB: ${user.foto_face_recognition || 'NULL'}`);
 
-        console.log(`[FaceRecognition][verifyUserFace] ===== Verifikasi ${userName} (ID:${user.id}) =====`);
-        console.log(`[FaceRecognition][verifyUserFace] Foto absensi: ${incomingPath}`);
-        console.log(`[FaceRecognition][verifyUserFace] foto_face_recognition DB: ${user.foto_face_recognition || 'NULL'}`);
+            const incomingDesc = await this.getFaceDescriptor(incomingPath, `${userName}/incoming`);
 
-        const incomingDesc = await this.getFaceDescriptor(incomingPath, `${userName}/incoming`);
-
-        if (!incomingDesc) {
-            return { isMatch: false, error: "Tidak ditemukan wajah pada foto absensi. Pastikan wajah terlihat jelas.", failReason: FACE_FAIL_REASON.FACE_NOT_DETECTED };
-        }
-
-        if (incomingDesc.error) {
-            return { isMatch: false, error: incomingDesc.error, failReason: incomingDesc.failReason };
-        }
-
-        const { desc: userDesc, failReason, referencePath } = await this.getUserDescriptor(user);
-
-        if (!userDesc) {
-            let errorMsg;
-            switch (failReason) {
-                case FACE_FAIL_REASON.REFERENCE_NO_URL:
-                    errorMsg = "Data wajah referensi belum diregistrasi. Silakan lakukan rekam wajah terlebih dahulu.";
-                    break;
-                case FACE_FAIL_REASON.REFERENCE_FILE_NOT_FOUND:
-                    errorMsg = `File foto referensi tidak ditemukan di server. Silakan lakukan rekam wajah ulang.`;
-                    break;
-                case FACE_FAIL_REASON.REFERENCE_FACE_INVALID:
-                    errorMsg = "Foto referensi tidak mengandung wajah yang valid. Silakan lakukan rekam wajah ulang.";
-                    break;
-                default:
-                    errorMsg = "Gagal memproses foto referensi wajah.";
-            }
-            console.error(`[FaceRecognition][verifyUserFace] ❌ Descriptor referensi gagal. FailReason: ${failReason}`);
-            return { isMatch: false, error: errorMsg, failReason };
-        }
-
-        try {
-            const distance = faceapi.euclideanDistance(incomingDesc, userDesc);
-            console.log(`[FaceRecognition][verifyUserFace] Distance: ${distance.toFixed(4)} | Threshold: ${THRESHOLD} | Match: ${distance < THRESHOLD ? 'YES' : 'NO'}`);
-
-            if (distance < THRESHOLD) {
-                return { isMatch: true, distance };
+            if (!incomingDesc) {
+                return { isMatch: false, error: "Tidak ditemukan wajah pada foto absensi. Pastikan wajah terlihat jelas.", failReason: FACE_FAIL_REASON.FACE_NOT_DETECTED };
             }
 
-            return { 
-                isMatch: false, 
-                distance, 
-                error: `Wajah tidak cocok dengan data referensi (score: ${(1 - distance).toFixed(2)}).`,
-                failReason: FACE_FAIL_REASON.FACE_NO_MATCH
-            };
-        } catch (err) {
-            console.error(`[FaceRecognition][verifyUserFace] ❌ Error comparing:`, err.message);
-            return { isMatch: false, error: "Terjadi kesalahan teknis saat membandingkan wajah.", failReason: FACE_FAIL_REASON.SYSTEM_ERROR };
+            if (incomingDesc.error) {
+                return { isMatch: false, error: incomingDesc.error, failReason: incomingDesc.failReason };
+            }
+
+            const { desc: userDesc, failReason, referencePath } = await this.getUserDescriptor(user);
+
+            if (!userDesc) {
+                let errorMsg;
+                switch (failReason) {
+                    case FACE_FAIL_REASON.REFERENCE_NO_URL:
+                        errorMsg = "Data wajah referensi belum diregistrasi. Silakan lakukan rekam wajah terlebih dahulu.";
+                        break;
+                    case FACE_FAIL_REASON.REFERENCE_FILE_NOT_FOUND:
+                        errorMsg = `File foto referensi tidak ditemukan di server. Silakan lakukan rekam wajah ulang.`;
+                        break;
+                    case FACE_FAIL_REASON.REFERENCE_FACE_INVALID:
+                        errorMsg = "Foto referensi tidak mengandung wajah yang valid. Silakan lakukan rekam wajah ulang.";
+                        break;
+                    default:
+                        errorMsg = "Gagal memproses foto referensi wajah.";
+                }
+                console.error(`[FaceRecognition][verifyUserFace] ❌ Descriptor referensi gagal. FailReason: ${failReason}`);
+                return { isMatch: false, error: errorMsg, failReason };
+            }
+
+            try {
+                const distance = faceapi.euclideanDistance(incomingDesc, userDesc);
+                console.log(`[FaceRecognition][verifyUserFace] Distance: ${distance.toFixed(4)} | Threshold: ${THRESHOLD} | Match: ${distance < THRESHOLD ? 'YES' : 'NO'}`);
+
+                if (distance < THRESHOLD) {
+                    return { isMatch: true, distance };
+                }
+
+                return {
+                    isMatch: false,
+                    distance,
+                    error: `Wajah tidak cocok dengan data referensi (score: ${(1 - distance).toFixed(2)}).`,
+                    failReason: FACE_FAIL_REASON.FACE_NO_MATCH
+                };
+            } catch (err) {
+                console.error(`[FaceRecognition][verifyUserFace] ❌ Error comparing:`, err.message);
+                return { isMatch: false, error: "Terjadi kesalahan teknis saat membandingkan wajah.", failReason: FACE_FAIL_REASON.SYSTEM_ERROR };
+            }
         } finally {
-            releaseSlot(); // Kembalikan slot ke queue
+            releaseSlot(); // Kembalikan slot ke queue — selalu dijalankan
         }
     }
 
