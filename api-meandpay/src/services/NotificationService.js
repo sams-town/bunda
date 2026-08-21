@@ -1,10 +1,26 @@
 import prisma from "../config/prisma.js";
 
+// Cache: fungsi check berat hanya berjalan 1x per hari, bukan setiap request
+const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 jam
+let lastCheckTimestamp = 0;
+let isChecking = false; // lock agar tidak jalan paralel
+
 class NotificationService {
     async getAll(query = {}) {
-        await this.checkExpiringContracts();
-        await this.checkUpcomingBirthdays();
-        await this.checkExpiringSIP();
+        // Jalankan check berat HANYA jika sudah lewat 24 jam DAN tidak sedang berjalan
+        const now = Date.now();
+        if (!isChecking && (now - lastCheckTimestamp) > CHECK_INTERVAL_MS) {
+            isChecking = true;
+            // Jalankan di background — tidak blokir response
+            Promise.all([
+                this.checkExpiringContracts(),
+                this.checkUpcomingBirthdays(),
+                this.checkExpiringSIP()
+            ])
+            .then(() => { lastCheckTimestamp = Date.now(); })
+            .catch(err => console.error('[NotificationService] Background check error:', err))
+            .finally(() => { isChecking = false; });
+        }
         const search = query.search || "";
         const notifiableId = query.notifiable_id;
         const where = {};

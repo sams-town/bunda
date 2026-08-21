@@ -14,6 +14,34 @@ const ROOT_DIR = path.resolve(__dirname, "../../");
 
 let modelsLoaded = false;
 
+// ─── FACE RECOGNITION QUEUE ────────────────────────────────────────────────
+// Batasi maksimal 2 proses face recognition berjalan bersamaan
+// Ini mencegah CPU spike ke 99% saat ratusan orang absen bersamaan
+const MAX_CONCURRENT = 2;
+let activeCount = 0;
+const waitQueue = [];
+
+function acquireSlot() {
+    return new Promise((resolve) => {
+        if (activeCount < MAX_CONCURRENT) {
+            activeCount++;
+            resolve();
+        } else {
+            waitQueue.push(resolve);
+        }
+    });
+}
+
+function releaseSlot() {
+    if (waitQueue.length > 0) {
+        const next = waitQueue.shift();
+        next(); // slot langsung diberikan ke yang menunggu
+    } else {
+        activeCount--;
+    }
+}
+// ───────────────────────────────────────────────────────────────────────────
+
 /**
  * Enum-like constants untuk reason kegagalan verifikasi wajah.
  * Digunakan untuk membedakan jenis kegagalan di response API.
@@ -233,9 +261,12 @@ class FaceRecognitionService {
      * Verifikasi wajah untuk user tertentu (diketahui dari user_id).
      */
     async verifyUserFace(incomingPath, user) {
+        await acquireSlot(); // Tunggu slot tersedia (max 2 paralel)
+        try {
         await this.loadModels();
 
         const userName = user.name || `user#${user.id}`;
+
         const THRESHOLD = 0.45;
 
         console.log(`[FaceRecognition][verifyUserFace] ===== Verifikasi ${userName} (ID:${user.id}) =====`);
@@ -290,6 +321,8 @@ class FaceRecognitionService {
         } catch (err) {
             console.error(`[FaceRecognition][verifyUserFace] ❌ Error comparing:`, err.message);
             return { isMatch: false, error: "Terjadi kesalahan teknis saat membandingkan wajah.", failReason: FACE_FAIL_REASON.SYSTEM_ERROR };
+        } finally {
+            releaseSlot(); // Kembalikan slot ke queue
         }
     }
 
