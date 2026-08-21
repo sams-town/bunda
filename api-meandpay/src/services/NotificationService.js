@@ -237,9 +237,9 @@ class NotificationService {
                         // Check if notification already exists for this contract and expiration date
                         const existingNotif = await prisma.notifications.findFirst({
                             where: {
-                                type: 'Kontrak Berakhir',
-                                notifiable_id: admin.id,
                                 AND: [
+                                    { type: 'Kontrak Berakhir' },
+                                    { notifiable_id: admin.id },
                                     { data: { contains: `"contract_id":"${contractIdStr}"` } },
                                     { data: { contains: `"tanggal_selesai":"${contract.tanggal_selesai.toISOString()}"` } }
                                 ]
@@ -286,9 +286,9 @@ class NotificationService {
                 for (const admin of admins) {
                     const existingNotif = await prisma.notifications.findFirst({
                         where: {
-                            type: 'Kontrak PKWT Berakhir',
-                            notifiable_id: admin.id,
                             AND: [
+                                { type: 'Kontrak PKWT Berakhir' },
+                                { notifiable_id: admin.id },
                                 { data: { contains: `"user_id":"${userIdStr}"` } },
                                 { data: { contains: `"tanggal_berakhir_pkwt":"${employee.tanggal_berakhir_pkwt.toISOString()}"` } }
                             ]
@@ -370,9 +370,9 @@ class NotificationService {
                                 // Check if notification already exists for this year's birthday
                                 const existingNotif = await prisma.notifications.findFirst({
                                     where: {
-                                        type: 'Ulang Tahun Karyawan',
-                                        notifiable_id: admin.id,
                                         AND: [
+                                            { type: 'Ulang Tahun Karyawan' },
+                                            { notifiable_id: admin.id },
                                             { data: { contains: `"user_id":"${userIdStr}"` } },
                                             { data: { contains: `"year":${targetYear}` } }
                                         ]
@@ -459,9 +459,9 @@ class NotificationService {
                 for (const admin of admins) {
                     const existingNotif = await prisma.notifications.findFirst({
                         where: {
-                            type: 'SIP Berakhir',
-                            notifiable_id: admin.id,
                             AND: [
+                                { type: 'SIP Berakhir' },
+                                { notifiable_id: admin.id },
                                 { data: { contains: `"user_id":"${userIdStr}"` } },
                                 { data: { contains: `"masa_berlaku":"${employee.masa_berlaku.toISOString()}"` } }
                             ]
