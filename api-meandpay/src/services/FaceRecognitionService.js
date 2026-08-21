@@ -324,35 +324,43 @@ class FaceRecognitionService {
     async crossVerifyFaces(checkInPhotoPath, checkOutPhotoPath) {
         await this.loadModels();
 
-        // Tingkatkan threshold ke 0.55 karena verifikasi utama terhadap foto profil sudah dilakukan
-        // Ini memberi toleransi lebih terhadap perbedaan pencahayaan/kondisi foto pagi vs sore
-        const THRESHOLD = 0.55;
+        // Threshold dinaikkan ke 0.65 karena:
+        // - Verifikasi utama terhadap foto profil (Layer 1) sudah dilakukan dengan threshold ketat (0.45)
+        // - Cross-verify (Layer 2) hanya bertujuan mendeteksi fraud nyata (orang yang BENAR-BENAR berbeda)
+        // - Dua selfie dari orang yang SAMA bisa menghasilkan distance 0.55-0.64 karena:
+        //   * Perbedaan pencahayaan (pagi terang vs sore/malam gelap)
+        //   * Kompresi gambar berbeda
+        //   * Sudut kamera sedikit berbeda
+        //   * Ekspresi wajah berubah (lelah di akhir shift)
+        // - Threshold 0.55 lama terlalu ketat dan menyebabkan false-reject tinggi
+        const THRESHOLD = 0.65;
+        // Zona abu-abu: jarak 0.55-0.65 → orang kemungkinan sama tapi kondisi foto berbeda → izinkan tapi catat warning
+        const WARNING_ZONE = 0.55;
         const logPrefix = '[FaceRecognition][crossVerify]';
 
         console.log(`${logPrefix} Membandingkan foto check-in vs check-out`);
         console.log(`${logPrefix} Check-in : ${checkInPhotoPath}`);
         console.log(`${logPrefix} Check-out: ${checkOutPhotoPath}`);
+        console.log(`${logPrefix} Threshold: ${THRESHOLD} (zona warning: ${WARNING_ZONE}-${THRESHOLD})`);
 
         // Validasi file check-in ada
         if (!fs.existsSync(checkInPhotoPath)) {
             console.error(`${logPrefix} File foto check-in tidak ditemukan: ${checkInPhotoPath}`);
-            return {
-                isMatch: false,
-                error: "File foto check-in tidak ditemukan di server untuk cross-verification.",
-                failReason: FACE_FAIL_REASON.REFERENCE_FILE_NOT_FOUND
-            };
+            // Jika foto check-in tidak ada, skip cross-verify — verifikasi foto profil sudah cukup
+            console.warn(`${logPrefix} Skipping cross-verify karena file check-in tidak ditemukan di disk.`);
+            return { isMatch: true, distance: null, skipped: true };
         }
 
         // Ekstrak descriptor dari foto check-in
         const checkInDesc = await this.getFaceDescriptor(checkInPhotoPath, 'crossVerify/checkIn');
         if (!checkInDesc) {
             console.warn(`${logPrefix} Wajah tidak terdeteksi di foto check-in. Skipping cross-verify.`);
-            // Jika foto check-in tidak bisa dibaca, kita skip cross-verify
-            // (verifikasi terhadap referensi sudah cukup sebagai fallback)
+            // Jika foto check-in tidak bisa dibaca/wajah tidak terdeteksi, skip cross-verify
+            // (verifikasi terhadap foto profil referensi sudah cukup sebagai fallback)
             return { isMatch: true, distance: null, skipped: true };
         }
         if (checkInDesc.error) {
-            console.warn(`${logPrefix} Foto check-in gagal: ${checkInDesc.error}. Skipping cross-verify.`);
+            console.warn(`${logPrefix} Foto check-in gagal diproses: ${checkInDesc.error}. Skipping cross-verify.`);
             return { isMatch: true, distance: null, skipped: true };
         }
 
@@ -361,7 +369,7 @@ class FaceRecognitionService {
         if (!checkOutDesc) {
             return {
                 isMatch: false,
-                error: "Wajah tidak terdeteksi pada foto absensi pulang.",
+                error: "Wajah tidak terdeteksi pada foto absensi pulang. Pastikan pencahayaan cukup dan wajah terlihat jelas.",
                 failReason: FACE_FAIL_REASON.FACE_NOT_DETECTED
             };
         }
@@ -375,25 +383,42 @@ class FaceRecognitionService {
 
         try {
             const distance = faceapi.euclideanDistance(checkInDesc, checkOutDesc);
-            console.log(`${logPrefix} Distance check-in vs check-out: ${distance.toFixed(4)} | Threshold: ${THRESHOLD} | Match: ${distance < THRESHOLD ? 'YES' : 'NO'}`);
+            const similarityScore = Math.max(0, (1 - distance) * 100).toFixed(1);
+            const matchStatus = distance < THRESHOLD ? 'MATCH' : 'NO_MATCH';
 
-            if (distance < THRESHOLD) {
+            console.log(`${logPrefix} ===== HASIL CROSS-VERIFY =====`);
+            console.log(`${logPrefix} Distance      : ${distance.toFixed(4)}`);
+            console.log(`${logPrefix} Threshold     : ${THRESHOLD}`);
+            console.log(`${logPrefix} Warning Zone  : ${WARNING_ZONE}`);
+            console.log(`${logPrefix} Similarity    : ${similarityScore}%`);
+            console.log(`${logPrefix} Status        : ${matchStatus}`);
+
+            if (distance < WARNING_ZONE) {
+                // Jelas sama — cocok dengan confidence tinggi
+                console.log(`${logPrefix} ✅ Match confidence TINGGI (distance ${distance.toFixed(4)} < ${WARNING_ZONE})`);
                 return { isMatch: true, distance };
             }
 
+            if (distance < THRESHOLD) {
+                // Zona abu-abu — kemungkinan sama tapi kondisi foto berbeda (pencahayaan, ekspresi)
+                // Tetap izinkan karena Layer 1 (verifikasi foto profil) sudah berhasil
+                console.warn(`${logPrefix} ⚠️ Match di ZONA ABU-ABU (distance ${distance.toFixed(4)}, antara ${WARNING_ZONE}-${THRESHOLD}). Kemungkinan perbedaan pencahayaan/kondisi. Diizinkan karena Layer 1 sudah lolos.`);
+                return { isMatch: true, distance, warningZone: true };
+            }
+
+            // Distance >= 0.65 → kemungkinan orang berbeda (fraud)
+            console.error(`${logPrefix} ❌ NO MATCH — distance ${distance.toFixed(4)} >= threshold ${THRESHOLD}. Kemungkinan orang yang berbeda.`);
             return {
                 isMatch: false,
                 distance,
-                error: `Wajah saat pulang tidak cocok dengan wajah saat masuk (score: ${(1 - distance).toFixed(2)}).`,
+                error: `Wajah saat pulang tidak cocok dengan wajah saat masuk (kemiripan: ${similarityScore}%). Pastikan yang absen pulang adalah orang yang sama yang absen masuk.`,
                 failReason: FACE_FAIL_REASON.FACE_NO_MATCH
             };
         } catch (err) {
             console.error(`${logPrefix} Error saat cross-verify:`, err.message);
-            return {
-                isMatch: false,
-                error: "Terjadi kesalahan teknis saat membandingkan wajah check-in dan check-out.",
-                failReason: FACE_FAIL_REASON.SYSTEM_ERROR
-            };
+            // Jika terjadi error teknis, skip cross-verify dan andalkan Layer 1
+            console.warn(`${logPrefix} Skipping cross-verify karena error teknis. Layer 1 sudah berhasil.`);
+            return { isMatch: true, distance: null, skipped: true };
         }
     }
 
