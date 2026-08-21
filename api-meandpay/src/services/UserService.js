@@ -484,8 +484,8 @@ class UserService {
 
         const users = await prisma.users.findMany({
             where: {
-                id: { notIn: [...excludedUserIds, 1062n] },
                 AND: [
+                    { id: { notIn: [...excludedUserIds, 1062n] } },
                     { foto_face_recognition: { not: null } },
                     { foto_face_recognition: { not: "" } },
                     { foto_face_recognition: { not: "null" } }
