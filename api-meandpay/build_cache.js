@@ -1,6 +1,7 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
+import FaceRecognitionService from './src/services/FaceRecognitionService.js';
+
 const prisma = new PrismaClient();
-const FaceRecognitionService = require('./src/services/FaceRecognitionService');
 const faceService = new FaceRecognitionService();
 
 async function buildCache() {
