@@ -98,9 +98,21 @@ export const FACE_FAIL_REASON = {
 };
 
 class FaceRecognitionService {
-    // Cache in-memory descriptor per user ID (string).
-    // PENTING: Harus di-invalidate setiap kali foto referensi user diperbarui.
-    userDescriptorsCache = {};
+    // ─── CACHE DESCRIPTOR WAJAH ─────────────────────────────────────────────
+    // Cache descriptor foto REFERENSI per user (foto profil yang diupload saat registrasi).
+    // TTL: 60 menit. Setelah 60 menit, descriptor di-refresh dari disk.
+    // Ini menghemat 15-20 detik per request (tidak perlu WASM re-extract referensi).
+    // Key: userId (string), Value: { descriptor: Float32Array, cachedAt: number }
+    userDescriptorsCache = new Map();
+    static REFERENCE_CACHE_TTL_MS = 60 * 60 * 1000; // 60 menit
+
+    // Cache descriptor foto CHECK-IN (foto saat absen masuk).
+    // TTL: 16 jam. Ini untuk crossVerify saat absen pulang agar tidak perlu
+    // re-extract foto masuk (yang mungkin sudah berusia beberapa jam).
+    // Key: absensiRecordId (string), Value: { descriptor: Float32Array, cachedAt: number }
+    checkInDescriptorCache = new Map();
+    static CHECKIN_CACHE_TTL_MS = 16 * 60 * 60 * 1000; // 16 jam
+    // ─────────────────────────────────────────────────────────────────────────────
 
     async loadModels() {
         if (modelsLoaded) return;
@@ -222,11 +234,18 @@ class FaceRecognitionService {
     async getUserDescriptor(user) {
         const userIdStr = user.id.toString();
         const userName = user.name || `user#${userIdStr}`;
+        const now = Date.now();
 
-        const cached = this.userDescriptorsCache[userIdStr];
+        // Cek cache TTL: gunakan descriptor yang tersimpan jika belum expired
+        const cached = this.userDescriptorsCache.get(userIdStr);
+        if (cached && (now - cached.cachedAt) < FaceRecognitionService.REFERENCE_CACHE_TTL_MS) {
+            const ageMin = Math.round((now - cached.cachedAt) / 60000);
+            console.log(`[FaceRecognition][${userName}] ⚡ Cache HIT descriptor referensi (usia: ${ageMin} menit).`);
+            return { desc: cached.descriptor, failReason: null, referencePath: 'cached' };
+        }
+
         if (cached) {
-            console.log(`[FaceRecognition][${userName}] Menggunakan cached descriptor.`);
-            return { desc: cached, failReason: null, referencePath: 'cached' };
+            console.log(`[FaceRecognition][${userName}] Cache EXPIRED, refresh dari disk.`);
         }
 
         if (!user.foto_face_recognition) {
@@ -253,10 +272,51 @@ class FaceRecognitionService {
             return { desc: null, failReason: userDesc.failReason || FACE_FAIL_REASON.REFERENCE_FACE_INVALID, referencePath };
         }
 
-        this.userDescriptorsCache[userIdStr] = userDesc;
-        console.log(`[FaceRecognition][${userName}] Descriptor disimpan ke cache.`);
+        // Simpan ke cache dengan timestamp
+        this.userDescriptorsCache.set(userIdStr, { descriptor: userDesc, cachedAt: now });
+        console.log(`[FaceRecognition][${userName}] 💾 Descriptor referensi disimpan ke cache (TTL: 60 menit).`);
 
         return { desc: userDesc, failReason: null, referencePath };
+    }
+
+    /**
+     * Hapus cache descriptor user tertentu.
+     * Panggil ini saat foto referensi user diperbarui (upload ulang foto wajah).
+     */
+    invalidateUserCache(userId) {
+        const userIdStr = String(userId);
+        const deleted = this.userDescriptorsCache.delete(userIdStr);
+        console.log(`[FaceRecognition] Cache descriptor user ${userIdStr} ${deleted ? 'dihapus' : 'tidak ada di cache'}.`);
+    }
+
+    /**
+     * Simpan descriptor foto check-in ke cache untuk digunakan crossVerify saat pulang.
+     * @param {string} absensiId - ID record absensi
+     * @param {Float32Array} descriptor - descriptor wajah foto check-in
+     */
+    cacheCheckInDescriptor(absensiId, descriptor) {
+        const key = String(absensiId);
+        this.checkInDescriptorCache.set(key, { descriptor, cachedAt: Date.now() });
+        console.log(`[FaceRecognition] 💾 Cache check-in descriptor untuk absensi ID ${key} disimpan (TTL: 16 jam).`);
+    }
+
+    /**
+     * Ambil descriptor foto check-in dari cache.
+     * @param {string} absensiId - ID record absensi
+     * @returns {Float32Array|null} descriptor atau null jika tidak ada/expired
+     */
+    getCheckInDescriptorFromCache(absensiId) {
+        const key = String(absensiId);
+        const cached = this.checkInDescriptorCache.get(key);
+        if (!cached) return null;
+        const now = Date.now();
+        if ((now - cached.cachedAt) > FaceRecognitionService.CHECKIN_CACHE_TTL_MS) {
+            this.checkInDescriptorCache.delete(key);
+            return null;
+        }
+        const ageMin = Math.round((now - cached.cachedAt) / 60000);
+        console.log(`[FaceRecognition] ⚡ Cache HIT check-in descriptor untuk absensi ID ${key} (usia: ${ageMin} menit).`);
+        return cached.descriptor;
     }
 
     /**
@@ -405,27 +465,16 @@ class FaceRecognitionService {
      * orang yang check-out adalah orang yang sama yang check-in.
      * @param {string} checkInPhotoPath - absolute path ke foto check-in
      * @param {string} checkOutPhotoPath - absolute path ke foto check-out
+     * @param {string|null} absensiId - ID record absensi (opsional, untuk cache check-in descriptor)
      * @returns {{ isMatch: boolean, distance?: number, error?: string, failReason?: string }}
      */
-    async crossVerifyFaces(checkInPhotoPath, checkOutPhotoPath) {
+    async crossVerifyFaces(checkInPhotoPath, checkOutPhotoPath, absensiId = null) {
         // crossVerify WAJIB masuk ke queue yang sama dengan verifyUserFace
-        // Sebelumnya tidak pakai acquireSlot() → bisa jalan tanpa batas paralel
-        // Sekarang dibatasi sama (max 2 total) agar tidak membebani CPU
         await acquireSlot();
         try {
             await this.loadModels();
 
-            // Threshold dinaikkan ke 0.65 karena:
-            // - Verifikasi utama terhadap foto profil (Layer 1) sudah dilakukan dengan threshold ketat (0.45)
-            // - Cross-verify (Layer 2) hanya bertujuan mendeteksi fraud nyata (orang yang BENAR-BENAR berbeda)
-            // - Dua selfie dari orang yang SAMA bisa menghasilkan distance 0.55-0.64 karena:
-            //   * Perbedaan pencahayaan (pagi terang vs sore/malam gelap)
-            //   * Kompresi gambar berbeda
-            //   * Sudut kamera sedikit berbeda
-            //   * Ekspresi wajah berubah (lelah di akhir shift)
-            // - Threshold 0.55 lama terlalu ketat dan menyebabkan false-reject tinggi
             const THRESHOLD = 0.65;
-            // Zona abu-abu: jarak 0.55-0.65 → orang kemungkinan sama tapi kondisi foto berbeda → izinkan tapi catat warning
             const WARNING_ZONE = 0.55;
             const logPrefix = '[FaceRecognition][crossVerify]';
 
@@ -434,22 +483,31 @@ class FaceRecognitionService {
             console.log(`${logPrefix} Check-out: ${checkOutPhotoPath}`);
             console.log(`${logPrefix} Threshold: ${THRESHOLD} (zona warning: ${WARNING_ZONE}-${THRESHOLD})`);
 
-            // Validasi file check-in ada
-            if (!fs.existsSync(checkInPhotoPath)) {
-                console.error(`${logPrefix} File foto check-in tidak ditemukan: ${checkInPhotoPath}`);
-                console.warn(`${logPrefix} Skipping cross-verify karena file check-in tidak ditemukan di disk.`);
-                return { isMatch: true, distance: null, skipped: true };
-            }
+            // ── Coba ambil descriptor check-in dari cache dulu (hemat 15-20 detik) ──
+            let checkInDesc = absensiId ? this.getCheckInDescriptorFromCache(absensiId) : null;
 
-            // Ekstrak descriptor dari foto check-in
-            const checkInDesc = await this.getFaceDescriptor(checkInPhotoPath, 'crossVerify/checkIn');
             if (!checkInDesc) {
-                console.warn(`${logPrefix} Wajah tidak terdeteksi di foto check-in. Skipping cross-verify.`);
-                return { isMatch: true, distance: null, skipped: true };
-            }
-            if (checkInDesc.error) {
-                console.warn(`${logPrefix} Foto check-in gagal diproses: ${checkInDesc.error}. Skipping cross-verify.`);
-                return { isMatch: true, distance: null, skipped: true };
+                // Cache miss: validasi file dan ekstrak descriptor
+                if (!fs.existsSync(checkInPhotoPath)) {
+                    console.error(`${logPrefix} File foto check-in tidak ditemukan: ${checkInPhotoPath}`);
+                    console.warn(`${logPrefix} Skipping cross-verify karena file check-in tidak ditemukan di disk.`);
+                    return { isMatch: true, distance: null, skipped: true };
+                }
+
+                checkInDesc = await this.getFaceDescriptor(checkInPhotoPath, 'crossVerify/checkIn');
+                if (!checkInDesc) {
+                    console.warn(`${logPrefix} Wajah tidak terdeteksi di foto check-in. Skipping cross-verify.`);
+                    return { isMatch: true, distance: null, skipped: true };
+                }
+                if (checkInDesc.error) {
+                    console.warn(`${logPrefix} Foto check-in gagal diproses: ${checkInDesc.error}. Skipping cross-verify.`);
+                    return { isMatch: true, distance: null, skipped: true };
+                }
+
+                // Simpan ke cache untuk request berikutnya (misal: double-check)
+                if (absensiId) {
+                    this.cacheCheckInDescriptor(absensiId, checkInDesc);
+                }
             }
 
             // Ekstrak descriptor dari foto check-out (foto yang baru diambil)

@@ -386,7 +386,7 @@ class AbsensiController {
                 console.log(`[AbsenWajah] 🔄 Cross-verify wajah check-in vs check-out untuk ${user.name}`);
                 console.log(`[AbsenWajah] 📸 Path foto masuk (resolved): ${checkInPhotoPath}`);
 
-                const crossResult = await faceRecognitionService.crossVerifyFaces(checkInPhotoPath, incomingPath);
+                const crossResult = await faceRecognitionService.crossVerifyFaces(checkInPhotoPath, incomingPath, shiftRecord.id);
 
                 if (!crossResult.isMatch) {
                     console.error(`[AbsenWajah] ❌ Cross-verify GAGAL untuk ${user.name}: ${crossResult.error}`);
