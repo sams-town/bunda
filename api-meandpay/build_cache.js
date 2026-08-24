@@ -1,8 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import FaceRecognitionService from './src/services/FaceRecognitionService.js';
+import faceService from './src/services/FaceRecognitionService.js';
 
 const prisma = new PrismaClient();
-const faceService = new FaceRecognitionService();
 
 async function buildCache() {
     console.log("Mulai membangun disk cache...");
