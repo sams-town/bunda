@@ -8,6 +8,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../");
 
+// ─── RACE CONDITION LOCK ─────────────────────────────────────────────────────
+// Mencegah double-tap absen: jika user_id sedang diproses, tolak request duplikat.
+// Key: user_id (string), Value: true
+const processingUsers = new Set();
+// ─────────────────────────────────────────────────────────────────────────────
+
 class AbsensiController {
     async index(req, res) {
         try {
@@ -79,6 +85,7 @@ class AbsensiController {
     }
 
     async storeWajah(req, res) {
+        let userId = null; // Diisi setelah user teridentifikasi, untuk release lock
         try {
             const payload = { ...req.body };
 
@@ -94,13 +101,26 @@ class AbsensiController {
                 if (uploadedFiles.length > 0) {
                     const theFile = uploadedFiles[0];
                     incomingPath = path.join(ROOT_DIR, "public", "uploads", "absensi", theFile.filename);
-                    
-                    // We will set the final photo path later after determining if it's 'masuk' or 'pulang'
                 }
             }
 
             if (!incomingPath) {
                 return res.status(400).json({ success: false, message: "Foto absen wajib disertakan untuk absensi wajah." });
+            }
+
+            // ── RACE CONDITION GUARD (tahap awal, sebelum identifikasi user) ────────
+            // Jika payload.user_id sudah ada, kita bisa lock lebih awal
+            if (payload.user_id) {
+                const userIdKey = String(payload.user_id);
+                if (processingUsers.has(userIdKey)) {
+                    console.warn(`[AbsenWajah] ⚠️ Double-tap ditolak untuk user_id=${userIdKey}`);
+                    return res.status(429).json({
+                        success: false,
+                        message: "Absensi sedang diproses. Mohon tunggu sebentar sebelum mencoba lagi."
+                    });
+                }
+                processingUsers.add(userIdKey);
+                userId = userIdKey; // Simpan untuk release di finally
             }
 
             let user = null;
@@ -113,6 +133,20 @@ class AbsensiController {
                     return res.status(404).json({ success: false, message: "User tidak ditemukan." });
                 }
 
+                // ── LOCK untuk user yang diidentifikasi via user_id ──────────────────
+                // (Jika belum di-lock di atas, lock sekarang setelah user dikonfirmasi ada)
+                if (!userId) {
+                    const userIdKey = String(user.id);
+                    if (processingUsers.has(userIdKey)) {
+                        console.warn(`[AbsenWajah] ⚠️ Double-tap ditolak untuk ${user.name} (ID:${userIdKey})`);
+                        return res.status(429).json({
+                            success: false,
+                            message: "Absensi sedang diproses. Mohon tunggu sebentar sebelum mencoba lagi."
+                        });
+                    }
+                    processingUsers.add(userIdKey);
+                    userId = userIdKey;
+                }
                 console.log(`[AbsenWajah] User ditemukan: ${user.name} (ID:${user.id}), foto_face_recognition: ${user.foto_face_recognition || 'NULL'}`);
 
                 // Verifikasi wajah SELALU dijalankan di endpoint storeWajah
@@ -239,12 +273,15 @@ class AbsensiController {
             let shiftRecord = null;
             let tipe_absen = payload.tipe_absen; // 'masuk' or 'pulang'
 
-            // Check if there is an unfinished shift (like a night shift) from yesterday/recently
+            // Deteksi shift malam yang belum selesai (check-in kemarin, belum check-out)
+            // Toleransi maksimal 14 jam: shift 8 jam + lembur max 4 jam + buffer 2 jam
+            // 18 jam terlalu lebar dan bisa overlap dengan shift hari berikutnya
+            const NIGHT_SHIFT_TOLERANCE_HOURS = 14;
             const openNightShift = activeShifts.find(s => {
                 if (s.jam_absen && !s.jam_pulang) {
                     const checkInTime = parseJakartaTime(s.tanggal, s.jam_absen);
                     const elapsedHours = (now - checkInTime) / (1000 * 60 * 60);
-                    return elapsedHours > 0 && elapsedHours < 18;
+                    return elapsedHours > 0 && elapsedHours < NIGHT_SHIFT_TOLERANCE_HOURS;
                 }
                 return false;
             });
@@ -341,8 +378,13 @@ class AbsensiController {
 
             // 4. Cross-verify: Saat pulang, pastikan wajah sama dengan saat masuk
             if (tipe_absen === 'pulang' && shiftRecord.foto_jam_absen) {
-                const checkInPhotoPath = path.join(ROOT_DIR, "public", shiftRecord.foto_jam_absen.startsWith('/') ? shiftRecord.foto_jam_absen.substring(1) : shiftRecord.foto_jam_absen);
+                // PENTING: foto_jam_absen dari DB sudah di-serialize menjadi URL penuh
+                // (misal: "http://103.178.175.109/api/uploads/absensi/foto.jpg")
+                // JANGAN gunakan path.join() manual — gunakan resolveReferencePath()
+                // yang sudah menangani URL penuh maupun relative path dengan benar.
+                const checkInPhotoPath = faceRecognitionService.resolveReferencePath(shiftRecord.foto_jam_absen);
                 console.log(`[AbsenWajah] 🔄 Cross-verify wajah check-in vs check-out untuk ${user.name}`);
+                console.log(`[AbsenWajah] 📸 Path foto masuk (resolved): ${checkInPhotoPath}`);
 
                 const crossResult = await faceRecognitionService.crossVerifyFaces(checkInPhotoPath, incomingPath);
 
@@ -408,6 +450,13 @@ class AbsensiController {
                 error: error.message,
                 stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
             });
+        } finally {
+            // ── RELEASE LOCK — selalu dijalankan, apapun yang terjadi ────────────
+            // Pastikan lock dilepas meski terjadi error, agar user bisa absen ulang
+            if (userId) {
+                processingUsers.delete(userId);
+                console.log(`[AbsenWajah] 🔓 Lock dilepas untuk user_id=${userId}`);
+            }
         }
     }
 

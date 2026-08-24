@@ -1,5 +1,33 @@
 import prisma from "../config/prisma.js";
 
+// ─── CACHE PEGAWAI KELUAR ─────────────────────────────────────────────────────
+// Query pegawai_keluars sangat boros jika dijalankan setiap request GET /absensi.
+// Cache 5 menit: data ini sangat jarang berubah (hanya saat ada karyawan keluar/dikembalikan).
+const PEGAWAI_KELUAR_CACHE_TTL_MS = 5 * 60 * 1000; // 5 menit
+let pegawaiKeluarCache = null;      // Hasil query
+let pegawaiKeluarCacheTime = 0;     // Timestamp terakhir cache diisi
+
+async function getExcludedUserIds() {
+    const now = Date.now();
+    // Gunakan cache jika masih segar (belum lewat 5 menit)
+    if (pegawaiKeluarCache && (now - pegawaiKeluarCacheTime) < PEGAWAI_KELUAR_CACHE_TTL_MS) {
+        return pegawaiKeluarCache;
+    }
+    // Cache expired atau belum ada — query DB
+    const pegawaiKeluars = await prisma.pegawai_keluars.findMany({
+        where: { status: { in: ['APPROVED', 'DELETED'] } },
+        select: { user_id: true }
+    });
+    const ids = pegawaiKeluars
+        .map((pk) => pk.user_id)
+        .filter((id) => id !== null && id !== undefined);
+    // Simpan ke cache
+    pegawaiKeluarCache = ids;
+    pegawaiKeluarCacheTime = now;
+    return ids;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 class AbsensiService {
     async getAll(query = {}) {
         const search = query.search || "";
@@ -64,13 +92,8 @@ class AbsensiService {
             });
         }
 
-        const pegawaiKeluars = await prisma.pegawai_keluars.findMany({
-            where: { status: { in: ['APPROVED', 'DELETED'] } },
-            select: { user_id: true }
-        });
-        const excludedUserIds = pegawaiKeluars
-            .map((pk) => pk.user_id)
-            .filter((id) => id !== null && id !== undefined);
+        // Ambil excluded user IDs dari cache (bukan dari DB langsung setiap request)
+        const excludedUserIds = await getExcludedUserIds();
 
         where.AND.push({ user_id: { notIn: [...excludedUserIds, 1n] } });
         where.AND.push({
