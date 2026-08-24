@@ -15,19 +15,44 @@ const ROOT_DIR = path.resolve(__dirname, "../../");
 let modelsLoaded = false;
 
 // ─── FACE RECOGNITION QUEUE ────────────────────────────────────────────────
-// Batasi maksimal 2 proses face recognition berjalan bersamaan
-// Ini mencegah CPU spike ke 99% saat ratusan orang absen bersamaan
+// Batasi maksimal 2 proses face recognition berjalan bersamaan.
+// Ini mencegah CPU spike ke 99% saat ratusan orang absen bersamaan.
 const MAX_CONCURRENT = 2;
+
+// Timeout menunggu slot (ms). Jika slot tidak tersedia dalam waktu ini,
+// request ditolak dengan error — mencegah 504 Gateway Timeout dari Nginx.
+// Nginx default timeout = 60s. Kita pakai 25s agar ada waktu untuk response error.
+const QUEUE_WAIT_TIMEOUT_MS = 25000; // 25 detik
+
+// Timeout per operasi face recognition (ms).
+// WASM bisa hang pada gambar rusak. Batasi maksimal 20 detik per operasi.
+const FACE_OP_TIMEOUT_MS = 20000; // 20 detik
+
 let activeCount = 0;
 const waitQueue = [];
 
 function acquireSlot() {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         if (activeCount < MAX_CONCURRENT) {
             activeCount++;
             resolve();
         } else {
-            waitQueue.push(resolve);
+            // Timer: jika menunggu > 25 detik, tolak request
+            // sehingga server bisa kirim error 503 dan tidak diam sampai Nginx 504
+            const timeoutId = setTimeout(() => {
+                // Hapus diri dari antrian jika masih di sana
+                const idx = waitQueue.findIndex(item => item.resolve === resolve);
+                if (idx !== -1) waitQueue.splice(idx, 1);
+                reject(new Error('QUEUE_TIMEOUT: Sistem face recognition sedang sangat sibuk. Silakan coba lagi dalam beberapa detik.'));
+            }, QUEUE_WAIT_TIMEOUT_MS);
+
+            // Simpan resolve + timeoutId agar bisa dibersihkan saat slot tersedia
+            waitQueue.push({
+                resolve: () => {
+                    clearTimeout(timeoutId); // Batalkan timeout karena slot sudah dapat
+                    resolve();
+                }
+            });
         }
     });
 }
@@ -35,12 +60,27 @@ function acquireSlot() {
 function releaseSlot() {
     if (waitQueue.length > 0) {
         const next = waitQueue.shift();
-        next(); // slot langsung diberikan ke yang menunggu
+        next.resolve(); // slot langsung diberikan ke yang menunggu
     } else {
         activeCount--;
     }
 }
-// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Wrapper timeout untuk operasi async face recognition.
+ * Mencegah WASM hang selamanya pada gambar rusak atau sangat besar.
+ * @param {Promise} promise - operasi yang ingin di-timeout
+ * @param {number} ms - batas waktu dalam milidetik
+ * @param {string} label - label untuk logging
+ */
+function withTimeout(promise, ms, label) {
+    const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`FACE_TIMEOUT: Operasi '${label}' melebihi batas ${ms / 1000}s. Gambar mungkin terlalu besar atau rusak.`)), ms)
+    );
+    return Promise.race([promise, timeoutPromise]);
+}
+// ────────────────────────────────────────────────────────────────────────────
+
 
 /**
  * Enum-like constants untuk reason kegagalan verifikasi wajah.
@@ -123,9 +163,17 @@ class FaceRecognitionService {
         }
 
         try {
-            const img = await canvas.loadImage(imagePath);
-            const detections = await faceapi.detectAllFaces(img).withFaceLandmarks().withFaceDescriptors();
+            const img = await withTimeout(
+                canvas.loadImage(imagePath),
+                FACE_OP_TIMEOUT_MS,
+                `loadImage:${context}`
+            );
 
+            const detections = await withTimeout(
+                faceapi.detectAllFaces(img).withFaceLandmarks().withFaceDescriptors(),
+                FACE_OP_TIMEOUT_MS,
+                `detectFaces:${context}`
+            );
             if (detections.length === 0) {
                 console.warn(`${logPrefix} Tidak ada wajah terdeteksi di: ${imagePath}`);
                 return { 
@@ -158,6 +206,11 @@ class FaceRecognitionService {
             return detection.descriptor;
 
         } catch (e) {
+            // Tangani timeout dan error lain secara eksplisit
+            if (e.message && e.message.startsWith('FACE_TIMEOUT')) {
+                console.error(`${logPrefix} ⏱️ Timeout ekstrak descriptor: ${e.message}`);
+                return { error: 'Proses analisis wajah terlalu lama. Coba gunakan foto dengan ukuran lebih kecil.', failReason: FACE_FAIL_REASON.SYSTEM_ERROR };
+            }
             console.error(`${logPrefix} Error saat ekstrak descriptor dari ${imagePath}:`, e.message);
             return null;
         }
@@ -355,66 +408,67 @@ class FaceRecognitionService {
      * @returns {{ isMatch: boolean, distance?: number, error?: string, failReason?: string }}
      */
     async crossVerifyFaces(checkInPhotoPath, checkOutPhotoPath) {
-        await this.loadModels();
-
-        // Threshold dinaikkan ke 0.65 karena:
-        // - Verifikasi utama terhadap foto profil (Layer 1) sudah dilakukan dengan threshold ketat (0.45)
-        // - Cross-verify (Layer 2) hanya bertujuan mendeteksi fraud nyata (orang yang BENAR-BENAR berbeda)
-        // - Dua selfie dari orang yang SAMA bisa menghasilkan distance 0.55-0.64 karena:
-        //   * Perbedaan pencahayaan (pagi terang vs sore/malam gelap)
-        //   * Kompresi gambar berbeda
-        //   * Sudut kamera sedikit berbeda
-        //   * Ekspresi wajah berubah (lelah di akhir shift)
-        // - Threshold 0.55 lama terlalu ketat dan menyebabkan false-reject tinggi
-        const THRESHOLD = 0.65;
-        // Zona abu-abu: jarak 0.55-0.65 → orang kemungkinan sama tapi kondisi foto berbeda → izinkan tapi catat warning
-        const WARNING_ZONE = 0.55;
-        const logPrefix = '[FaceRecognition][crossVerify]';
-
-        console.log(`${logPrefix} Membandingkan foto check-in vs check-out`);
-        console.log(`${logPrefix} Check-in : ${checkInPhotoPath}`);
-        console.log(`${logPrefix} Check-out: ${checkOutPhotoPath}`);
-        console.log(`${logPrefix} Threshold: ${THRESHOLD} (zona warning: ${WARNING_ZONE}-${THRESHOLD})`);
-
-        // Validasi file check-in ada
-        if (!fs.existsSync(checkInPhotoPath)) {
-            console.error(`${logPrefix} File foto check-in tidak ditemukan: ${checkInPhotoPath}`);
-            // Jika foto check-in tidak ada, skip cross-verify — verifikasi foto profil sudah cukup
-            console.warn(`${logPrefix} Skipping cross-verify karena file check-in tidak ditemukan di disk.`);
-            return { isMatch: true, distance: null, skipped: true };
-        }
-
-        // Ekstrak descriptor dari foto check-in
-        const checkInDesc = await this.getFaceDescriptor(checkInPhotoPath, 'crossVerify/checkIn');
-        if (!checkInDesc) {
-            console.warn(`${logPrefix} Wajah tidak terdeteksi di foto check-in. Skipping cross-verify.`);
-            // Jika foto check-in tidak bisa dibaca/wajah tidak terdeteksi, skip cross-verify
-            // (verifikasi terhadap foto profil referensi sudah cukup sebagai fallback)
-            return { isMatch: true, distance: null, skipped: true };
-        }
-        if (checkInDesc.error) {
-            console.warn(`${logPrefix} Foto check-in gagal diproses: ${checkInDesc.error}. Skipping cross-verify.`);
-            return { isMatch: true, distance: null, skipped: true };
-        }
-
-        // Ekstrak descriptor dari foto check-out (foto yang baru diambil)
-        const checkOutDesc = await this.getFaceDescriptor(checkOutPhotoPath, 'crossVerify/checkOut');
-        if (!checkOutDesc) {
-            return {
-                isMatch: false,
-                error: "Wajah tidak terdeteksi pada foto absensi pulang. Pastikan pencahayaan cukup dan wajah terlihat jelas.",
-                failReason: FACE_FAIL_REASON.FACE_NOT_DETECTED
-            };
-        }
-        if (checkOutDesc.error) {
-            return {
-                isMatch: false,
-                error: checkOutDesc.error,
-                failReason: checkOutDesc.failReason
-            };
-        }
-
+        // crossVerify WAJIB masuk ke queue yang sama dengan verifyUserFace
+        // Sebelumnya tidak pakai acquireSlot() → bisa jalan tanpa batas paralel
+        // Sekarang dibatasi sama (max 2 total) agar tidak membebani CPU
+        await acquireSlot();
         try {
+            await this.loadModels();
+
+            // Threshold dinaikkan ke 0.65 karena:
+            // - Verifikasi utama terhadap foto profil (Layer 1) sudah dilakukan dengan threshold ketat (0.45)
+            // - Cross-verify (Layer 2) hanya bertujuan mendeteksi fraud nyata (orang yang BENAR-BENAR berbeda)
+            // - Dua selfie dari orang yang SAMA bisa menghasilkan distance 0.55-0.64 karena:
+            //   * Perbedaan pencahayaan (pagi terang vs sore/malam gelap)
+            //   * Kompresi gambar berbeda
+            //   * Sudut kamera sedikit berbeda
+            //   * Ekspresi wajah berubah (lelah di akhir shift)
+            // - Threshold 0.55 lama terlalu ketat dan menyebabkan false-reject tinggi
+            const THRESHOLD = 0.65;
+            // Zona abu-abu: jarak 0.55-0.65 → orang kemungkinan sama tapi kondisi foto berbeda → izinkan tapi catat warning
+            const WARNING_ZONE = 0.55;
+            const logPrefix = '[FaceRecognition][crossVerify]';
+
+            console.log(`${logPrefix} Membandingkan foto check-in vs check-out`);
+            console.log(`${logPrefix} Check-in : ${checkInPhotoPath}`);
+            console.log(`${logPrefix} Check-out: ${checkOutPhotoPath}`);
+            console.log(`${logPrefix} Threshold: ${THRESHOLD} (zona warning: ${WARNING_ZONE}-${THRESHOLD})`);
+
+            // Validasi file check-in ada
+            if (!fs.existsSync(checkInPhotoPath)) {
+                console.error(`${logPrefix} File foto check-in tidak ditemukan: ${checkInPhotoPath}`);
+                console.warn(`${logPrefix} Skipping cross-verify karena file check-in tidak ditemukan di disk.`);
+                return { isMatch: true, distance: null, skipped: true };
+            }
+
+            // Ekstrak descriptor dari foto check-in
+            const checkInDesc = await this.getFaceDescriptor(checkInPhotoPath, 'crossVerify/checkIn');
+            if (!checkInDesc) {
+                console.warn(`${logPrefix} Wajah tidak terdeteksi di foto check-in. Skipping cross-verify.`);
+                return { isMatch: true, distance: null, skipped: true };
+            }
+            if (checkInDesc.error) {
+                console.warn(`${logPrefix} Foto check-in gagal diproses: ${checkInDesc.error}. Skipping cross-verify.`);
+                return { isMatch: true, distance: null, skipped: true };
+            }
+
+            // Ekstrak descriptor dari foto check-out (foto yang baru diambil)
+            const checkOutDesc = await this.getFaceDescriptor(checkOutPhotoPath, 'crossVerify/checkOut');
+            if (!checkOutDesc) {
+                return {
+                    isMatch: false,
+                    error: "Wajah tidak terdeteksi pada foto absensi pulang. Pastikan pencahayaan cukup dan wajah terlihat jelas.",
+                    failReason: FACE_FAIL_REASON.FACE_NOT_DETECTED
+                };
+            }
+            if (checkOutDesc.error) {
+                return {
+                    isMatch: false,
+                    error: checkOutDesc.error,
+                    failReason: checkOutDesc.failReason
+                };
+            }
+
             const distance = faceapi.euclideanDistance(checkInDesc, checkOutDesc);
             const similarityScore = Math.max(0, (1 - distance) * 100).toFixed(1);
             const matchStatus = distance < THRESHOLD ? 'MATCH' : 'NO_MATCH';
@@ -427,7 +481,6 @@ class FaceRecognitionService {
             console.log(`${logPrefix} Status        : ${matchStatus}`);
 
             if (distance < WARNING_ZONE) {
-                // Jelas sama — cocok dengan confidence tinggi
                 console.log(`${logPrefix} ✅ Match confidence TINGGI (distance ${distance.toFixed(4)} < ${WARNING_ZONE})`);
                 return { isMatch: true, distance };
             }
@@ -435,7 +488,7 @@ class FaceRecognitionService {
             if (distance < THRESHOLD) {
                 // Zona abu-abu — kemungkinan sama tapi kondisi foto berbeda (pencahayaan, ekspresi)
                 // Tetap izinkan karena Layer 1 (verifikasi foto profil) sudah berhasil
-                console.warn(`${logPrefix} ⚠️ Match di ZONA ABU-ABU (distance ${distance.toFixed(4)}, antara ${WARNING_ZONE}-${THRESHOLD}). Kemungkinan perbedaan pencahayaan/kondisi. Diizinkan karena Layer 1 sudah lolos.`);
+                console.warn(`${logPrefix} ⚠️ Match di ZONA ABU-ABU (distance ${distance.toFixed(4)}, antara ${WARNING_ZONE}-${THRESHOLD}). Diizinkan karena Layer 1 sudah lolos.`);
                 return { isMatch: true, distance, warningZone: true };
             }
 
@@ -447,13 +500,18 @@ class FaceRecognitionService {
                 error: `Wajah saat pulang tidak cocok dengan wajah saat masuk (kemiripan: ${similarityScore}%). Pastikan yang absen pulang adalah orang yang sama yang absen masuk.`,
                 failReason: FACE_FAIL_REASON.FACE_NO_MATCH
             };
+
         } catch (err) {
-            console.error(`${logPrefix} Error saat cross-verify:`, err.message);
-            // Jika terjadi error teknis, skip cross-verify dan andalkan Layer 1
-            console.warn(`${logPrefix} Skipping cross-verify karena error teknis. Layer 1 sudah berhasil.`);
+            console.error(`[FaceRecognition][crossVerify] Error saat cross-verify:`, err.message);
+            // Jika terjadi error teknis (termasuk QUEUE_TIMEOUT), skip cross-verify
+            console.warn(`[FaceRecognition][crossVerify] Skipping cross-verify karena error. Layer 1 sudah berhasil.`);
             return { isMatch: true, distance: null, skipped: true };
+        } finally {
+            // WAJIB: kembalikan slot ke queue, apapun yang terjadi
+            releaseSlot();
         }
     }
+
 
     // Backward compatibility
     async compareFaces(referencePath, incomingPath) {

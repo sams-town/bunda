@@ -443,13 +443,25 @@ class AbsensiController {
             });
 
         } catch (error) {
-            console.error("AbsensiController.storeWajah FATAL ERROR:", error);
+            console.error("AbsensiController.storeWajah FATAL ERROR:", error.message);
+
+            // Jika error adalah QUEUE_TIMEOUT: antrian face recognition penuh
+            // Kirim 503 (Service Unavailable) agar Nginx tidak override dengan 504
+            if (error.message && error.message.startsWith('QUEUE_TIMEOUT')) {
+                return res.status(503).json({
+                    success: false,
+                    message: "Sistem absensi sedang sangat sibuk (banyak karyawan absen bersamaan). Silakan coba lagi dalam 10-15 detik.",
+                    error: error.message
+                });
+            }
+
             return res.status(500).json({ 
                 success: false, 
                 message: "Gagal memproses absensi wajah di server.", 
                 error: error.message,
                 stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
             });
+
         } finally {
             // ── RELEASE LOCK — selalu dijalankan, apapun yang terjadi ────────────
             // Pastikan lock dilepas meski terjadi error, agar user bisa absen ulang
