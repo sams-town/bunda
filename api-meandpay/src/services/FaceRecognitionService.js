@@ -12,6 +12,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../");
 
+// Pastikan folder cache tersedia
+const CACHE_DIR = path.join(__dirname, '..', '..', '.cache');
+if (!fs.existsSync(CACHE_DIR)) {
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+}
+const DESCRIPTORS_CACHE_FILE = path.join(CACHE_DIR, 'face_descriptors.json');
+
 let modelsLoaded = false;
 
 // ─── FACE RECOGNITION QUEUE ────────────────────────────────────────────────
@@ -98,20 +105,65 @@ export const FACE_FAIL_REASON = {
 };
 
 class FaceRecognitionService {
-    // ─── CACHE DESCRIPTOR WAJAH ─────────────────────────────────────────────
-    // Cache descriptor foto REFERENSI per user (foto profil yang diupload saat registrasi).
-    // TTL: 60 menit. Setelah 60 menit, descriptor di-refresh dari disk.
-    // Ini menghemat 15-20 detik per request (tidak perlu WASM re-extract referensi).
-    // Key: userId (string), Value: { descriptor: Float32Array, cachedAt: number }
+    // ─── CACHE DESCRIPTOR WAJAH (MEMORY & DISK) ────────────────────────────
+    // Cache descriptor foto REFERENSI per user.
+    // Memory Cache: Map()
     userDescriptorsCache = new Map();
-    static REFERENCE_CACHE_TTL_MS = 60 * 60 * 1000; // 60 menit
+    static REFERENCE_CACHE_TTL_MS = 60 * 60 * 1000; // 60 menit di memory
 
     // Cache descriptor foto CHECK-IN (foto saat absen masuk).
-    // TTL: 16 jam. Ini untuk crossVerify saat absen pulang agar tidak perlu
-    // re-extract foto masuk (yang mungkin sudah berusia beberapa jam).
-    // Key: absensiRecordId (string), Value: { descriptor: Float32Array, cachedAt: number }
     checkInDescriptorCache = new Map();
     static CHECKIN_CACHE_TTL_MS = 16 * 60 * 60 * 1000; // 16 jam
+
+    constructor() {
+        this.loadDiskCache();
+    }
+
+    /**
+     * Muat cache descriptor dari disk saat service diinisialisasi.
+     * Mencegah proses ulang WASM yang lama saat PM2 restart.
+     */
+    loadDiskCache() {
+        try {
+            if (fs.existsSync(DESCRIPTORS_CACHE_FILE)) {
+                const data = fs.readFileSync(DESCRIPTORS_CACHE_FILE, 'utf8');
+                const parsed = JSON.parse(data);
+                const now = Date.now();
+                
+                let loadedCount = 0;
+                for (const [userId, entry] of Object.entries(parsed)) {
+                    if (entry.descriptor && Array.isArray(entry.descriptor)) {
+                        // Ubah array biasa kembali ke Float32Array
+                        const floatArray = new Float32Array(entry.descriptor);
+                        this.userDescriptorsCache.set(userId, { descriptor: floatArray, cachedAt: now });
+                        loadedCount++;
+                    }
+                }
+                console.log(`[FaceRecognition] 🚀 Berhasil memuat ${loadedCount} descriptor dari disk cache.`);
+            }
+        } catch (error) {
+            console.error(`[FaceRecognition] Gagal memuat disk cache:`, error.message);
+        }
+    }
+
+    /**
+     * Simpan memory cache ke disk agar persisten.
+     */
+    saveDiskCache() {
+        try {
+            const dataToSave = {};
+            for (const [userId, entry] of this.userDescriptorsCache.entries()) {
+                // Ubah Float32Array ke Array biasa agar bisa di stringify
+                dataToSave[userId] = {
+                    descriptor: Array.from(entry.descriptor),
+                    cachedAt: entry.cachedAt
+                };
+            }
+            fs.writeFileSync(DESCRIPTORS_CACHE_FILE, JSON.stringify(dataToSave), 'utf8');
+        } catch (error) {
+            console.error(`[FaceRecognition] Gagal menyimpan disk cache:`, error.message);
+        }
+    }
     // ─────────────────────────────────────────────────────────────────────────────
 
     async loadModels() {
@@ -272,20 +324,26 @@ class FaceRecognitionService {
             return { desc: null, failReason: userDesc.failReason || FACE_FAIL_REASON.REFERENCE_FACE_INVALID, referencePath };
         }
 
-        // Simpan ke cache dengan timestamp
+        // Simpan ke memory cache
         this.userDescriptorsCache.set(userIdStr, { descriptor: userDesc, cachedAt: now });
-        console.log(`[FaceRecognition][${userName}] 💾 Descriptor referensi disimpan ke cache (TTL: 60 menit).`);
+        console.log(`[FaceRecognition][${userName}] 💾 Descriptor referensi disimpan ke memory cache.`);
+        
+        // Simpan permanen ke disk cache secara asynchronous agar tidak memblokir proses
+        setTimeout(() => this.saveDiskCache(), 100);
 
         return { desc: userDesc, failReason: null, referencePath };
     }
 
     /**
-     * Hapus cache descriptor user tertentu.
+     * Hapus cache descriptor user tertentu (dari memory dan disk).
      * Panggil ini saat foto referensi user diperbarui (upload ulang foto wajah).
      */
     invalidateUserCache(userId) {
         const userIdStr = String(userId);
         const deleted = this.userDescriptorsCache.delete(userIdStr);
+        if (deleted) {
+            this.saveDiskCache();
+        }
         console.log(`[FaceRecognition] Cache descriptor user ${userIdStr} ${deleted ? 'dihapus' : 'tidak ada di cache'}.`);
     }
 
