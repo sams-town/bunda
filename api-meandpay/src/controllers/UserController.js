@@ -54,6 +54,37 @@ class UserController {
     }
 
     /**
+     * GET /api/users/subordinates
+     * Gets users managed by the currently logged in manager
+     */
+    async subordinates(req, res) {
+        try {
+            // Check if user has manager role
+            const userRoles = req.user.roles ? req.user.roles.map(r => r.roles.name) : [];
+            if (!userRoles.includes('manager')) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Anda tidak memiliki akses (role manager dibutuhkan)",
+                });
+            }
+
+            const result = await userService.getManagerReports(req.user.id);
+            return res.status(200).json({
+                success: true,
+                message: "Data bawahan berhasil diambil",
+                ...result,
+            });
+        } catch (error) {
+            console.error("UserController.subordinates error:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Gagal mengambil data bawahan",
+                error: error.message,
+            });
+        }
+    }
+
+    /**
      * GET /api/users/:id
      */
     async show(req, res) {

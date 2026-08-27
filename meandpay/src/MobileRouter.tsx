@@ -18,6 +18,7 @@ import { MobileLayout } from './components/MobileLayout';
 import { MobileProfilePage } from './components/MobileProfilePage';
 import { MobilePayrollPage } from './components/MobilePayrollPage';
 import { MobileNotificationsPage } from './components/MobileNotificationsPage';
+import { ManagerShiftEmployeesPage } from './components/ManagerShiftEmployeesPage';
 
 export function MobileRouter({ user, handleLogout, settings }: { user: any, handleLogout?: () => void, settings?: any }) {
   const location = useLocation();
@@ -41,6 +42,7 @@ export function MobileRouter({ user, handleLogout, settings }: { user: any, hand
   else if (['/finance-kasbon', '/finance-reimbursement', '/finance-pengajuan'].includes(location.pathname)) content = <MobileFinancePage />;
   else if (['/visit-kunjungan', '/visit-penugasan', '/visit-rapat', '/visit-dokter'].includes(location.pathname)) content = <MobileVisitPage />;
   else if (['/kinerja-pegawai', '/kinerja-laporan-kerja', '/finance-target-kinerja'].includes(location.pathname)) content = <MobileKinerjaPage />;
+  else if (location.pathname === '/manager-shift') content = <ManagerShiftEmployeesPage onBack={() => navigate('/beranda')} />;
   else content = <MobileBerandaPage settings={settings} />;
 
   return <MobileLayout>{content}</MobileLayout>;

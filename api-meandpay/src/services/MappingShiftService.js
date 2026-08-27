@@ -32,6 +32,44 @@ class MappingShiftService {
         return { data: this.serializeList(data) };
     }
 
+    async getMyTeam(managerId) {
+        // 1. Get jabatans managed by this manager
+        const jabatans = await prisma.jabatans.findMany({
+            where: { manager: BigInt(managerId) },
+            select: { id: true }
+        });
+        const jabatanIds = jabatans.map(j => j.id);
+
+        if (jabatanIds.length === 0) {
+            return { data: [] };
+        }
+
+        // 2. Get users in these jabatans
+        const users = await prisma.users.findMany({
+            where: { jabatan_id: { in: jabatanIds } },
+            select: { id: true }
+        });
+        const userIds = users.map(u => u.id);
+
+        if (userIds.length === 0) {
+            return { data: [] };
+        }
+
+        // 3. Get their shifts
+        const data = await prisma.mapping_shifts.findMany({
+            where: {
+                user_id: { in: userIds }
+            },
+            orderBy: { tanggal: "desc" },
+            include: {
+                users: true,
+                shifts: true
+            }
+        });
+
+        return { data: this.serializeList(data) };
+    }
+
     async getWhere(where) {
         const records = await prisma.mapping_shifts.findMany({
             where,

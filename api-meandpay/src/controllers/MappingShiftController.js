@@ -10,6 +10,25 @@ class MappingShiftController {
         }
     }
 
+    async myTeam(req, res) {
+        try {
+            // Check if user has manager role
+            const userRoles = req.user.roles ? req.user.roles.map(r => r.roles.name) : [];
+            if (!userRoles.includes('manager')) {
+                return res.status(403).json({
+                    success: false,
+                    message: "Anda tidak memiliki akses (role manager dibutuhkan)",
+                });
+            }
+
+            const result = await mappingShiftService.getMyTeam(req.user.id);
+            return res.status(200).json({ success: true, message: "Data mapping shift tim berhasil diambil", ...result });
+        } catch (error) {
+            console.error("MappingShiftController.myTeam error:", error);
+            return res.status(500).json({ success: false, message: "Gagal mengambil data mapping shift tim", error: error.message });
+        }
+    }
+
     async show(req, res) {
         try {
             const data = await mappingShiftService.getById(req.params.id);

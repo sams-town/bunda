@@ -91,6 +91,7 @@ router.put("/me", authMiddleware, (req, res) => authController.updateProfile(req
 // ========================
 router.get("/users", (req, res) => userController.index(req, res));
 router.get("/users/all", (req, res) => userController.all(req, res));
+router.get("/users/subordinates", authMiddleware, (req, res) => userController.subordinates(req, res));
 router.get("/users/:id", (req, res) => userController.show(req, res));
 router.post("/users", authMiddleware, upload.single("foto_karyawan"), (req, res) => userController.store(req, res));
 router.put("/users/:id", authMiddleware, upload.single("foto_karyawan"), (req, res) => userController.update(req, res));
@@ -236,6 +237,7 @@ router.delete("/status-pajak/:id", (req, res) => statusPajakController.destroy(r
 // MAPPING SHIFT ROUTES
 // ========================
 router.get("/mapping-shifts", (req, res) => mappingShiftController.index(req, res));
+router.get("/mapping-shifts/my-team", authMiddleware, (req, res) => mappingShiftController.myTeam(req, res));
 router.get("/mapping-shifts/:id", (req, res) => mappingShiftController.show(req, res));
 router.get("/mapping-shifts-user/:id", (req, res) => mappingShiftController.showUser(req, res));
 router.get("/mapping-shifts-user-first/:id", (req, res) => mappingShiftController.showUserFirst(req, res));

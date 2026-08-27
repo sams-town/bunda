@@ -4,6 +4,30 @@ import fileService from "./FileService.js";
 
 class UserService {
     /**
+     * Get manager reports (subordinates)
+     */
+    async getManagerReports(managerId) {
+        // Find departments where the manager is the auth user
+        const jabatans = await prisma.jabatans.findMany({
+            where: { manager: BigInt(managerId) },
+            select: { id: true }
+        });
+        const jabatanIds = jabatans.map(j => j.id);
+
+        if (jabatanIds.length === 0) {
+            return { data: [], total: 0 };
+        }
+
+        const data = await prisma.users.findMany({
+            where: { jabatan_id: { in: jabatanIds }, id: { not: 1n } }, // exclude superadmin if any
+            orderBy: { name: 'asc' },
+            select: { id: true, name: true, jabatan_id: true, jabatan: true }
+        });
+
+        return { data: this.serializeList(data), total: data.length };
+    }
+
+    /**
      * Get all users with optional pagination & search
      */
     async getAll(query = {}, authUser = null) {
