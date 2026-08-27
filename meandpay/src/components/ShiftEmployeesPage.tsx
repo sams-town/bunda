@@ -699,8 +699,8 @@ function AddEmployeeToShiftModal({
   );
 
   const filteredEmployees = allEmployees.filter(emp =>
-    emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-    emp.username.toLowerCase().includes(employeeSearch.toLowerCase())
+    (emp.name || '').toLowerCase().includes((employeeSearch || '').toLowerCase()) ||
+    (emp.username || '').toLowerCase().includes((employeeSearch || '').toLowerCase())
   );
 
   const toggleEmployee = (id: string) => {
