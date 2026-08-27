@@ -146,7 +146,8 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
     if (!permission) return true;
     if (permission === 'manager_only') {
       const roles = userData?.roles || [];
-      return roles.some((r: any) => r.name === 'manager' || r.roles?.name === 'manager');
+      // roles could be array of strings or array of objects depending on how backend sends it
+      return roles.includes('manager') || roles.some((r: any) => r === 'manager' || r?.name === 'manager' || r?.roles?.name === 'manager');
     }
     if (userData?.is_admin === 'admin') return true;
     
