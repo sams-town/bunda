@@ -690,7 +690,7 @@ function AddEmployeeToShiftModal({
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [lockLocation, setLockLocation] = useState(false);
+  const [lockLocation, setLockLocation] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
 
@@ -825,8 +825,6 @@ function AddEmployeeToShiftModal({
               type="checkbox"
               id="lockLocationAdd"
               checked={lockLocation}
-              onChange={e => setLockLocation(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
             />
             <label htmlFor="lockLocationAdd" className="text-xs font-bold text-slate-500 tracking-tight cursor-pointer">
               Lock Location

@@ -1,4 +1,5 @@
 import mappingShiftService from "../services/MappingShiftService.js";
+import prisma from "../config/prisma.js";
 
 class MappingShiftController {
     async index(req, res) {
@@ -68,6 +69,48 @@ class MappingShiftController {
             }
 
             const result = await mappingShiftService.bulkCreateRange(req.body);
+
+            // Send notification to admins if this was done by a manager (someone who is not admin)
+            if (req.user && req.user.id) {
+                try {
+                    const managerName = req.user.name;
+                    const employee = await prisma.users.findUnique({ where: { id: BigInt(user_id) } });
+                    const shift = shift_id ? await prisma.shifts.findUnique({ where: { id: BigInt(shift_id) } }) : null;
+                    
+                    if (employee) {
+                        const shiftName = shift ? shift.nama_shift : "Libur/Kosong";
+                        const msg = `Manager ${managerName} telah menambahkan Shift ${shiftName} untuk Karyawan ${employee.name} (${start_date} s/d ${end_date})`;
+                        
+                        // Get admins
+                        const admins = await prisma.users.findMany({
+                            where: { OR: [{ is_admin: 'admin' }, { is_admin: 'superadmin' }, { id: 1n }] },
+                            select: { id: true }
+                        });
+                        
+                        for (const admin of admins) {
+                            if (admin.id.toString() === req.user.id.toString()) continue; 
+                            
+                            await prisma.notifications.create({
+                                data: {
+                                    type: 'Mapping Shift',
+                                    notifiable_type: 'App\\Models\\User',
+                                    notifiable_id: admin.id,
+                                    data: JSON.stringify({
+                                        message: msg,
+                                        user_id: user_id.toString(),
+                                        shift_id: shift_id ? shift_id.toString() : null,
+                                        action: 'create'
+                                    }),
+                                    created_at: new Date(),
+                                    updated_at: new Date()
+                                }
+                            });
+                        }
+                    }
+                } catch (notifErr) {
+                    console.error("Failed to send notification for Mapping Shift:", notifErr);
+                }
+            }
 
             return res.status(201).json({
                 success: true,
