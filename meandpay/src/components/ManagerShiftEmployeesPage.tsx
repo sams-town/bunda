@@ -302,7 +302,7 @@ export function ManagerShiftEmployeesPage({ onBack }: ManagerShiftEmployeesPageP
     return (
       <div className="max-w-7xl mx-auto pb-20">
         {/* Header skeleton */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-slate-200 animate-pulse" />
             <div>
@@ -310,14 +310,14 @@ export function ManagerShiftEmployeesPage({ onBack }: ManagerShiftEmployeesPageP
               <div className="h-4 w-72 bg-slate-100 rounded-lg animate-pulse mt-2" />
             </div>
           </div>
-          <div className="flex gap-2.5">
+          <div className="flex flex-wrap gap-2.5">
             <div className="h-10 w-24 bg-slate-200 rounded-xl animate-pulse" />
             <div className="h-10 w-28 bg-slate-300 rounded-xl animate-pulse" />
           </div>
         </div>
 
         {/* Stats skeleton */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           {[0, 1, 2].map(i => (
             <div key={i} className="bg-white rounded-2xl border border-slate-200/80 px-5 py-4 shadow-sm">
               <div className="flex items-center gap-3.5">
@@ -381,7 +381,7 @@ export function ManagerShiftEmployeesPage({ onBack }: ManagerShiftEmployeesPageP
         className="max-w-7xl mx-auto pb-20"
       >
         {/* ── Page Header ── */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div className="flex items-center gap-4">
             <div className="relative">
               <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 blur-lg opacity-30" />
@@ -394,7 +394,7 @@ export function ManagerShiftEmployeesPage({ onBack }: ManagerShiftEmployeesPageP
               <p className="text-[13px] text-slate-400 font-medium mt-0.5">Kelola jadwal shift & penugasan karyawan</p>
             </div>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             <button
               onClick={() => generateMappingTemplate(shifts, allEmployees)}
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm active:scale-[0.97]"
@@ -423,7 +423,7 @@ export function ManagerShiftEmployeesPage({ onBack }: ManagerShiftEmployeesPageP
         </div>
 
         {/* ── Stats Row ── */}
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           {[
             { label: 'Total Shift', value: shifts.length, icon: Clock, color: 'from-indigo-500 to-violet-600', lightBg: 'bg-indigo-50', lightIcon: 'text-indigo-500' },
             { label: 'Karyawan Aktif', value: totalEmployeesInShifts, icon: Users, color: 'from-emerald-500 to-teal-600', lightBg: 'bg-emerald-50', lightIcon: 'text-emerald-500' },
