@@ -146,8 +146,13 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
     if (!permission) return true;
     if (permission === 'manager_only') {
       const roles = userData?.roles || [];
-      // roles could be array of strings or array of objects depending on how backend sends it
-      return roles.includes('manager') || roles.some((r: any) => r === 'manager' || r?.name === 'manager' || r?.roles?.name === 'manager');
+      const hasManagerRole = roles.includes('manager') || roles.some((r: any) => r === 'manager' || r?.name === 'manager' || r?.roles?.name === 'manager');
+      
+      // Karena terkadang manager tidak ada di 'roles' tapi ada di nama jabatannya
+      const jabatanName = userData?.jabatan?.nama_jabatan?.toUpperCase() || '';
+      const hasManagerJabatan = jabatanName.includes('MANAGER') || jabatanName.includes('MGR');
+      
+      return hasManagerRole || hasManagerJabatan;
     }
     if (userData?.is_admin === 'admin') return true;
     

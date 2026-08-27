@@ -13,13 +13,9 @@ class MappingShiftController {
     async myTeam(req, res) {
         try {
             // Check if user has manager role
-            const userRoles = req.user.roles ? req.user.roles.map(r => r.roles.name) : [];
-            if (!userRoles.includes('manager')) {
-                return res.status(403).json({
-                    success: false,
-                    message: "Anda tidak memiliki akses (role manager dibutuhkan)",
-                });
-            }
+            const userRoles = req.user.roles || [];
+            // Remove strict check because manager could be determined by jabatan name or DB relation
+            // The service getMyTeam will return empty if the user is not a manager of any jabatan.
 
             const result = await mappingShiftService.getMyTeam(req.user.id);
             return res.status(200).json({ success: true, message: "Data mapping shift tim berhasil diambil", ...result });
