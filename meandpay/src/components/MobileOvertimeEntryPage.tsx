@@ -16,7 +16,7 @@ import {
   MapPin,
   CheckCircle2
 } from 'lucide-react';
-import { cn, formatPhotoUrl, downloadFile } from '../lib/utils';
+import { cn, formatPhotoUrl, downloadTemplate } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './Toast';
 
@@ -237,7 +237,7 @@ export function MobileOvertimeEntryPage() {
               </div>
               <button
                 type="button"
-                onClick={() => downloadFile(templateUrl, 'Formulir-Lembur.xlsx')}
+                onClick={() => downloadTemplate('form_lembur')}
                 className="w-full py-4 bg-white border border-amber-200 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black text-amber-600 uppercase tracking-[0.1em] shadow-sm active:scale-95 transition-all cursor-pointer"
               >
                 <Download className="w-4 h-4" />

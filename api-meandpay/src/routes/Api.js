@@ -313,6 +313,7 @@ const settingUpload = createUploadMiddleware(
     10 * 1024 * 1024
 );
 router.get("/settings", (req, res) => settingController.index(req, res));
+router.get("/settings/download-template", (req, res) => settingController.downloadTemplate(req, res));
 router.get("/settings/:id", (req, res) => settingController.show(req, res));
 router.post("/settings", settingUpload.fields([{ name: "logo", maxCount: 1 }, { name: "form_cuti", maxCount: 1 }, { name: "slip_gaji", maxCount: 1 }, { name: "form_lembur", maxCount: 1 }]), (req, res) => settingController.store(req, res));
 router.put("/settings/:id", settingUpload.fields([{ name: "logo", maxCount: 1 }, { name: "form_cuti", maxCount: 1 }, { name: "slip_gaji", maxCount: 1 }, { name: "form_lembur", maxCount: 1 }]), (req, res) => settingController.update(req, res));

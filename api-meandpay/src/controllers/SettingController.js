@@ -1,4 +1,10 @@
 import settingService from "../services/SettingService.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 class SettingController {
     /**
@@ -46,6 +52,56 @@ class SettingController {
                 message: "Gagal mengambil data setting",
                 error: error.message,
             });
+        }
+    }
+
+    /**
+     * GET /api/settings/download-template?type=form_cuti|form_lembur|slip_gaji
+     * Publicly accessible — no auth required.
+     * Sends the file with Content-Disposition: attachment so mobile browsers
+     * save the file rather than trying to open/preview it.
+     */
+    async downloadTemplate(req, res) {
+        try {
+            const { type } = req.query; // form_cuti | form_lembur | slip_gaji
+            const allowed = ['form_cuti', 'form_lembur', 'slip_gaji'];
+            if (!type || !allowed.includes(type)) {
+                return res.status(400).json({ success: false, message: "Parameter type tidak valid." });
+            }
+
+            const record = await settingService.getById(1);
+            if (!record) {
+                return res.status(404).json({ success: false, message: "Setting tidak ditemukan." });
+            }
+
+            const fieldMap = {
+                form_cuti: record.file_form_cuti,
+                form_lembur: record.file_form_lembur,
+                slip_gaji: record.file_slip_gaji,
+            };
+
+            const filePath = fieldMap[type];
+            if (!filePath) {
+                return res.status(404).json({ success: false, message: `Template ${type} belum diunggah.` });
+            }
+
+            // filePath stored as /uploads/logos/filename.xlsx
+            const cleanPath = filePath.replace(/^\//, '');
+            const absolutePath = path.join(__dirname, "../../public", cleanPath);
+
+            if (!fs.existsSync(absolutePath)) {
+                return res.status(404).json({ success: false, message: "File tidak ditemukan di server." });
+            }
+
+            const filename = path.basename(absolutePath);
+            // Force download on ALL browsers including mobile
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.setHeader('Content-Type', 'application/octet-stream');
+            res.setHeader('Cache-Control', 'no-cache');
+            return res.sendFile(absolutePath);
+        } catch (error) {
+            console.error("SettingController.downloadTemplate error:", error);
+            return res.status(500).json({ success: false, message: "Gagal mengunduh template.", error: error.message });
         }
     }
 

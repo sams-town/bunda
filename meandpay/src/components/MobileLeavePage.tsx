@@ -19,7 +19,7 @@ import {
   User,
   Printer
 } from 'lucide-react';
-import { cn, formatPhotoUrl, compressImageFile, downloadFile } from '../lib/utils';
+import { cn, formatPhotoUrl, compressImageFile, downloadTemplate } from '../lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from './Toast';
 import { generateLeaveFormPDF } from '../lib/pdfLeaveForm';
@@ -684,7 +684,7 @@ export function MobileLeavePage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => downloadFile(templateUrl, 'Formulir-Cuti.xlsx')}
+                    onClick={() => downloadTemplate('form_cuti')}
                     className="w-full py-3 bg-white border border-indigo-200 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-[0.1em] shadow-sm active:scale-95 transition-all cursor-pointer"
                   >
                     <Download className="w-4 h-4" />

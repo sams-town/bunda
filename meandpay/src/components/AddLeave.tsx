@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Save, X, Calendar, User, FileText, ImageIcon, Loader2, Download } from 'lucide-react';
-import { cn, formatPhotoUrl, downloadFile } from '../lib/utils';
+import { cn, formatPhotoUrl, downloadTemplate } from '../lib/utils';
 import { Card, SectionTitle, FormInput, FormSelect, Field, Toast } from './common/FormUI';
 
 interface AddLeaveProps {
@@ -79,7 +79,7 @@ export function AddLeave({ onBack }: AddLeaveProps) {
                         </div>
                         <button
                             type="button"
-                            onClick={() => downloadFile(templateUrl, 'Formulir-Cuti.xlsx')}
+                            onClick={() => downloadTemplate('form_cuti')}
                             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-200 active:scale-95 transition-all cursor-pointer"
                         >
                             <Download className="w-3.5 h-3.5" />

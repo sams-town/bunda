@@ -49,25 +49,47 @@ export function formatPhotoUrl(url: string | null | undefined) {
   return `${apiBase}/uploads/${cleanPath}`;
 }
 
+/**
+ * downloadTemplate — use the backend's dedicated download endpoint.
+ * This forces Content-Disposition: attachment on all browsers including iOS/Android.
+ * type: 'form_cuti' | 'form_lembur' | 'slip_gaji'
+ */
+export function downloadTemplate(type: 'form_cuti' | 'form_lembur' | 'slip_gaji') {
+  const apiBase = import.meta.env.VITE_API_MEANDPAY || 'https://hris.rsbundahalimah.com/api';
+  const url = `${apiBase}/settings/download-template?type=${type}`;
+  // Use an invisible anchor click — the server sends Content-Disposition: attachment
+  const a = document.createElement('a');
+  a.href = url;
+  a.target = '_blank';
+  a.rel = 'noopener noreferrer';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/**
+ * downloadFile — generic blob download for arbitrary file URLs.
+ * Falls back to window.open if fetch fails.
+ */
 export async function downloadFile(url: string | null | undefined, defaultFilename = 'dokumen_template.xlsx') {
   if (!url) return;
+  // url is already a fully-formed absolute URL (already formatted before being stored in state)
   try {
-    const formattedUrl = formatPhotoUrl(url);
-    const res = await fetch(formattedUrl);
+    const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP error ${res.status}`);
     const blob = await res.blob();
     const blobUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = blobUrl;
-    const nameFromUrl = formattedUrl.split('/').pop()?.split('?')[0];
+    const nameFromUrl = url.split('/').pop()?.split('?')[0];
     a.download = nameFromUrl || defaultFilename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(blobUrl);
   } catch (err) {
-    console.warn('Direct blob download failed, falling back to window.open:', err);
-    window.open(formatPhotoUrl(url), '_blank');
+    console.warn('Blob download failed, opening in new tab:', err);
+    window.open(url, '_blank');
   }
 }
 

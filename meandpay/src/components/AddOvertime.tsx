@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Save, Calendar, User, Clock, FileText, Loader2, Download } from 'lucide-react';
 import { useToast } from './Toast';
-import { formatPhotoUrl, downloadFile } from '../lib/utils';
+import { formatPhotoUrl, downloadTemplate } from '../lib/utils';
 
 interface AddOvertimeProps {
     onBack: () => void;
@@ -112,7 +112,7 @@ export function AddOvertime({ onBack }: AddOvertimeProps) {
                         </div>
                         <button 
                             type="button"
-                            onClick={() => downloadFile(templateUrl, 'Formulir-Lembur.xlsx')}
+                            onClick={() => downloadTemplate('form_lembur')}
                             className="flex items-center gap-2 px-5 py-3 bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-200 active:scale-95 transition-all cursor-pointer"
                         >
                             <Download className="w-4 h-4" />
