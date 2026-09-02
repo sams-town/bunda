@@ -16,7 +16,7 @@ import {
   MapPin,
   CheckCircle2
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl, downloadFile } from '../lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './Toast';
 
@@ -39,17 +39,6 @@ export function MobileOvertimeEntryPage() {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [locationState, setLocationState] = useState<{ lat: number; lng: number } | null>(null);
   const [officeLocation, setOfficeLocation] = useState<any>(null);
-
-  const getFileUrl = (path: string | null) => {
-    if (!path) return null;
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    let cleanPath = path.replace(/^\//, '');
-    if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
-    const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
-    const apiBase = import.meta.env.VITE_API_MEANDPAY;
-    const base = (apiData || apiBase || 'https://hris.rsbundahalimah.com').replace(/\/api$/, '').replace(/\/$/, '');
-    return `${base}/uploads/${cleanPath}`;
-  };
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -144,7 +133,7 @@ export function MobileOvertimeEntryPage() {
       });
       const json = await res.json();
       const item = Array.isArray(json.data) ? json.data[0] : json.data;
-      if (item?.file_form_lembur) setTemplateUrl(getFileUrl(item.file_form_lembur));
+      if (item?.file_form_lembur) setTemplateUrl(formatPhotoUrl(item.file_form_lembur));
     } catch (err) {
       console.error('Failed to fetch template:', err);
     }
@@ -246,15 +235,14 @@ export function MobileOvertimeEntryPage() {
                   <p className="text-[9px] font-bold text-amber-500 mt-1 leading-tight">Unduh dan isi formulir ini sebelum mengirim pengajuan.</p>
                 </div>
               </div>
-              <a 
-                href={templateUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="w-full py-4 bg-white border border-amber-200 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black text-amber-600 uppercase tracking-[0.1em] shadow-sm active:scale-95 transition-all"
+              <button
+                type="button"
+                onClick={() => downloadFile(templateUrl, 'Formulir-Lembur.xlsx')}
+                className="w-full py-4 bg-white border border-amber-200 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black text-amber-600 uppercase tracking-[0.1em] shadow-sm active:scale-95 transition-all cursor-pointer"
               >
                 <Download className="w-4 h-4" />
                 Unduh Template
-              </a>
+              </button>
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-6">

@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import {
     Search, FileText, Download, ArrowLeft, Loader2, Calendar, FileSpreadsheet
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl } from '../lib/utils';
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface Kontrak {
@@ -64,9 +64,7 @@ function calculatePeriode(start: string | null, end: string | null) {
 
 function getFileUrl(path: string | null) {
     if (!path) return null;
-    if (path.startsWith('http')) return path;
-    const base = import.meta.env.VITE_API_MEANDPAY.replace('/api', '');
-    return `${base}${path.startsWith('/') ? '' : '/'}${path}`;
+    return formatPhotoUrl(path);
 }
 
 /* ─── Component ─────────────────────────────────────────── */

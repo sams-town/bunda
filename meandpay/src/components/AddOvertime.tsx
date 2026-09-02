@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Save, Calendar, User, Clock, FileText, Loader2, Download } from 'lucide-react';
 import { useToast } from './Toast';
+import { formatPhotoUrl, downloadFile } from '../lib/utils';
 
 interface AddOvertimeProps {
     onBack: () => void;
@@ -20,17 +21,6 @@ export function AddOvertime({ onBack }: AddOvertimeProps) {
         alasan: ''
     });
 
-    const getFileUrl = (path: string | null) => {
-        if (!path) return null;
-        if (path.startsWith('http') || path.startsWith('blob:')) return path;
-        let cleanPath = path.replace(/^\//, '');
-        if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
-        const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
-        const apiBase = import.meta.env.VITE_API_MEANDPAY;
-        const base = (apiData || apiBase || 'https://hris.rsbundahalimah.com').replace(/\/api$/, '').replace(/\/$/, '');
-        return `${base}/uploads/${cleanPath}`;
-    };
-
     useEffect(() => {
         fetchEmployees();
         fetchTemplate();
@@ -43,7 +33,7 @@ export function AddOvertime({ onBack }: AddOvertimeProps) {
             });
             const json = await res.json();
             const item = Array.isArray(json.data) ? json.data[0] : json.data;
-            if (item?.file_form_lembur) setTemplateUrl(getFileUrl(item.file_form_lembur));
+            if (item?.file_form_lembur) setTemplateUrl(formatPhotoUrl(item.file_form_lembur));
         } catch (err) {
             console.error(err);
         }
@@ -120,15 +110,14 @@ export function AddOvertime({ onBack }: AddOvertimeProps) {
                                 <p className="text-[10px] font-bold text-amber-500">Unduh & tanda tangani sebelum dikirim</p>
                             </div>
                         </div>
-                        <a 
-                            href={templateUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 px-5 py-3 bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-200 active:scale-95 transition-all"
+                        <button 
+                            type="button"
+                            onClick={() => downloadFile(templateUrl, 'Formulir-Lembur.xlsx')}
+                            className="flex items-center gap-2 px-5 py-3 bg-amber-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-200 active:scale-95 transition-all cursor-pointer"
                         >
                             <Download className="w-4 h-4" />
                             Unduh File
-                        </a>
+                        </button>
                     </div>
                 )}
 

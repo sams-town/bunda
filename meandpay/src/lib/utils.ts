@@ -32,7 +32,7 @@ export function formatPhotoUrl(url: string | null | undefined) {
   }
   
   const cleanPath = path.replace(/^\//, '');
-  if (cleanPath.startsWith('uploads/') || cleanPath.startsWith('lemburs/') || cleanPath.startsWith('beritas/') || cleanPath.startsWith('cuti/')) {
+  if (cleanPath.startsWith('uploads/') || cleanPath.startsWith('lemburs/') || cleanPath.startsWith('beritas/') || cleanPath.startsWith('cuti/') || cleanPath.startsWith('kontraks/')) {
     // Determine if we need to inject /api/ before the static folder
     // If apiBase doesn't end with /api, we prepend /api so Nginx proxies it to backend
     const hasApiSuffix = import.meta.env.VITE_API_MEANDPAY?.endsWith('/api');
@@ -47,6 +47,28 @@ export function formatPhotoUrl(url: string | null | undefined) {
     return `${apiBase}/api/uploads/${cleanPath}`;
   }
   return `${apiBase}/uploads/${cleanPath}`;
+}
+
+export async function downloadFile(url: string | null | undefined, defaultFilename = 'dokumen_template.xlsx') {
+  if (!url) return;
+  try {
+    const formattedUrl = formatPhotoUrl(url);
+    const res = await fetch(formattedUrl);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const blob = await res.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    const nameFromUrl = formattedUrl.split('/').pop()?.split('?')[0];
+    a.download = nameFromUrl || defaultFilename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    console.warn('Direct blob download failed, falling back to window.open:', err);
+    window.open(formatPhotoUrl(url), '_blank');
+  }
 }
 
 export const compressImage = async (fileOrDataUrl: File | string, maxWidth = 800, quality = 0.7): Promise<string> => {

@@ -19,7 +19,7 @@ import {
   User,
   Printer
 } from 'lucide-react';
-import { cn, formatPhotoUrl, compressImageFile } from '../lib/utils';
+import { cn, formatPhotoUrl, compressImageFile, downloadFile } from '../lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from './Toast';
 import { generateLeaveFormPDF } from '../lib/pdfLeaveForm';
@@ -95,16 +95,7 @@ export function MobileLeavePage() {
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [isRejecting, setIsRejecting] = useState(false);
 
-  const getFileUrl = (path: string | null) => {
-    if (!path) return null;
-    if (path.startsWith('http') || path.startsWith('blob:')) return path;
-    let cleanPath = path.replace(/^\//, '');
-    if (cleanPath.startsWith('uploads/')) cleanPath = cleanPath.slice(8);
-    const apiData = import.meta.env.VITE_API_MEANDPAY_DATA;
-    const apiBase = import.meta.env.VITE_API_MEANDPAY;
-    const base = (apiData || apiBase || 'https://hris.rsbundahalimah.com').replace(/\/api$/, '').replace(/\/$/, '');
-    return `${base}/uploads/${cleanPath}`;
-  };
+
 
   useEffect(() => {
     const init = async () => {
@@ -189,7 +180,7 @@ export function MobileLeavePage() {
       });
       const json = await res.json();
       const item = Array.isArray(json.data) ? json.data[0] : json.data;
-      if (item?.file_form_cuti) setTemplateUrl(getFileUrl(item.file_form_cuti));
+      if (item?.file_form_cuti) setTemplateUrl(formatPhotoUrl(item.file_form_cuti));
     } catch (err) {
       console.error('Failed to fetch template:', err);
     }
@@ -691,15 +682,14 @@ export function MobileLeavePage() {
                       <p className="text-[9px] font-bold text-indigo-400 mt-1 leading-tight">Silakan unduh, isi, dan tanda tangani formulir sebelum dikirim.</p>
                     </div>
                   </div>
-                  <a 
-                    href={templateUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="w-full py-3 bg-white border border-indigo-200 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-[0.1em] shadow-sm active:scale-95 transition-all"
+                  <button
+                    type="button"
+                    onClick={() => downloadFile(templateUrl, 'Formulir-Cuti.xlsx')}
+                    className="w-full py-3 bg-white border border-indigo-200 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-[0.1em] shadow-sm active:scale-95 transition-all cursor-pointer"
                   >
                     <Download className="w-4 h-4" />
                     Unduh File Template
-                  </a>
+                  </button>
                 </div>
               )}
 
