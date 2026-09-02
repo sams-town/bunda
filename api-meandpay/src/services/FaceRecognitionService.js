@@ -381,51 +381,65 @@ class FaceRecognitionService {
      * Identifikasi user dari foto absensi (mode publik tanpa user_id).
      */
     async findMatchingUser(incomingPath, users) {
-        await this.loadModels();
+        await acquireSlot();
+        try {
+            await this.loadModels();
 
-        console.log(`[FaceRecognition][findMatchingUser] Foto: ${incomingPath}, Kandidat: ${users.length}`);
+            console.log(`[FaceRecognition][findMatchingUser] Foto: ${incomingPath}, Kandidat: ${users.length}`);
 
-        const incomingDesc = await this.getFaceDescriptor(incomingPath, 'incoming');
+            const incomingDesc = await this.getFaceDescriptor(incomingPath, 'incoming');
 
-        if (!incomingDesc) {
-            return { user: null, error: "Tidak ditemukan wajah pada foto absensi.", failReason: FACE_FAIL_REASON.FACE_NOT_DETECTED };
-        }
-        
-        if (incomingDesc.error) {
-            return { user: null, error: incomingDesc.error, failReason: incomingDesc.failReason };
-        }
-
-        const THRESHOLD = 0.45;
-        let bestMatch = null;
-        let bestDistance = THRESHOLD;
-
-        for (const user of users) {
-            if (!user.foto_face_recognition) continue;
-
-            const { desc: userDesc, failReason } = await this.getUserDescriptor(user);
-            if (!userDesc) {
-                console.warn(`[FaceRecognition][findMatchingUser] Skip ${user.name} — ${failReason}`);
-                continue;
+            if (!incomingDesc) {
+                return { user: null, error: "Tidak ditemukan wajah pada foto absensi. Pastikan wajah terlihat jelas.", failReason: FACE_FAIL_REASON.FACE_NOT_DETECTED };
+            }
+            
+            if (incomingDesc.error) {
+                return { user: null, error: incomingDesc.error, failReason: incomingDesc.failReason };
             }
 
-            try {
-                const distance = faceapi.euclideanDistance(incomingDesc, userDesc);
-                console.log(`[FaceRecognition] ${user.name} | Distance: ${distance.toFixed(4)}`);
-                if (distance < bestDistance) {
-                    bestDistance = distance;
-                    bestMatch = user;
+            // Gunakan threshold lebih ketat (0.38) untuk pencocokan 1:N guna mencegah salah orang
+            const THRESHOLD = 0.38;
+            let bestMatch = null;
+            let bestDistance = THRESHOLD;
+            let secondBestDistance = 1.0;
+
+            for (const user of users) {
+                if (!user.foto_face_recognition) continue;
+
+                const { desc: userDesc, failReason } = await this.getUserDescriptor(user);
+                if (!userDesc) {
+                    console.warn(`[FaceRecognition][findMatchingUser] Skip ${user.name} — ${failReason}`);
+                    continue;
                 }
-            } catch (err) {
-                console.error(`[FaceRecognition] Error comparing ${user.name}:`, err.message);
+
+                try {
+                    const distance = faceapi.euclideanDistance(incomingDesc, userDesc);
+                    console.log(`[FaceRecognition] ${user.name} | Distance: ${distance.toFixed(4)}`);
+                    if (distance < bestDistance) {
+                        secondBestDistance = bestDistance;
+                        bestDistance = distance;
+                        bestMatch = user;
+                    } else if (distance < secondBestDistance) {
+                        secondBestDistance = distance;
+                    }
+                } catch (err) {
+                    console.error(`[FaceRecognition] Error comparing ${user.name}:`, err.message);
+                }
             }
-        }
 
-        if (bestMatch) {
-            console.log(`[FaceRecognition][findMatchingUser] ✅ Match: ${bestMatch.name} | Distance: ${bestDistance.toFixed(4)}`);
-            return { user: bestMatch, distance: bestDistance };
-        }
+            if (bestMatch) {
+                console.log(`[FaceRecognition][findMatchingUser] ✅ Match: ${bestMatch.name} | Distance: ${bestDistance.toFixed(4)}`);
+                return { user: bestMatch, distance: bestDistance };
+            }
 
-        return { user: null, error: "Wajah tidak cocok dengan data referensi karyawan mana pun.", failReason: FACE_FAIL_REASON.FACE_NO_MATCH };
+            return { 
+                user: null, 
+                error: "Wajah tidak cocok dengan data referensi karyawan mana pun. Silakan gunakan pencarian nama/NIP untuk absen terverifikasi.", 
+                failReason: FACE_FAIL_REASON.FACE_NO_MATCH 
+            };
+        } finally {
+            releaseSlot();
+        }
     }
 
     /**

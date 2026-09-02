@@ -54,6 +54,30 @@ class UserController {
     }
 
     /**
+     * GET /api/users/quick-access
+     * Ultra-fast lightweight list of active employees for quick access attendance
+     */
+    async quickAccess(req, res) {
+        try {
+            const search = req.query.search || req.query.q || '';
+            const users = await userService.getQuickAccessEmployees(search);
+            return res.status(200).json({
+                success: true,
+                message: "Data pegawai berhasil diambil",
+                data: users,
+                total: users.length
+            });
+        } catch (error) {
+            console.error("UserController.quickAccess error:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Gagal mengambil data pegawai untuk akses cepat",
+                error: error.message,
+            });
+        }
+    }
+
+    /**
      * GET /api/users/subordinates
      * Gets users managed by the currently logged in manager
      */

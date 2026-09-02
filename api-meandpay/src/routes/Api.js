@@ -91,6 +91,7 @@ router.put("/me", authMiddleware, (req, res) => authController.updateProfile(req
 // ========================
 router.get("/users", (req, res) => userController.index(req, res));
 router.get("/users/all", (req, res) => userController.all(req, res));
+router.get("/users/quick-access", (req, res) => userController.quickAccess(req, res));
 router.get("/users/subordinates", authMiddleware, (req, res) => userController.subordinates(req, res));
 router.get("/users/:id", (req, res) => userController.show(req, res));
 router.post("/users", authMiddleware, upload.single("foto_karyawan"), (req, res) => userController.store(req, res));

@@ -526,6 +526,66 @@ class UserService {
     }
 
     /**
+     * Get lightweight list of active employees for quick access attendance
+     */
+    async getQuickAccessEmployees(search = '') {
+        const pegawaiKeluars = await prisma.pegawai_keluars.findMany({
+            where: { status: { in: ['APPROVED', 'DELETED'] } },
+            select: { user_id: true }
+        });
+        const excludedUserIds = pegawaiKeluars
+            .map((pk) => pk.user_id)
+            .filter((id) => id !== null && id !== undefined);
+
+        const andConditions = [
+            { id: { notIn: [...excludedUserIds, 1062n] } }
+        ];
+
+        if (search && search.trim()) {
+            const q = search.trim();
+            andConditions.push({
+                OR: [
+                    { name: { contains: q } },
+                    { nik: { contains: q } },
+                    { username: { contains: q } }
+                ]
+            });
+        }
+
+        const users = await prisma.users.findMany({
+            where: {
+                AND: andConditions
+            },
+            select: {
+                id: true,
+                name: true,
+                nik: true,
+                username: true,
+                foto_karyawan: true,
+                foto_face_recognition: true,
+                jabatan: {
+                    select: {
+                        id: true,
+                        nama_jabatan: true
+                    }
+                }
+            },
+            orderBy: { name: "asc" },
+            take: search && search.trim() ? 50 : 300
+        });
+
+        return users.map(u => ({
+            id: u.id.toString(),
+            name: u.name,
+            nik: u.nik,
+            username: u.username,
+            foto_karyawan: u.foto_karyawan || u.foto_face_recognition || null,
+            has_face_recognition: !!(u.foto_face_recognition && u.foto_face_recognition !== 'null' && u.foto_face_recognition !== ''),
+            jabatan: u.jabatan ? { id: u.jabatan.id.toString(), nama_jabatan: u.jabatan.nama_jabatan } : null
+        }));
+    }
+
+    /**
      * Get single user by ID
      */
     async getById(id, authUser = null) {
