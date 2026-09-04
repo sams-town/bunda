@@ -53,6 +53,7 @@ import { RolesPage } from './components/RolesPage';
 import { ContractsPage } from './components/ContractsPage';
 import { ResignationsPage } from './components/ResignationsPage';
 import { ShiftPage } from './components/ShiftPage';
+import { MappingShiftMatrixPage } from './components/MappingShiftMatrixPage';
 import { DivisionsPage } from './components/DivisionsPage';
 import { LocationsPage } from './components/LocationsPage';
 import { DataRecapPage } from './components/DataRecapPage';
@@ -387,6 +388,8 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
               <ResignationsPage key="resignations" />
             ) : currentPage === 'shift' ? (
               <ShiftPage key="shift" />
+            ) : currentPage === 'mapping-shift-matrix' ? (
+              <MappingShiftMatrixPage key="mapping-shift-matrix" />
             ) : currentPage === 'divisions' ? (
               <DivisionsPage key="divisions" />
             ) : currentPage === 'locations' ? (
