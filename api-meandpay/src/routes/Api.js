@@ -243,6 +243,7 @@ router.get("/mapping-shifts/:id", (req, res) => mappingShiftController.show(req,
 router.get("/mapping-shifts-user/:id", (req, res) => mappingShiftController.showUser(req, res));
 router.get("/mapping-shifts-user-first/:id", (req, res) => mappingShiftController.showUserFirst(req, res));
 router.post("/mapping-shifts/bulk", (req, res) => mappingShiftController.bulkStore(req, res));
+router.post("/mapping-shifts/matrix", (req, res) => mappingShiftController.bulkStoreMatrix(req, res));
 router.put("/mapping-shifts/bulk", (req, res) => mappingShiftController.bulkUpdate(req, res));
 router.delete("/mapping-shifts/bulk", (req, res) => mappingShiftController.bulkDestroy(req, res));
 

@@ -148,6 +148,38 @@ class MappingShiftService {
         return { data: createdRecords };
     }
 
+    async bulkStoreMatrix(matrixData) {
+        const createdRecords = [];
+        // matrixData is expected to be an array of: { user_id, tanggal, shift_id, lock_location }
+        
+        for (const item of matrixData) {
+            const { user_id, tanggal, shift_id, lock_location } = item;
+            
+            // Delete existing mapping for this user on this specific date
+            await prisma.mapping_shifts.deleteMany({
+                where: {
+                    user_id: BigInt(user_id),
+                    tanggal: new Date(tanggal)
+                }
+            });
+            
+            if (shift_id) {
+                // If a shift is selected, create new mapping
+                const record = await prisma.mapping_shifts.create({
+                    data: {
+                        user_id: BigInt(user_id),
+                        shift_id: BigInt(shift_id),
+                        tanggal: new Date(tanggal),
+                        lock_location: lock_location !== undefined ? lock_location.toString() : "0"
+                    }
+                });
+                createdRecords.push(this.serialize(record));
+            }
+        }
+        
+        return { data: createdRecords, count: createdRecords.length };
+    }
+
     async bulkUpdateRange(data) {
         const { user_id, start_date, end_date, shift_id, lock_location } = data;
 

@@ -127,6 +127,28 @@ class MappingShiftController {
         }
     }
 
+    async bulkStoreMatrix(req, res) {
+        try {
+            const { matrix } = req.body;
+            if (!matrix || !Array.isArray(matrix)) {
+                return res.status(400).json({ success: false, message: "Data matrix tidak valid" });
+            }
+            const result = await mappingShiftService.bulkStoreMatrix(matrix);
+            return res.status(201).json({
+                success: true,
+                message: `${result.count} jadwal shift berhasil dipetakan.`,
+                ...result
+            });
+        } catch (error) {
+            console.error("MappingShiftController.bulkStoreMatrix error:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Gagal menyimpan jadwal shift matrix",
+                error: error.message
+            });
+        }
+    }
+
     async bulkUpdate(req, res) {
         try {
             const { user_id, start_date, end_date, shift_id, lock_location } = req.body;
