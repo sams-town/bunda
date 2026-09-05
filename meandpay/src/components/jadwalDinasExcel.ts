@@ -226,9 +226,11 @@ export async function generateJadwalDinas(
   if (allEmployees.length > 0 && allShifts.length > 0) {
     try {
       const zipped = unzipSync(new Uint8Array(rawBuf));
-      const sheetKey = 'xl/worksheets/sheet1.xml';
 
-      if (zipped[sheetKey]) {
+      // Find the first worksheet XML (usually sheet1.xml)
+      const sheetKey = Object.keys(zipped).find(k => /xl\/worksheets\/sheet\d+\.xml$/.test(k));
+
+      if (sheetKey && zipped[sheetKey]) {
         const enc = new TextEncoder();
         const dec = new TextDecoder();
         let xml = dec.decode(zipped[sheetKey]);
