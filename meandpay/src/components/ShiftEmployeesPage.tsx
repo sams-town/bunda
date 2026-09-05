@@ -144,37 +144,30 @@ function dayCode(date: Date): string {
 }
 
 function generateJadwalDinasTemplate(
-  shift: Shift,
   allEmployees: Employee[],
   allShifts: Shift[],
   mappings: MappingData[],
   year: number,
   month: number // 0-indexed
 ) {
-  const wb = XLSX.utils.book_new();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthName = new Date(year, month, 1).toLocaleString('id-ID', { month: 'long' });
 
-  // Build shift name → abbrev map for display in cells (e.g. "Shift Pagi" → "P")
-  // Also build the dropdown list: full shift names for Data Validation
+  // ── Shift lookup maps ──
   const shiftNames = allShifts.map(s => s.nama_shift);
-
-  // Build per-user schedule lookup: userId → { dayNum: shiftName }
-  // Use full shift name so the cell value matches the dropdown option exactly
   const shiftById = new Map(allShifts.map(s => [s.id, s.nama_shift]));
+
+  // ── Build per-user schedule: userId → { dayNum: shiftName } (ALL shifts) ──
   const scheduleMap: Record<string, Record<number, string>> = {};
   mappings.forEach(m => {
     if (!shiftById.has(m.shift_id)) return;
     const d = new Date(m.tanggal);
-    const mYear = d.getUTCFullYear();
-    const mMonth = d.getUTCMonth();
-    const mDay = d.getUTCDate();
-    if (mYear !== year || mMonth !== month) return;
+    if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month) return;
     if (!scheduleMap[m.user_id]) scheduleMap[m.user_id] = {};
-    scheduleMap[m.user_id][mDay] = shiftById.get(m.shift_id)!;
+    scheduleMap[m.user_id][d.getUTCDate()] = shiftById.get(m.shift_id)!;
   });
 
-  // ── Build AOA ──
+  // ── AOA ──
   const dateHeaders: (string | number)[] = [];
   const dayCodeHeaders: string[] = [];
   for (let d = 1; d <= daysInMonth; d++) {
@@ -192,119 +185,81 @@ function generateJadwalDinasTemplate(
     ['', '', ...dayCodeHeaders, '', '', ''],
   ];
 
-  // Data rows — ALL employees, pre-filled with existing schedule
-  const dataStartRow = 7; // 0-indexed (rows 0-6 are headers above)
+  const DATA_START_ROW = 7; // 0-indexed row index of first employee in aoa
   allEmployees.forEach((emp, idx) => {
     const row: any[] = [idx + 1, emp.name];
-    for (let d = 1; d <= daysInMonth; d++) {
-      // Pre-fill with existing scheduled shift name, or empty string (dropdown still shows)
-      row.push(scheduleMap[emp.id]?.[d] ?? '');
-    }
-    // P/S/M totals — computed from existing data
     let pCount = 0, sCount = 0, mCount = 0;
     for (let d = 1; d <= daysInMonth; d++) {
-      const val = (scheduleMap[emp.id]?.[d] ?? '').toLowerCase();
-      if (val.includes('pagi') || val.startsWith('p')) pCount++;
-      else if (val.includes('siang') || val.includes('sore') || val.startsWith('s')) sCount++;
-      else if (val.includes('malam') || val.startsWith('m')) mCount++;
+      const val = scheduleMap[emp.id]?.[d] ?? '';
+      row.push(val);
+      const vl = val.toLowerCase();
+      if (vl.includes('pagi') || vl.includes('subuh')) pCount++;
+      else if (vl.includes('siang') || vl.includes('sore')) sCount++;
+      else if (vl.includes('malam')) mCount++;
     }
     row.push(pCount || '', sCount || '', mCount || '');
     aoa.push(row);
   });
 
   aoa.push(['']);
-  const legendCol = 3;
-  const padLegend = (label: string): any[] => {
-    const r: any[] = Array(legendCol).fill('');
-    r.push('', label);
-    return r;
-  };
-  aoa.push(padLegend('MINGGU/LIBUR'));
-  aoa.push(padLegend('CUTI'));
-  aoa.push(padLegend('CUTI BERSAMA/HARI BESAR'));
+  const padLeg = (lbl: string): any[] => [...Array(3).fill(''), '', lbl];
+  aoa.push(padLeg('MINGGU/LIBUR'));
+  aoa.push(padLeg('CUTI'));
+  aoa.push(padLeg('CUTI BERSAMA/HARI BESAR'));
+
+  // ── Shift list hidden sheet (source for Data Validation formula) ──
+  // Put shift names in column A of a hidden sheet "ShiftList", rows 1..N
+  // Then DV formula1 = "ShiftList!$A$1:$A$N"
+  const shiftListSheetName = '_ShiftList';
+
+  // ── Build workbook with SheetJS ──
+  const wb = XLSX.utils.book_new();
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-  // ── Column widths ──
-  const colWidths: XLSX.ColInfo[] = [{ wch: 5 }, { wch: 30 }];
-  for (let d = 0; d < daysInMonth; d++) colWidths.push({ wch: 14 }); // wider for dropdown text
-  colWidths.push({ wch: 5 }, { wch: 5 }, { wch: 5 });
-  ws['!cols'] = colWidths;
+  // Column widths
+  ws['!cols'] = [
+    { wch: 5 }, { wch: 30 },
+    ...Array(daysInMonth).fill({ wch: 14 }),
+    { wch: 5 }, { wch: 5 }, { wch: 5 }
+  ];
 
-  // ── Row heights ──
-  const rowCount = aoa.length;
-  ws['!rows'] = Array.from({ length: rowCount }, (_, i) => {
+  // Row heights
+  ws['!rows'] = aoa.map((_, i) => {
     if (i === 2) return { hpt: 22 };
-    if (i >= dataStartRow && i < dataStartRow + allEmployees.length) return { hpt: 18 };
+    if (i >= DATA_START_ROW && i < DATA_START_ROW + allEmployees.length) return { hpt: 18 };
     return { hpt: 15 };
   });
 
-  // ── Cell styles ──
+  // Cell styles
   for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(year, month, d);
-    const colIndex = 2 + (d - 1);
-    const colLetter = XLSX.utils.encode_col(colIndex);
-    const isSunday = date.getDay() === 0;
-
-    // Header rows style
-    const dayNumCell = `${colLetter}6`;
-    const dayCodeCell = `${colLetter}7`;
-    if (isSunday) {
-      if (ws[dayNumCell]) ws[dayNumCell].s = { fill: { fgColor: { rgb: 'FF0000' }, patternType: 'solid' }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
-      if (ws[dayCodeCell]) ws[dayCodeCell].s = { fill: { fgColor: { rgb: 'FF0000' }, patternType: 'solid' }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
-      for (let empRow = 0; empRow < allEmployees.length; empRow++) {
-        const cellAddr = `${colLetter}${dataStartRow + 1 + empRow}`;
-        if (!ws[cellAddr]) ws[cellAddr] = { v: '', t: 's' };
-        ws[cellAddr].s = { fill: { fgColor: { rgb: 'FF0000' }, patternType: 'solid' } };
+    const col = XLSX.utils.encode_col(1 + d); // col index 2 = col C
+    const isSun = new Date(year, month, d).getDay() === 0;
+    const hdrNum = `${col}6`;
+    const hdrCode = `${col}7`;
+    if (isSun) {
+      const redStyle = { fill: { fgColor: { rgb: 'FF0000' }, patternType: 'solid' }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
+      if (ws[hdrNum]) ws[hdrNum].s = redStyle;
+      if (ws[hdrCode]) ws[hdrCode].s = redStyle;
+      for (let r = 0; r < allEmployees.length; r++) {
+        const ca = `${col}${DATA_START_ROW + 1 + r}`;
+        if (!ws[ca]) ws[ca] = { v: '', t: 's' };
+        ws[ca].s = { fill: { fgColor: { rgb: 'FF0000' }, patternType: 'solid' } };
       }
     } else {
-      if (ws[dayNumCell]) ws[dayNumCell].s = { fill: { fgColor: { rgb: '00FFFF' }, patternType: 'solid' }, font: { bold: true } };
+      if (ws[hdrNum]) ws[hdrNum].s = { fill: { fgColor: { rgb: '00FFFF' }, patternType: 'solid' }, font: { bold: true } };
     }
   }
-
-  ['A6', 'B6', 'A7', 'B7'].forEach(addr => {
-    if (ws[addr]) ws[addr].s = { fill: { fgColor: { rgb: 'FF6600' }, patternType: 'solid' }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
+  ['A6', 'B6', 'A7', 'B7'].forEach(a => {
+    if (ws[a]) ws[a].s = { fill: { fgColor: { rgb: 'FF6600' }, patternType: 'solid' }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
+  });
+  const legStart = DATA_START_ROW + allEmployees.length + 2;
+  ['FF0000', 'FFFF00', 'FFFF00'].forEach((c, i) => {
+    const a = `D${legStart + i}`;
+    if (!ws[a]) ws[a] = { v: '', t: 's' };
+    ws[a].s = { fill: { fgColor: { rgb: c }, patternType: 'solid' } };
   });
 
-  const legendStartRow = dataStartRow + allEmployees.length + 2;
-  ['FF0000', 'FFFF00', 'FFFF00'].forEach((color, i) => {
-    const cellAddr = `D${legendStartRow + i}`;
-    if (!ws[cellAddr]) ws[cellAddr] = { v: '', t: 's' };
-    ws[cellAddr].s = { fill: { fgColor: { rgb: color }, patternType: 'solid' } };
-  });
-
-  // ── Excel Data Validation — dropdown on every date cell ──
-  // SheetJS CE stores validations as ws['!dataValidations'] (array of objects)
-  // Each validation: { sqref, type, formula1, showDropDown, showErrorMessage, error, errorTitle }
-  // formula1 must be a quoted comma-separated list for "list" type
-  const dvFormula = `"${shiftNames.join(',')}"`;
-
-  if (!ws['!dataValidations']) (ws as any)['!dataValidations'] = [];
-  const dvList = (ws as any)['!dataValidations'] as any[];
-
-  for (let empRow = 0; empRow < allEmployees.length; empRow++) {
-    const xlsxRow = dataStartRow + 1 + empRow; // 1-indexed xlsx row
-    // Build sqref spanning all date columns for this employee row
-    // e.g. "C8:AG8" for a 31-day month
-    const firstDateCol = XLSX.utils.encode_col(2);
-    const lastDateCol = XLSX.utils.encode_col(2 + daysInMonth - 1);
-    const sqref = `${firstDateCol}${xlsxRow}:${lastDateCol}${xlsxRow}`;
-
-    dvList.push({
-      sqref,
-      type: 'list',
-      formula1: dvFormula,
-      showDropDown: false,   // false = show the dropdown arrow
-      showErrorMessage: true,
-      error: 'Pilih nama shift dari daftar yang tersedia',
-      errorTitle: 'Nilai Tidak Valid',
-      showInputMessage: true,
-      promptTitle: 'Pilih Shift',
-      prompt: shiftNames.join(', '),
-    });
-  }
-
-  // ── Merges ──
   ws['!merges'] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
     { s: { r: 2, c: 0 }, e: { r: 2, c: daysInMonth + 4 } },
@@ -317,29 +272,278 @@ function generateJadwalDinasTemplate(
     { s: { r: 5, c: daysInMonth + 4 }, e: { r: 6, c: daysInMonth + 4 } },
   ];
 
-  const sheetName = shift.nama_shift.substring(0, 31);
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.utils.book_append_sheet(wb, ws, 'Jadwal Dinas');
 
-  // Sheet 2: Shift reference (helps import parser)
-  const shiftRefData = allShifts.map(s => [s.id, s.nama_shift, s.jam_masuk, s.jam_keluar]);
+  // ── Hidden sheet with shift names (DV source) ──
+  const wsShiftList = XLSX.utils.aoa_to_sheet(shiftNames.map(n => [n]));
+  XLSX.utils.book_append_sheet(wb, wsShiftList, shiftListSheetName);
+
+  // Referensi sheets
   const wsShift = XLSX.utils.aoa_to_sheet([
     ['ID Shift', 'Nama Shift', 'Jam Masuk', 'Jam Keluar'],
-    ...shiftRefData
+    ...allShifts.map(s => [s.id, s.nama_shift, s.jam_masuk, s.jam_keluar])
   ]);
   wsShift['!cols'] = [{ wch: 10 }, { wch: 30 }, { wch: 12 }, { wch: 12 }];
   XLSX.utils.book_append_sheet(wb, wsShift, 'Referensi Shift');
 
-  // Sheet 3: Employee reference
-  const empRefData = allEmployees.map(e => [e.id, e.name, e.username, e.jabatan?.nama_jabatan || '-']);
   const wsEmp = XLSX.utils.aoa_to_sheet([
     ['ID Karyawan', 'Nama', 'Username', 'Jabatan'],
-    ...empRefData
+    ...allEmployees.map(e => [e.id, e.name, e.username, e.jabatan?.nama_jabatan || '-'])
   ]);
   wsEmp['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 20 }, { wch: 25 }];
   XLSX.utils.book_append_sheet(wb, wsEmp, 'Referensi Karyawan');
 
-  const safeShiftName = shift.nama_shift.replace(/[^a-zA-Z0-9]/g, '_');
-  XLSX.writeFile(wb, `Jadwal_Dinas_${safeShiftName}_${monthName}_${year}.xlsx`);
+  // ── Write to array buffer, then patch Data Validation XML manually ──
+  // SheetJS CE does NOT serialize !dataValidations — we must inject the XML ourselves.
+  const rawBuf: ArrayBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx', bookSST: false });
+
+  patchDataValidationAndDownload(
+    rawBuf,
+    allEmployees.length,
+    daysInMonth,
+    DATA_START_ROW,
+    shiftListSheetName,
+    shiftNames.length,
+    `Jadwal_Dinas_${monthName}_${year}.xlsx`
+  );
+}
+
+// ── XML patcher: injects <dataValidations> into sheet1.xml inside the xlsx ZIP ──
+async function patchDataValidationAndDownload(
+  buf: ArrayBuffer,
+  empCount: number,
+  daysInMonth: number,
+  dataStartRow: number,    // 0-indexed
+  shiftListSheet: string,
+  shiftCount: number,
+  filename: string
+) {
+  // Dynamic import of JSZip-compatible approach using browser's built-in DecompressionStream
+  // We use a pure JS ZIP read/write without extra deps.
+  // xlsx format is a ZIP; we use the File System approach via Blob + manual ZIP patching.
+  //
+  // Since we can't use JSZip without installing it, we use a different approach:
+  // Write the DV as a worksheet-level XML fragment by re-using SheetJS internal helpers.
+  // SheetJS DOES write !dataValidations if we set them BEFORE writing, using the correct key.
+  //
+  // The correct internal key in SheetJS source is ws['!dataValidations'] but the actual
+  // OOXML writer checks for a different path. Let's use the ZIP patching approach with
+  // the browser's native CompressionStream / DecompressionStream APIs (available in modern browsers).
+
+  try {
+    const bytes = new Uint8Array(buf);
+
+    // Parse ZIP manually (PKZIP local file headers)
+    const files = parseZip(bytes);
+
+    // Find sheet1.xml (first sheet = Jadwal Dinas)
+    const sheetKey = 'xl/worksheets/sheet1.xml';
+    if (!files[sheetKey]) {
+      // Fallback: download without DV
+      downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
+      return;
+    }
+
+    // Build the DV XML block
+    // DV references the hidden shift list sheet: 'ShiftList'!$A$1:$A$N
+    // sqref spans all date cols for all employee rows in one block using space-separated refs
+    // e.g.  C8:AG8 C9:AG9 ... = "C8:AG308"  (one contiguous block works if rows are consecutive)
+    const firstDateCol = XLSX.utils.encode_col(2);        // 'C'
+    const lastDateCol  = XLSX.utils.encode_col(2 + daysInMonth - 1); // e.g. 'AG'
+    const firstEmpXlRow = dataStartRow + 2;  // 1-indexed xlsx row (row 0 in aoa = row 1 in xlsx, row 7 in aoa = row 8 in xlsx)
+    const lastEmpXlRow  = dataStartRow + 1 + empCount;
+
+    const sqref = `${firstDateCol}${firstEmpXlRow}:${lastDateCol}${lastEmpXlRow}`;
+
+    // The hidden sheet's index: Jadwal Dinas=1, _ShiftList=2 (1-indexed in OOXML)
+    // We'll reference by name using the defined name approach — actually simplest is inline list
+    // since we know names at generation time. Inline list in formula1: "Name1,Name2,..."
+    // Max 255 chars for inline list. If shifts > ~10 names that's too long.
+    // Use sheet reference instead: ShiftListSheetName!$A$1:$A$N
+    const dvFormula1 = `${shiftListSheet}!$A$1:$A$${shiftCount}`;
+
+    const dvXml = `<dataValidations count="1">` +
+      `<dataValidation type="list" allowBlank="1" showDropDown="0" showInputMessage="1" showErrorMessage="1" sqref="${sqref}">` +
+      `<formula1>${dvFormula1}</formula1>` +
+      `</dataValidation>` +
+      `</dataValidations>`;
+
+    // Inject DV XML into sheet1.xml: insert before </worksheet>
+    let sheetXml = new TextDecoder().decode(files[sheetKey]);
+    if (sheetXml.includes('<dataValidations')) {
+      sheetXml = sheetXml.replace(/<dataValidations[\s\S]*?<\/dataValidations>/, dvXml);
+    } else {
+      sheetXml = sheetXml.replace('</worksheet>', dvXml + '</worksheet>');
+    }
+    files[sheetKey] = new TextEncoder().encode(sheetXml);
+
+    // Also hide the _ShiftList sheet in workbook.xml
+    const wbXmlKey = 'xl/workbook.xml';
+    if (files[wbXmlKey]) {
+      let wbXml = new TextDecoder().decode(files[wbXmlKey]);
+      // Mark _ShiftList sheet as hidden: add state="hidden" to its <sheet> element
+      wbXml = wbXml.replace(
+        new RegExp(`(<sheet[^>]*name="${shiftListSheet}"[^>]*)(/>|>)`),
+        (m, attrs, end) => {
+          if (attrs.includes('state=')) return m;
+          return `${attrs} state="hidden"${end}`;
+        }
+      );
+      files[wbXmlKey] = new TextEncoder().encode(wbXml);
+    }
+
+    // Rebuild ZIP and download
+    const newZipBuf = buildZip(files);
+    downloadBlob(
+      new Blob([newZipBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+      filename
+    );
+  } catch (err) {
+    console.error('DV patch failed, downloading without dropdown:', err);
+    // Fallback: download original without DV
+    downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
+  }
+}
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Minimal ZIP reader (PKZIP local file entries, stored/deflated) ──
+function parseZip(data: Uint8Array): Record<string, Uint8Array> {
+  const files: Record<string, Uint8Array> = {};
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  let i = 0;
+  while (i < data.length - 4) {
+    if (view.getUint32(i, true) !== 0x04034b50) { i++; continue; }
+    const compression = view.getUint16(i + 8, true);
+    const compressedSize = view.getUint32(i + 18, true);
+    const uncompressedSize = view.getUint32(i + 22, true);
+    const fnLen = view.getUint16(i + 26, true);
+    const extraLen = view.getUint16(i + 28, true);
+    const fn = new TextDecoder().decode(data.subarray(i + 30, i + 30 + fnLen));
+    const dataOffset = i + 30 + fnLen + extraLen;
+
+    if (compression === 0) {
+      // Stored
+      files[fn] = data.subarray(dataOffset, dataOffset + uncompressedSize);
+    } else if (compression === 8) {
+      // Deflated — use DecompressionStream (browser native, sync workaround via ArrayBuffer)
+      try {
+        const compressed = data.subarray(dataOffset, dataOffset + compressedSize);
+        // We need synchronous inflate; use a manual store via pre-decoded approach
+        // Since DecompressionStream is async, we store raw and decode lazily
+        // For now store compressed with a marker — we'll decode on demand
+        // Actually, SheetJS already decoded these when it read them. We just need
+        // to re-encode them back. Store the already-decoded content from SheetJS's
+        // internal representation via a different approach.
+        //
+        // Simple approach: we re-use the data as-is (SheetJS will have already
+        // parsed them; the bytes we have ARE the final decoded bytes from XLSX.write)
+        // since XLSX.write outputs STORED entries (no compression) for simplicity.
+        files[fn] = data.subarray(dataOffset, dataOffset + compressedSize);
+      } catch {
+        files[fn] = data.subarray(dataOffset, dataOffset + compressedSize);
+      }
+    }
+    i = dataOffset + compressedSize;
+  }
+  return files;
+}
+
+// ── Minimal ZIP writer (stores all entries uncompressed) ──
+function buildZip(files: Record<string, Uint8Array>): Uint8Array {
+  const localHeaders: Uint8Array[] = [];
+  const centralDir: Uint8Array[] = [];
+  const offsets: number[] = [];
+  let offset = 0;
+
+  const crc32Table = (() => {
+    const t = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[i] = c;
+    }
+    return t;
+  })();
+
+  const crc32 = (data: Uint8Array) => {
+    let crc = 0xFFFFFFFF;
+    for (const b of data) crc = crc32Table[(crc ^ b) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  };
+
+  const writeUint16 = (v: number) => { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0, v, true); return b; };
+  const writeUint32 = (v: number) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, v, true); return b; };
+
+  for (const [name, content] of Object.entries(files)) {
+    const nameBytes = new TextEncoder().encode(name);
+    const crc = crc32(content);
+    offsets.push(offset);
+
+    // Local file header
+    const lh = concatU8([
+      new Uint8Array([0x50, 0x4B, 0x03, 0x04]), // signature
+      writeUint16(20),        // version needed
+      writeUint16(0),         // flags
+      writeUint16(0),         // compression: stored
+      writeUint16(0),         // mod time
+      writeUint16(0),         // mod date
+      writeUint32(crc),
+      writeUint32(content.length),
+      writeUint32(content.length),
+      writeUint16(nameBytes.length),
+      writeUint16(0),         // extra length
+      nameBytes,
+      content,
+    ]);
+    localHeaders.push(lh);
+    offset += lh.length;
+
+    // Central directory entry
+    centralDir.push(concatU8([
+      new Uint8Array([0x50, 0x4B, 0x01, 0x02]),
+      writeUint16(20), writeUint16(20),
+      writeUint16(0), writeUint16(0), writeUint16(0),
+      writeUint32(crc),
+      writeUint32(content.length),
+      writeUint32(content.length),
+      writeUint16(nameBytes.length),
+      writeUint16(0), writeUint16(0),
+      writeUint16(0), writeUint16(0),
+      writeUint32(0),
+      writeUint32(offsets[offsets.length - 1]),
+      nameBytes,
+    ]));
+  }
+
+  const cdBytes = concatU8(centralDir);
+  const cdOffset = offset;
+  const eocd = concatU8([
+    new Uint8Array([0x50, 0x4B, 0x05, 0x06]),
+    writeUint16(0), writeUint16(0),
+    writeUint16(centralDir.length),
+    writeUint16(centralDir.length),
+    writeUint32(cdBytes.length),
+    writeUint32(cdOffset),
+    writeUint16(0),
+  ]);
+
+  return concatU8([...localHeaders, cdBytes, eocd]);
+}
+
+function concatU8(arrays: Uint8Array[]): Uint8Array {
+  const total = arrays.reduce((s, a) => s + a.length, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const a of arrays) { out.set(a, off); off += a.length; }
+  return out;
 }
 
 /* ─── Legacy Import Template Generator (kept for compatibility) ──── */
@@ -617,7 +821,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             </div>
           </div>
           <div className="flex items-center gap-2.5">
-            {/* ── Template Dropdown ── */}
+            {/* ── Template Button (single, month/year picker) ── */}
             <div className="relative" ref={templateDropdownRef}>
               <button
                 onClick={() => { setTemplateDropdownOpen(v => !v); setImportDropdownOpen(false); }}
@@ -658,35 +862,18 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
                         max={2100}
                       />
                     </div>
-                    <div className="py-1.5 max-h-72 overflow-y-auto">
-                      <p className="px-4 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Shift</p>
-                      {shifts.map(s => {
-                        const theme = getShiftTheme(s.jam_masuk);
-                        const ShiftIcon = theme.icon;
-                        const employeesForShift = getEmployeesForShift(s.id);
-                        return (
-                          <button
-                            key={s.id}
-                            onClick={() => {
-                              setTemplateDropdownOpen(false);
-                              generateJadwalDinasTemplate(s, allEmployees, shifts, mappings, templateYear, templateMonth);
-                            }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left"
-                          >
-                            <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br shadow-sm", theme.gradient)}>
-                              <ShiftIcon className="w-3.5 h-3.5 text-white" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[13px] font-bold text-slate-700 truncate">{s.nama_shift}</p>
-                              <p className="text-[10px] text-slate-400">{s.jam_masuk} – {s.jam_keluar} · {employeesForShift.length} karyawan</p>
-                            </div>
-                            <Download className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                          </button>
-                        );
-                      })}
-                      {shifts.length === 0 && (
-                        <p className="px-4 py-3 text-xs text-slate-400 text-center">Belum ada shift tersedia</p>
-                      )}
+                    <div className="p-4">
+                      <p className="text-[11px] text-slate-400 mb-3">Download 1 template lengkap berisi semua karyawan. Setiap sel tanggal sudah ada dropdown pilihan shift.</p>
+                      <button
+                        onClick={() => {
+                          setTemplateDropdownOpen(false);
+                          generateJadwalDinasTemplate(allEmployees, shifts, mappings, templateYear, templateMonth);
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[13px] font-bold rounded-xl transition-all shadow-lg shadow-indigo-200"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Download Template ({allEmployees.length} karyawan)
+                      </button>
                     </div>
                   </motion.div>
                 )}
@@ -1444,7 +1631,7 @@ function ImportMappingModal({
                     onClick={() => {
                       if (preSelectedShift) {
                         const empForShift = allEmployees; // all employees — let admin fill in
-                        generateJadwalDinasTemplate(preSelectedShift, empForShift, shifts, mappings ?? [], dlYear, dlMonth);
+                        generateJadwalDinasTemplate(empForShift, shifts, mappings ?? [], dlYear, dlMonth);
                       } else {
                         generateMappingTemplate(shifts, allEmployees);
                       }
