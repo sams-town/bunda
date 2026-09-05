@@ -5,7 +5,7 @@ import {
   Calendar, ArrowLeft, Check,
   UserPlus, AlertTriangle, RefreshCw,
   Sun, Sunrise, Sunset, Moon, FileSpreadsheet,
-  Download, Upload, ChevronRight
+  Download, Upload, ChevronRight, ChevronDown
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { cn } from '../lib/utils';
@@ -136,11 +136,219 @@ function getShiftTheme(jamMasuk: string): ShiftTheme {
   }
 }
 
-/* ─── Import Template Generator ──────────────────────────── */
+/* ─── Jadwal Dinas Excel Generator ───────────────────────── */
+// Day-of-week code (Indonesian, Mon=S, Tue=S, Wed=R, Thu=K, Fri=J, Sat=S, Sun=M)
+function dayCode(date: Date): string {
+  const codes = ['M', 'S', 'S', 'R', 'K', 'J', 'S']; // 0=Sun … 6=Sat
+  return codes[date.getDay()];
+}
+
+function generateJadwalDinasTemplate(
+  shift: Shift,
+  employees: Employee[],
+  mappings: MappingData[],
+  year: number,
+  month: number // 0-indexed
+) {
+  const wb = XLSX.utils.book_new();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthName = new Date(year, month, 1).toLocaleString('id-ID', { month: 'long' });
+
+  // Build per-user schedule lookup: userId → { dayNum: shiftCode }
+  // shiftCode = first char of shift name or 'P'/'S'/'M' etc.
+  const scheduleMap: Record<string, Record<number, string>> = {};
+  mappings.forEach(m => {
+    if (m.shift_id !== shift.id) return;
+    const d = new Date(m.tanggal);
+    const mYear = d.getUTCFullYear();
+    const mMonth = d.getUTCMonth();
+    const mDay = d.getUTCDate();
+    if (mYear !== year || mMonth !== month) return;
+    if (!scheduleMap[m.user_id]) scheduleMap[m.user_id] = {};
+    // Use first char of shift name as schedule code
+    scheduleMap[m.user_id][mDay] = shift.nama_shift.charAt(0).toUpperCase();
+  });
+
+  // ── Build AOA (array of arrays) ──
+  // Row 0: header line 1 – hospital name (merged A1:B1 area, title area)
+  // Row 1: blank
+  // Row 2: "JADWAL DINAS" centered
+  // Row 3: month/year
+  // Row 4: blank
+  // Row 5: column headers  [No | Nama | 1 | 2 | … | 31 | P | S | M]
+  // Row 6: sub-headers      [   |      | S | S | … |    |   |   |  ]
+  // Row 7+: employee data
+  // Last 3 rows: legend
+
+  const dateHeaders: (string | number)[] = [];
+  const dayCodeHeaders: string[] = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    dateHeaders.push(d);
+    dayCodeHeaders.push(dayCode(new Date(year, month, d)));
+  }
+
+  // Top metadata rows (will use merges for the title)
+  const aoa: any[][] = [
+    // Row 0: hospital title
+    ['RUMAH SAKIT HJ. BUNDA HALIMAH', '', ...Array(daysInMonth + 2).fill('')],
+    // Row 1: blank
+    [''],
+    // Row 2: JADWAL DINAS centered
+    ['JADWAL  DINAS'],
+    // Row 3: month year
+    [`${monthName} ${year}`],
+    // Row 4: "TANGGAL" label row
+    ['', '', ...Array(Math.floor(daysInMonth / 2)).fill(''), 'TANGGAL', ...Array(Math.ceil(daysInMonth / 2)).fill(''), '', '', ''],
+    // Row 5: column headers
+    ['No', 'Nama', ...dateHeaders, 'P', 'S', 'M'],
+    // Row 6: day-of-week codes
+    ['', '', ...dayCodeHeaders, '', '', ''],
+  ];
+
+  // Employee rows
+  employees.forEach((emp, idx) => {
+    const row: any[] = [idx + 1, emp.name];
+    let pCount = 0, sCount = 0, mCount = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cell = scheduleMap[emp.id]?.[d] ?? '';
+      row.push(cell);
+      const cl = cell.toLowerCase();
+      if (cl === 'p') pCount++;
+      else if (cl === 's') sCount++;
+      else if (cl === 'm') mCount++;
+    }
+    row.push(pCount || '', sCount || '', mCount || '');
+    aoa.push(row);
+  });
+
+  // Blank row before legend
+  aoa.push(['']);
+
+  // Legend rows (offset cols to match the template image)
+  const legendCol = 3; // start at column D (0-indexed 3)
+  const padLegend = (label: string): any[] => {
+    const r: any[] = Array(legendCol).fill('');
+    r.push('', label);
+    return r;
+  };
+  aoa.push(padLegend('MINGGU/LIBUR'));
+  aoa.push(padLegend('CUTI'));
+  aoa.push(padLegend('CUTI BERSAMA/HARI BESAR'));
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // ── Column widths ──
+  const colWidths: XLSX.ColInfo[] = [{ wch: 5 }, { wch: 30 }]; // No, Nama
+  for (let d = 0; d < daysInMonth; d++) colWidths.push({ wch: 4 });
+  colWidths.push({ wch: 5 }, { wch: 5 }, { wch: 5 }); // P, S, M
+
+  ws['!cols'] = colWidths;
+
+  // ── Row heights ──
+  const dataStartRow = 7; // 0-indexed row 7 = first employee
+  const rowCount = aoa.length;
+  ws['!rows'] = Array.from({ length: rowCount }, (_, i) => {
+    if (i === 2) return { hpt: 22 }; // JADWAL DINAS title
+    if (i >= dataStartRow && i < dataStartRow + employees.length) return { hpt: 18 };
+    return { hpt: 15 };
+  });
+
+  // ── Styles via cell-level format ──
+  // We use SheetJS CE which doesn't support full styles, but we can set number formats
+  // For colored cells we'll mark Sunday columns and legend cells with a special note
+  // (Full color requires xlsx-style or exceljs — here we mark with fill workaround via html)
+
+  // Mark Sunday columns in header rows with a comment so users know which are red
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    const colIndex = 2 + (d - 1); // col offset: No=0, Nama=1, Day1=2, ...
+    const colLetter = XLSX.utils.encode_col(colIndex);
+
+    if (date.getDay() === 0) { // Sunday
+      // Mark day number cell (row 5, 0-indexed) and day code cell (row 6)
+      const dayNumCell = `${colLetter}6`; // aoa row 5 = xlsx row 6
+      const dayCodeCell = `${colLetter}7`; // aoa row 6 = xlsx row 7
+      if (ws[dayNumCell]) ws[dayNumCell].s = { fill: { fgColor: { rgb: 'FF0000' }, patternType: 'solid' }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
+      if (ws[dayCodeCell]) ws[dayCodeCell].s = { fill: { fgColor: { rgb: 'FF0000' }, patternType: 'solid' }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
+
+      // Also mark employee cells in Sunday column
+      for (let empRow = 0; empRow < employees.length; empRow++) {
+        const cellAddr = `${colLetter}${8 + empRow}`; // xlsx row 8+ = employee data
+        if (!ws[cellAddr]) ws[cellAddr] = { v: '', t: 's' };
+        ws[cellAddr].s = { fill: { fgColor: { rgb: 'FF0000' }, patternType: 'solid' } };
+      }
+    }
+  }
+
+  // Style header rows
+  // Row 6 (date numbers) - cyan background
+  for (let d = 0; d < daysInMonth; d++) {
+    const colLetter = XLSX.utils.encode_col(2 + d);
+    const cellAddr = `${colLetter}6`;
+    if (ws[cellAddr]) {
+      const isSunday = new Date(year, month, d + 1).getDay() === 0;
+      if (!isSunday) {
+        ws[cellAddr].s = { fill: { fgColor: { rgb: '00FFFF' }, patternType: 'solid' }, font: { bold: true } };
+      }
+    }
+  }
+
+  // "No" and "Nama" header cells
+  ['A6', 'B6', 'A7', 'B7'].forEach(addr => {
+    if (ws[addr]) ws[addr].s = { fill: { fgColor: { rgb: 'FF6600' }, patternType: 'solid' }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
+  });
+
+  // Legend color cells (column D = index 3)
+  const legendStartRow = 7 + employees.length + 2; // +1 blank row
+  const legendColors = ['FF0000', 'FFFF00', 'FFFF00'];
+  legendColors.forEach((color, i) => {
+    const cellAddr = `D${legendStartRow + i}`;
+    if (!ws[cellAddr]) ws[cellAddr] = { v: '', t: 's' };
+    ws[cellAddr].s = { fill: { fgColor: { rgb: color }, patternType: 'solid' } };
+  });
+
+  // ── Merges ──
+  ws['!merges'] = [
+    // Hospital name merge (row 1, cols A-E)
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+    // JADWAL DINAS merge
+    { s: { r: 2, c: 0 }, e: { r: 2, c: daysInMonth + 4 } },
+    // Month/year merge
+    { s: { r: 3, c: 0 }, e: { r: 3, c: daysInMonth + 4 } },
+    // TANGGAL label merge (row 4)
+    { s: { r: 4, c: 2 }, e: { r: 4, c: daysInMonth + 1 } },
+    // No column merge rows 5-6
+    { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } },
+    // Nama column merge rows 5-6
+    { s: { r: 5, c: 1 }, e: { r: 6, c: 1 } },
+    // P/S/M merges rows 5-6
+    { s: { r: 5, c: daysInMonth + 2 }, e: { r: 6, c: daysInMonth + 2 } },
+    { s: { r: 5, c: daysInMonth + 3 }, e: { r: 6, c: daysInMonth + 3 } },
+    { s: { r: 5, c: daysInMonth + 4 }, e: { r: 6, c: daysInMonth + 4 } },
+  ];
+
+  const sheetName = shift.nama_shift.substring(0, 31); // Excel sheet name max 31 chars
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+  // Sheet 2: ID reference (helps when importing back)
+  const refData = employees.map(e => [e.id, e.name, e.username]);
+  const ws2 = XLSX.utils.aoa_to_sheet([
+    [`Jadwal Dinas - ${shift.nama_shift} - ${monthName} ${year}`],
+    [''],
+    ['ID Karyawan', 'Nama', 'Username'],
+    ...refData
+  ]);
+  ws2['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 20 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Referensi ID');
+
+  const safeShiftName = shift.nama_shift.replace(/[^a-zA-Z0-9]/g, '_');
+  XLSX.writeFile(wb, `Jadwal_Dinas_${safeShiftName}_${monthName}_${year}.xlsx`);
+}
+
+/* ─── Legacy Import Template Generator (kept for compatibility) ──── */
 function generateMappingTemplate(availableShifts: Shift[], allEmployees: Employee[] = []) {
   const wb = XLSX.utils.book_new();
 
-  // Sheet 1: Template
   const headers = [
     'ID Karyawan*', 'Nama Karyawan (Info)', 'ID Shift*', 'Nama Shift (Info)',
     'Tanggal Mulai* (DD/MM/YYYY)', 'Tanggal Akhir* (DD/MM/YYYY)', 'Lock Location (1/0)'
@@ -148,43 +356,32 @@ function generateMappingTemplate(availableShifts: Shift[], allEmployees: Employe
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
-  
-  // First and last day of current month
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
-
   const fmt = (d: Date) => {
     const day = String(d.getDate()).padStart(2, '0');
     const mon = String(d.getMonth() + 1).padStart(2, '0');
     return `${day}/${mon}/${d.getFullYear()}`;
   };
-
   const contoh = [
     ['101', 'Budi Santoso', '1', 'Shift Pagi', fmt(firstDay), fmt(lastDay), '1'],
     ['102', 'Siti Rahayu', '2', 'Shift Siang', fmt(firstDay), fmt(lastDay), '0'],
   ];
-
   const ws1 = XLSX.utils.aoa_to_sheet([headers, ...contoh]);
-  ws1['!cols'] = [
-    { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 25 },
-    { wch: 25 }, { wch: 25 }, { wch: 18 }
-  ];
+  ws1['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 18 }];
   XLSX.utils.book_append_sheet(wb, ws1, 'Import Mapping Shift');
 
-  // Sheet 2: Daftar Shift (Referensi)
   const shiftData = availableShifts.map(s => [s.id, s.nama_shift, s.jam_masuk, s.jam_keluar]);
   const ws2 = XLSX.utils.aoa_to_sheet([['ID Shift', 'Nama Shift', 'Jam Masuk', 'Jam Keluar'], ...shiftData]);
   ws2['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 12 }, { wch: 12 }];
   XLSX.utils.book_append_sheet(wb, ws2, 'Referensi Shift');
 
-  // Sheet 3: Daftar Karyawan (Referensi)
   if (allEmployees.length > 0) {
     const empData = allEmployees.map(e => [e.id, e.name, e.username, e.jabatan?.nama_jabatan || '-']);
     const ws3 = XLSX.utils.aoa_to_sheet([['ID Karyawan', 'Nama Karyawan', 'Username', 'Jabatan'], ...empData]);
     ws3['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 25 }];
     XLSX.utils.book_append_sheet(wb, ws3, 'Referensi Karyawan');
   }
-
   XLSX.writeFile(wb, 'Template_Import_Shift_Pegawai.xlsx');
 }
 
@@ -197,9 +394,37 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [importPreselectedShift, setImportPreselectedShift] = useState<Shift | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ userId: string; userName: string } | null>(null);
   const [search, setSearch] = useState('');
+
+  // Dropdown open states for Template / Import
+  const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
+  const [importDropdownOpen, setImportDropdownOpen] = useState(false);
+
+  // Month/year selector for template download
+  const now = new Date();
+  const [templateYear, setTemplateYear] = useState(now.getFullYear());
+  const [templateMonth, setTemplateMonth] = useState(now.getMonth()); // 0-indexed
+
+  const templateDropdownRef = useRef<HTMLDivElement>(null);
+  const importDropdownRef = useRef<HTMLDivElement>(null);
+
   const { addToast, updateToast } = useToast();
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (templateDropdownRef.current && !templateDropdownRef.current.contains(e.target as Node)) {
+        setTemplateDropdownOpen(false);
+      }
+      if (importDropdownRef.current && !importDropdownRef.current.contains(e.target as Node)) {
+        setImportDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // Fetch all data
   const fetchData = useCallback(async () => {
@@ -395,18 +620,134 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             </div>
           </div>
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => generateMappingTemplate(shifts, allEmployees)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm active:scale-[0.97]"
-            >
-              <Download className="w-3.5 h-3.5" /> Template
-            </button>
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm active:scale-[0.97]"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" /> Import
-            </button>
+            {/* ── Template Dropdown ── */}
+            <div className="relative" ref={templateDropdownRef}>
+              <button
+                onClick={() => { setTemplateDropdownOpen(v => !v); setImportDropdownOpen(false); }}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm active:scale-[0.97]"
+              >
+                <Download className="w-3.5 h-3.5" /> Template
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", templateDropdownOpen && "rotate-180")} />
+              </button>
+              <AnimatePresence>
+                {templateDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50"
+                  >
+                    {/* Month/Year picker */}
+                    <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60 flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <select
+                        value={templateMonth}
+                        onChange={e => setTemplateMonth(Number(e.target.value))}
+                        className="flex-1 text-xs font-semibold text-slate-600 bg-transparent outline-none"
+                      >
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <option key={i} value={i}>
+                            {new Date(2000, i, 1).toLocaleString('id-ID', { month: 'long' })}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        value={templateYear}
+                        onChange={e => setTemplateYear(Number(e.target.value))}
+                        className="w-20 text-xs font-semibold text-slate-600 bg-transparent outline-none text-right"
+                        min={2020}
+                        max={2100}
+                      />
+                    </div>
+                    <div className="py-1.5 max-h-72 overflow-y-auto">
+                      <p className="px-4 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pilih Shift</p>
+                      {shifts.map(s => {
+                        const theme = getShiftTheme(s.jam_masuk);
+                        const ShiftIcon = theme.icon;
+                        const employeesForShift = getEmployeesForShift(s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => {
+                              setTemplateDropdownOpen(false);
+                              generateJadwalDinasTemplate(s, employeesForShift, mappings, templateYear, templateMonth);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left"
+                          >
+                            <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br shadow-sm", theme.gradient)}>
+                              <ShiftIcon className="w-3.5 h-3.5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-bold text-slate-700 truncate">{s.nama_shift}</p>
+                              <p className="text-[10px] text-slate-400">{s.jam_masuk} – {s.jam_keluar} · {employeesForShift.length} karyawan</p>
+                            </div>
+                            <Download className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                          </button>
+                        );
+                      })}
+                      {shifts.length === 0 && (
+                        <p className="px-4 py-3 text-xs text-slate-400 text-center">Belum ada shift tersedia</p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* ── Import Dropdown ── */}
+            <div className="relative" ref={importDropdownRef}>
+              <button
+                onClick={() => { setImportDropdownOpen(v => !v); setTemplateDropdownOpen(false); }}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm active:scale-[0.97]"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" /> Import
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", importDropdownOpen && "rotate-180")} />
+              </button>
+              <AnimatePresence>
+                {importDropdownOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50"
+                  >
+                    <div className="py-1.5 max-h-72 overflow-y-auto">
+                      <p className="px-4 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Import Jadwal untuk Shift</p>
+                      {shifts.map(s => {
+                        const theme = getShiftTheme(s.jam_masuk);
+                        const ShiftIcon = theme.icon;
+                        return (
+                          <button
+                            key={s.id}
+                            onClick={() => {
+                              setImportDropdownOpen(false);
+                              setImportPreselectedShift(s);
+                              setShowImportModal(true);
+                            }}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left"
+                          >
+                            <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br shadow-sm", theme.gradient)}>
+                              <ShiftIcon className="w-3.5 h-3.5 text-white" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] font-bold text-slate-700 truncate">{s.nama_shift}</p>
+                              <p className="text-[10px] text-slate-400">{s.jam_masuk} – {s.jam_keluar}</p>
+                            </div>
+                            <Upload className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                          </button>
+                        );
+                      })}
+                      {shifts.length === 0 && (
+                        <p className="px-4 py-3 text-xs text-slate-400 text-center">Belum ada shift tersedia</p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             <button
               onClick={() => fetchData()}
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-all shadow-sm active:scale-[0.97]"
@@ -658,8 +999,10 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
           <ImportMappingModal
             shifts={shifts}
             allEmployees={allEmployees}
-            onClose={() => setShowImportModal(false)}
-            onSuccess={() => { fetchData(); setShowImportModal(false); }}
+            preSelectedShift={importPreselectedShift}
+            mappings={mappings}
+            onClose={() => { setShowImportModal(false); setImportPreselectedShift(null); }}
+            onSuccess={() => { fetchData(); setShowImportModal(false); setImportPreselectedShift(null); }}
             addToast={addToast}
             updateToast={updateToast}
           />
@@ -916,6 +1259,8 @@ function AddEmployeeToShiftModal({
 function ImportMappingModal({
   shifts,
   allEmployees,
+  preSelectedShift,
+  mappings,
   onClose,
   onSuccess,
   addToast,
@@ -923,11 +1268,14 @@ function ImportMappingModal({
 }: {
   shifts: Shift[];
   allEmployees: Employee[];
+  preSelectedShift?: Shift | null;
+  mappings?: MappingData[];
   onClose: () => void;
   onSuccess: () => void;
   addToast: any;
   updateToast: any;
 }) {
+  const now = new Date();
   const [step, setStep] = useState<'upload' | 'preview' | 'importing' | 'done'>('upload');
   const [rows, setRows] = useState<ImportMappingRow[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -935,6 +1283,9 @@ function ImportMappingModal({
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<{ total: number; success: number; failed: number } | null>(null);
   const [filterError, setFilterError] = useState(false);
+  // Month/year used for template download inside modal
+  const [dlMonth, setDlMonth] = useState(now.getMonth());
+  const [dlYear, setDlYear] = useState(now.getFullYear());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
@@ -943,7 +1294,18 @@ function ImportMappingModal({
       return;
     }
     try {
-      const parsed = await parseMappingExcel(file);
+      // Try Jadwal Dinas format first if a shift is preselected, fall back to column format
+      let parsed: ImportMappingRow[] = [];
+      if (preSelectedShift) {
+        try {
+          parsed = await parseDinasExcel(file, preSelectedShift, allEmployees);
+        } catch {
+          // Fallback to legacy column format
+          parsed = await parseMappingExcel(file);
+        }
+      } else {
+        parsed = await parseMappingExcel(file);
+      }
       setRows(parsed);
       setFileInfo({
         name: file.name,
@@ -1026,7 +1388,15 @@ function ImportMappingModal({
             </div>
             <div>
               <h3 className="text-xl font-black text-slate-800">Import Jadwal Shift</h3>
-              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Bulk Upload Karyawan ke Shift</p>
+              {preSelectedShift ? (
+                <p className="text-[11px] text-slate-400 font-bold mt-0.5">
+                  Shift: <span className="text-emerald-600">{preSelectedShift.nama_shift}</span>
+                  <span className="text-slate-300 mx-1">·</span>
+                  {preSelectedShift.jam_masuk} – {preSelectedShift.jam_keluar}
+                </p>
+              ) : (
+                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Bulk Upload Karyawan ke Shift</p>
+              )}
             </div>
           </div>
           <button onClick={onClose} className="p-2.5 rounded-2xl hover:bg-slate-100 text-slate-400 transition-all">
@@ -1044,12 +1414,49 @@ function ImportMappingModal({
                   </div>
                   <div>
                     <h4 className="text-sm font-black text-slate-800">Download Template Import</h4>
-                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">Isi data jadwal shift sesuai format agar tidak terjadi kesalahan</p>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      {preSelectedShift
+                        ? `Format Jadwal Dinas untuk shift "${preSelectedShift.nama_shift}"`
+                        : 'Isi data jadwal shift sesuai format agar tidak terjadi kesalahan'}
+                    </p>
                   </div>
                 </div>
-                <button onClick={() => generateMappingTemplate(shifts, allEmployees)} className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-emerald-200">
-                  Unduh Template
-                </button>
+                <div className="flex flex-col items-end gap-2">
+                  {preSelectedShift && (
+                    <div className="flex items-center gap-1.5">
+                      <select
+                        value={dlMonth}
+                        onChange={e => setDlMonth(Number(e.target.value))}
+                        className="text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none"
+                      >
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <option key={i} value={i}>{new Date(2000, i, 1).toLocaleString('id-ID', { month: 'short' })}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        value={dlYear}
+                        onChange={e => setDlYear(Number(e.target.value))}
+                        className="w-20 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none"
+                        min={2020}
+                        max={2100}
+                      />
+                    </div>
+                  )}
+                  <button
+                    onClick={() => {
+                      if (preSelectedShift) {
+                        const empForShift = allEmployees; // all employees — let admin fill in
+                        generateJadwalDinasTemplate(preSelectedShift, empForShift, mappings ?? [], dlYear, dlMonth);
+                      } else {
+                        generateMappingTemplate(shifts, allEmployees);
+                      }
+                    }}
+                    className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-emerald-200"
+                  >
+                    Unduh Template
+                  </button>
+                </div>
               </div>
               <div
                 onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
@@ -1291,6 +1698,190 @@ function parseMappingExcel(file: File): Promise<ImportMappingRow[]> {
         resolve(rows);
       } catch (err) {
         reject(new Error('File tidak valid atau format tidak sesuai template'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Gagal membaca file'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/* ─── Jadwal Dinas Excel Parser ──────────────────────────── */
+// Reads the "Jadwal Dinas" format generated by generateJadwalDinasTemplate.
+// Strategy:
+//  1. Read raw cells from the first sheet.
+//  2. Scan rows to find the date-header row (a row where most values are small integers 1-31).
+//  3. Map each column index to a day-of-month.
+//  4. Every subsequent row until the legend/blank row is treated as an employee row:
+//     - Col 0  = row number (skip)
+//     - Col 1  = employee name (match to allEmployees by name)
+//     - Col 2+ = shift code for that day (non-empty = assigned to this shift)
+//  5. For each employee, group consecutive assigned days into ranges and emit
+//     one ImportMappingRow per contiguous range (matches the bulk endpoint expectation).
+//
+// The parser is intentionally lenient: it matches employee names case-insensitively
+// and also falls back to ID look-up via the "Referensi ID" sheet if present.
+function parseDinasExcel(
+  file: File,
+  shift: Shift,
+  allEmployees: Employee[]
+): Promise<ImportMappingRow[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const wb = XLSX.read(data, { type: 'array', cellDates: true });
+
+        // ── Build name→id map ──
+        const nameToId = new Map<string, string>();
+        allEmployees.forEach(emp => nameToId.set(emp.name.toLowerCase().trim(), emp.id));
+
+        // ── Also try "Referensi ID" sheet for explicit id mapping ──
+        const refSheetName = wb.SheetNames.find(n => n.toLowerCase().includes('referensi'));
+        if (refSheetName) {
+          const refWs = wb.Sheets[refSheetName];
+          const refRaw = XLSX.utils.sheet_to_json<any>(refWs, { defval: '' });
+          refRaw.forEach((row: any) => {
+            const id = String(row['ID Karyawan'] ?? row['id'] ?? '').trim();
+            const name = String(row['Nama'] ?? row['nama'] ?? '').toLowerCase().trim();
+            if (id && name) nameToId.set(name, id);
+          });
+        }
+
+        // ── Work with the first sheet (the schedule) ──
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const aoa: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as any[][];
+
+        // ── Find header row: row where columns 2+ contain sequential integers 1..N ──
+        let headerRowIdx = -1;
+        let dateColStart = 2; // default: col 0=No, col 1=Nama, col 2+=dates
+
+        for (let ri = 0; ri < Math.min(aoa.length, 15); ri++) {
+          const row = aoa[ri];
+          let dateCount = 0;
+          for (let ci = 2; ci < row.length; ci++) {
+            const v = Number(row[ci]);
+            if (Number.isInteger(v) && v >= 1 && v <= 31) dateCount++;
+          }
+          if (dateCount >= 20) { // at least 20 date columns found
+            headerRowIdx = ri;
+            break;
+          }
+        }
+
+        if (headerRowIdx === -1) {
+          throw new Error('Format tidak dikenali: baris tanggal (1-31) tidak ditemukan');
+        }
+
+        // Build colIndex → dayOfMonth map
+        const headerRow = aoa[headerRowIdx];
+        const colToDay: Record<number, number> = {};
+        for (let ci = dateColStart; ci < headerRow.length; ci++) {
+          const v = Number(headerRow[ci]);
+          if (Number.isInteger(v) && v >= 1 && v <= 31) {
+            colToDay[ci] = v;
+          }
+        }
+
+        const dayCols = Object.keys(colToDay).map(Number).sort((a, b) => a - b);
+        if (dayCols.length === 0) throw new Error('Tidak ada kolom tanggal yang valid');
+
+        // Determine year+month from filename or fall back to current
+        // Try to extract from cell content in first few rows
+        let year = new Date().getFullYear();
+        let month = new Date().getMonth(); // 0-indexed
+
+        for (let ri = 0; ri < headerRowIdx; ri++) {
+          const rowStr = aoa[ri].join(' ');
+          // Pattern: "September 2026" or "September\n2026"
+          const match = rowStr.match(/([A-Za-z]+)\s+(20\d{2})/);
+          if (match) {
+            const monthNames = ['januari','februari','maret','april','mei','juni','juli','agustus','september','oktober','november','desember'];
+            const mIdx = monthNames.indexOf(match[1].toLowerCase());
+            if (mIdx !== -1) {
+              month = mIdx;
+              year = parseInt(match[2]);
+              break;
+            }
+          }
+          // Also try just finding a 4-digit year
+          const yearMatch = rowStr.match(/\b(20\d{2})\b/);
+          if (yearMatch) year = parseInt(yearMatch[1]);
+        }
+
+        // ── Parse employee rows ──
+        // Employee rows start after the header row (and possibly a day-code sub-header row)
+        // Stop when we hit a row where col 1 is empty or matches legend keywords
+        const legendKeywords = ['minggu', 'libur', 'cuti', 'hari besar'];
+        const rows: ImportMappingRow[] = [];
+        let rowIndex = 1;
+
+        for (let ri = headerRowIdx + 1; ri < aoa.length; ri++) {
+          const row = aoa[ri];
+          const nameCell = String(row[1] ?? '').trim();
+
+          if (!nameCell) continue; // skip blank rows
+          if (legendKeywords.some(kw => nameCell.toLowerCase().includes(kw))) break; // hit legend
+
+          // Skip the day-code sub-header row (values like S/R/K/J/M)
+          if (/^[SsRrKkJjMm]$/.test(nameCell)) continue;
+
+          // Try to match employee
+          const employeeId = nameToId.get(nameCell.toLowerCase()) ?? null;
+
+          // Collect days that have a non-empty, non-whitespace value
+          const assignedDays: number[] = [];
+          for (const colIdx of dayCols) {
+            const cellVal = String(row[colIdx] ?? '').trim();
+            if (cellVal && cellVal !== '0') {
+              assignedDays.push(colToDay[colIdx]);
+            }
+          }
+
+          if (assignedDays.length === 0) continue;
+
+          // Group consecutive days into ranges
+          const ranges: [number, number][] = [];
+          let rangeStart = assignedDays[0];
+          let rangeEnd = assignedDays[0];
+
+          for (let di = 1; di < assignedDays.length; di++) {
+            if (assignedDays[di] === rangeEnd + 1) {
+              rangeEnd = assignedDays[di];
+            } else {
+              ranges.push([rangeStart, rangeEnd]);
+              rangeStart = assignedDays[di];
+              rangeEnd = assignedDays[di];
+            }
+          }
+          ranges.push([rangeStart, rangeEnd]);
+
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const monthStr = pad(month + 1);
+
+          ranges.forEach(([start, end]) => {
+            rows.push({
+              rowIndex: rowIndex++,
+              user_id: employeeId ?? '',
+              user_name: nameCell,
+              shift_id: shift.id,
+              shift_name: shift.nama_shift,
+              tanggal_mulai: `${year}-${monthStr}-${pad(start)}`,
+              tanggal_akhir: `${year}-${monthStr}-${pad(end)}`,
+              lock_location: 0,
+              status: employeeId ? 'pending' : 'error',
+              message: employeeId ? undefined : `Karyawan "${nameCell}" tidak ditemukan di sistem`,
+            });
+          });
+        }
+
+        if (rows.length === 0) {
+          throw new Error('Tidak ada data karyawan yang berhasil dibaca dari file');
+        }
+
+        resolve(rows);
+      } catch (err: any) {
+        reject(new Error(err.message || 'Gagal membaca file Jadwal Dinas'));
       }
     };
     reader.onerror = () => reject(new Error('Gagal membaca file'));
