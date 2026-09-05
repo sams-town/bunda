@@ -62,6 +62,8 @@ export function MobileAbsenPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingAbsenType, setPendingAbsenType] = useState<'masuk' | 'pulang' | null>(null);
+  // Shift kemarin yang sudah masuk tapi belum pulang (sudah lewat toleransi 14 jam)
+  const [missedCheckout, setMissedCheckout] = useState<any>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -121,7 +123,7 @@ export function MobileAbsenPage() {
         `${import.meta.env.VITE_API_MEANDPAY}/absensi_user_history/${userId}/${yesterdayStr}/${todayStr}`, 
         { 
           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          signal: AbortSignal.timeout(7000),
+          signal: AbortSignal.timeout(10000),
           cache: 'no-store'
         }
       );
@@ -132,42 +134,69 @@ export function MobileAbsenPage() {
 
       const json = await res.json();
       
-      if (json.success && json.data) {
-        const openNightShift = json.data.find((s: any) => {
-          if (s.jam_absen && !s.jam_pulang && s.shifts) {
-            const { jam_masuk, jam_keluar } = s.shifts;
-            const isNightShift = jam_keluar < jam_masuk;
-            if (isNightShift) {
-              const [h, m] = s.jam_absen.split(':').map(Number);
-              const datePart = s.tanggal.split('T')[0];
-              const [year, month, day] = datePart.split('-').map(Number);
-              const checkInTime = new Date(year, month - 1, day, h, m);
-              const elapsedHours = (new Date().getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
-              return elapsedHours > 0 && elapsedHours < 18;
-            }
-          }
-          return false;
+      if (json.success && json.data && json.data.length > 0) {
+        const records: any[] = json.data;
+
+        // ── STEP 1: Prioritas pertama — shift yang sudah absen masuk tapi belum pulang
+        // Ini berlaku untuk SEMUA tipe shift (pagi, siang, sore, malam)
+        // Toleransi 14 jam (konsisten dengan backend) — mencegah overlap shift berikutnya
+        const OPEN_SHIFT_TOLERANCE_HOURS = 14;
+
+        const openShift = records.find((s: any) => {
+          if (!s.jam_absen || s.jam_pulang) return false; // harus sudah masuk, belum pulang
+          // Hitung selisih waktu sejak absen masuk
+          const datePart = s.tanggal.split('T')[0];
+          const [yr, mo, dy] = datePart.split('-').map(Number);
+          const [h, m] = s.jam_absen.split(':').map(Number);
+          const checkInTime = new Date(yr, mo - 1, dy, h, m);
+          const elapsedHours = (now.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
+          // Masih dalam toleransi 14 jam sejak absen masuk
+          return elapsedHours >= 0 && elapsedHours < OPEN_SHIFT_TOLERANCE_HOURS;
         });
 
-        let activeShift = openNightShift;
-        if (!activeShift) {
-          activeShift = json.data.find((s: any) => {
-            if (!s.tanggal) return false;
-            const shiftDate = s.tanggal.split('T')[0];
-            return shiftDate === todayStr;
-          }) || json.data[0];
+        if (openShift) {
+          // Ada shift yang sudah masuk tapi belum pulang → tampilkan "Absen Pulang"
+          setTodayMapping(openShift);
+          setMissedCheckout(null);
+          setError(null);
+          return;
         }
 
-        if (activeShift) {
-          setTodayMapping(activeShift);
+        // ── STEP 1.5: Cek apakah ada shift kemarin yang sudah masuk tapi LUPA pulang
+        // (sudah lebih dari 14 jam — sudah lewat toleransi, tidak bisa absen pulang lagi via otomatis)
+        const forgotCheckout = records.find((s: any) => {
+          if (!s.jam_absen || s.jam_pulang) return false;
+          const datePart = s.tanggal.split('T')[0];
+          if (datePart === todayStr) return false; // bukan hari ini
+          const [yr, mo, dy] = datePart.split('-').map(Number);
+          const [h, m] = s.jam_absen.split(':').map(Number);
+          const checkInTime = new Date(yr, mo - 1, dy, h, m);
+          const elapsedHours = (now.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
+          return elapsedHours >= OPEN_SHIFT_TOLERANCE_HOURS; // sudah lewat 14 jam
+        });
+        setMissedCheckout(forgotCheckout || null);
+
+        // ── STEP 2: Tidak ada shift terbuka → cari shift hari ini yang belum absen masuk
+        const todayShift = records.find((s: any) => {
+          if (!s.tanggal) return false;
+          const shiftDate = s.tanggal.split('T')[0];
+          return shiftDate === todayStr;
+        });
+
+        if (todayShift) {
+          setTodayMapping(todayShift);
           setError(null);
-        } else {
-          console.warn("Shift match failed for today:", todayStr);
-          setTodayMapping(null);
+          return;
         }
+
+        // ── STEP 3: Fallback — ambil record pertama dari hasil API
+        setTodayMapping(records[0]);
+        setError(null);
+
       } else {
         setError(json.message || "Gagal memuat data shift.");
         setTodayMapping(null);
+        setMissedCheckout(null);
       }
     } catch (err: any) {
       console.error("Error fetching today mapping:", err);
@@ -513,6 +542,28 @@ export function MobileAbsenPage() {
             </div>
           )}
         </motion.div>
+
+        {/* ─── PERINGATAN LUPA ABSEN PULANG KEMARIN ─── */}
+        {missedCheckout && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-orange-50 border border-orange-200 rounded-[1.5rem] px-5 py-4 flex items-start gap-4"
+          >
+            <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center shrink-0 mt-0.5">
+              <ShieldAlert className="w-5 h-5 text-orange-500" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-black text-orange-700 uppercase tracking-wider mb-1">
+                Peringatan: Lupa Absen Pulang
+              </p>
+              <p className="text-[11px] font-bold text-orange-600 leading-relaxed">
+                Absensi tanggal <span className="font-black">{missedCheckout.tanggal?.split('T')[0]}</span> belum tercatat absen pulang.
+                Silakan hubungi admin HRD untuk koreksi.
+              </p>
+            </div>
+          </motion.div>
+        )}
 
         {/* ─── ACTION PANEL ─── */}
         <AnimatePresence mode="wait">
