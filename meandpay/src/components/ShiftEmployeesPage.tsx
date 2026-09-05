@@ -1042,16 +1042,12 @@ function ImportMappingModal({
       return;
     }
     try {
-      // Try Jadwal Dinas format first if a shift is preselected, fall back to column format
+      // Try Jadwal Dinas format first (auto-detect), fall back to legacy column format
       let parsed: ImportMappingRow[] = [];
-      if (preSelectedShift) {
-        try {
-          parsed = await parseDinasExcel(file, shifts, allEmployees);
-        } catch {
-          // Fallback to legacy column format
-          parsed = await parseMappingExcel(file);
-        }
-      } else {
+      try {
+        parsed = await parseDinasExcel(file, shifts, allEmployees);
+      } catch {
+        // Not Jadwal Dinas format — try legacy column format
         parsed = await parseMappingExcel(file);
       }
       setRows(parsed);
