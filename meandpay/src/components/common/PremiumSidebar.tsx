@@ -184,7 +184,7 @@ export function PremiumSidebar({
           {hasPermission('shift.view') && (
             <>
               <SidebarItem icon={Calendar} label="Manajemen Shift" active={currentPage === 'shift'} onClick={() => setCurrentPage('shift')} isCollapsed={isSidebarCollapsed} />
-              <SidebarItem icon={Calendar} label="Matrix Jadwal Shift" active={currentPage === 'mapping-shift-matrix'} onClick={() => setCurrentPage('mapping-shift-matrix')} isCollapsed={isSidebarCollapsed} />
+
             </>
           )}
         </div>

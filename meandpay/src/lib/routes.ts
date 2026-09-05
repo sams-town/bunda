@@ -86,8 +86,8 @@ export type Page =
   | 'salary-slip'
   | 'change-password'
   | 'beranda'
-  | 'doctors'
-  | 'mapping-shift-matrix';
+  | 'doctors';
+
 
 // Map Page type to URL path
 export const PAGE_TO_PATH: Record<Page, string> = {
@@ -139,7 +139,7 @@ export const PAGE_TO_PATH: Record<Page, string> = {
   'salary-slip': '/salary-slip',
   'change-password': '/change-password',
   'beranda': '/beranda',
-  'mapping-shift-matrix': '/mapping-shift-matrix',
+
 };
 
 // Normalize keys so we handle routes and params flexibly
