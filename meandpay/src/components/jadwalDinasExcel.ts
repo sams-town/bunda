@@ -1,8 +1,19 @@
 /**
- * jadwalDinasExcel.ts — Generate & parse Jadwal Dinas Excel
- * Uses SheetJS (xlsx) only — no ZIP patching, no ExcelJS.
- * Dropdown is implemented via a hidden "Referensi Shift" sheet
- * referenced by a named range, written correctly by SheetJS.
+ * jadwalDinasExcel.ts — Jadwal Dinas Excel generator & parser
+ * Uses SheetJS only. Valid xlsx, no patching.
+ *
+ * Template layout (0-indexed rows):
+ *   0: Hospital name
+ *   1: blank
+ *   2: JADWAL DINAS
+ *   3: Month Year
+ *   4: TANGGAL label row
+ *   5: No | Nama | 1..31 | P | S | M | LOCK
+ *   6: ''  | ''   | S..M  | ''| ''| ''| ''
+ *   7+: employee data rows
+ *
+ * Lock Location column is the last date col + 4 (after P, S, M).
+ * Parser reads it: if value === 1 or "1" → lock_location = 1.
  */
 import * as XLSX from 'xlsx';
 
@@ -43,14 +54,9 @@ function dayCode(date: Date): string {
   return ['M', 'S', 'S', 'R', 'K', 'J', 'S'][date.getDay()];
 }
 function pad(n: number) { return String(n).padStart(2, '0'); }
-function colLetter(n: number): string {
-  let s = '';
-  while (n > 0) { n--; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26); }
-  return s;
-}
 
 /* ══════════════════════════════════════════════════════════════
-   GENERATE — Clean Jadwal Dinas template, valid xlsx, no patches
+   GENERATE
 ══════════════════════════════════════════════════════════════ */
 export function generateJadwalDinas(
   allEmployees: Employee[],
@@ -62,21 +68,34 @@ export function generateJadwalDinas(
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthName   = new Date(year, month, 1).toLocaleString('id-ID', { month: 'long' });
 
-  /* schedule lookup */
+  /* schedule & lock lookup */
   const shiftById = new Map(allShifts.map(s => [s.id, s.nama_shift]));
   const scheduleMap: Record<string, Record<number, string>> = {};
+  const lockMap: Record<string, Record<number, number>> = {};
   mappings.forEach(m => {
     if (!shiftById.has(m.shift_id)) return;
     const d = new Date(m.tanggal);
     if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month) return;
+    const day = d.getUTCDate();
     if (!scheduleMap[m.user_id]) scheduleMap[m.user_id] = {};
-    scheduleMap[m.user_id][d.getUTCDate()] = shiftById.get(m.shift_id)!;
+    if (!lockMap[m.user_id]) lockMap[m.user_id] = {};
+    scheduleMap[m.user_id][day] = shiftById.get(m.shift_id)!;
+    lockMap[m.user_id][day] = (m.lock_location === '1' || m.lock_location === 1) ? 1 : 0;
   });
 
   const wb = XLSX.utils.book_new();
 
-  /* ── Sheet 1: Jadwal Dinas ── */
+  /* ── col indices (0-based) ──
+     0=No, 1=Nama, 2..2+days-1=dates, 2+days=P, 2+days+1=S, 2+days+2=M, 2+days+3=LOCK */
+  const COL_FIRST_DATE = 2;
+  const COL_LAST_DATE  = COL_FIRST_DATE + daysInMonth - 1;
+  const COL_P    = COL_LAST_DATE + 1;
+  const COL_S    = COL_LAST_DATE + 2;
+  const COL_M    = COL_LAST_DATE + 3;
+  const COL_LOCK = COL_LAST_DATE + 4;
+
   const DATA_START = 7; // 0-indexed aoa row for first employee
+
   const aoa: any[][] = [];
 
   // Row 0: hospital
@@ -87,26 +106,28 @@ export function generateJadwalDinas(
   aoa.push(['JADWAL  DINAS']);
   // Row 3: month/year
   aoa.push([`${monthName} ${year}`]);
-  // Row 4: TANGGAL label (blank No, blank Nama, then label, then blanks)
+  // Row 4: TANGGAL label
   const tanggalRow: any[] = ['', ''];
   for (let d = 1; d <= daysInMonth; d++) tanggalRow.push(d === Math.ceil(daysInMonth / 2) ? 'TANGGAL' : '');
-  tanggalRow.push('', '', '');
+  tanggalRow.push('', '', '', '');
   aoa.push(tanggalRow);
-  // Row 5: headers
+  // Row 5: headers No | Nama | 1..31 | P | S | M | LOCK
   const headerRow: any[] = ['No', 'Nama'];
   for (let d = 1; d <= daysInMonth; d++) headerRow.push(d);
-  headerRow.push('P', 'S', 'M');
+  headerRow.push('P', 'S', 'M', 'LOCK\n(1/0)');
   aoa.push(headerRow);
   // Row 6: day codes
   const codeRow: any[] = ['', ''];
   for (let d = 1; d <= daysInMonth; d++) codeRow.push(dayCode(new Date(year, month, d)));
-  codeRow.push('', '', '');
+  codeRow.push('', '', '', '');
   aoa.push(codeRow);
 
-  // Employee rows (row 7+)
+  // Employee data rows
   allEmployees.forEach((emp, idx) => {
     const row: any[] = [idx + 1, emp.name];
     let p = 0, s = 0, m = 0;
+    // Compute per-employee dominant lock value (1 if any day is locked)
+    let hasLock = false;
     for (let d = 1; d <= daysInMonth; d++) {
       const val = scheduleMap[emp.id]?.[d] ?? '';
       row.push(val);
@@ -114,8 +135,9 @@ export function generateJadwalDinas(
       if (vl.includes('pagi') || vl.includes('subuh')) p++;
       else if (vl.includes('siang') || vl.includes('sore')) s++;
       else if (vl.includes('malam')) m++;
+      if (lockMap[emp.id]?.[d] === 1) hasLock = true;
     }
-    row.push(p || '', s || '', m || '');
+    row.push(p || '', s || '', m || '', hasLock ? 1 : 0);
     aoa.push(row);
   });
 
@@ -127,77 +149,72 @@ export function generateJadwalDinas(
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-  // Column widths
-  ws['!cols'] = [
-    { wch: 5 }, { wch: 30 },
+  /* ── Column widths ── */
+  const colWidths: XLSX.ColInfo[] = [
+    { wch: 5 },   // No
+    { wch: 28 },  // Nama
     ...Array.from({ length: daysInMonth }, () => ({ wch: 5 })),
-    { wch: 5 }, { wch: 5 }, { wch: 5 },
+    { wch: 4 }, { wch: 4 }, { wch: 4 }, // P S M
+    { wch: 7 },   // LOCK
   ];
+  ws['!cols'] = colWidths;
 
-  // Merges
-  const lastDataCol = 2 + daysInMonth; // 0-indexed last date col
+  /* ── Merges ── */
   ws['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },                                  // hospital name
-    { s: { r: 2, c: 0 }, e: { r: 2, c: lastDataCol + 2 } },                      // JADWAL DINAS
-    { s: { r: 3, c: 0 }, e: { r: 3, c: lastDataCol + 2 } },                      // month/year
-    { s: { r: 4, c: 2 }, e: { r: 4, c: lastDataCol - 1 } },                      // TANGGAL
-    { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } },                                   // No
-    { s: { r: 5, c: 1 }, e: { r: 6, c: 1 } },                                   // Nama
-    { s: { r: 5, c: lastDataCol }, e: { r: 6, c: lastDataCol } },                 // P
-    { s: { r: 5, c: lastDataCol + 1 }, e: { r: 6, c: lastDataCol + 1 } },         // S
-    { s: { r: 5, c: lastDataCol + 2 }, e: { r: 6, c: lastDataCol + 2 } },         // M
+    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+    { s: { r: 2, c: 0 }, e: { r: 2, c: COL_LOCK } },
+    { s: { r: 3, c: 0 }, e: { r: 3, c: COL_LOCK } },
+    { s: { r: 4, c: COL_FIRST_DATE }, e: { r: 4, c: COL_LAST_DATE } },
+    { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } },
+    { s: { r: 5, c: 1 }, e: { r: 6, c: 1 } },
+    { s: { r: 5, c: COL_P }, e: { r: 6, c: COL_P } },
+    { s: { r: 5, c: COL_S }, e: { r: 6, c: COL_S } },
+    { s: { r: 5, c: COL_M }, e: { r: 6, c: COL_M } },
+    { s: { r: 5, c: COL_LOCK }, e: { r: 6, c: COL_LOCK } },
   ];
 
-  // Cell styles
-  const cellStyle = (cell: any, s: any) => { if (cell) cell.s = s; };
+  /* ── Cell styles ── */
+  const ec = (c: number, r: number) => XLSX.utils.encode_cell({ c, r });
+  const cs = (addr: string, style: any) => { if (ws[addr]) ws[addr].s = style; };
   const RED_BG    = { fill: { patternType: 'solid', fgColor: { rgb: 'FF0000' } }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
   const CYAN_BG   = { fill: { patternType: 'solid', fgColor: { rgb: '00FFFF' } }, font: { bold: true } };
   const ORANGE_BG = { fill: { patternType: 'solid', fgColor: { rgb: 'FF6600' } }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
-  const RED_CELL  = { fill: { patternType: 'solid', fgColor: { rgb: 'FF0000' } } };
 
-  // Style header rows (row 5=index5, row 6=index6 in xlsx = 1-indexed 6,7)
-  const enc = (c: number, r: number) => XLSX.utils.encode_cell({ c, r });
-  cellStyle(ws[enc(0, 5)], ORANGE_BG); // No header
-  cellStyle(ws[enc(1, 5)], ORANGE_BG); // Nama header
-  cellStyle(ws[enc(0, 6)], ORANGE_BG); // No code row
-  cellStyle(ws[enc(1, 6)], ORANGE_BG); // Nama code row
+  cs(ec(0, 0), { font: { bold: true, sz: 14 } });
+  cs(ec(0, 2), { font: { bold: true, sz: 16 }, alignment: { horizontal: 'center' } });
+  cs(ec(0, 3), { font: { bold: true, sz: 13 }, alignment: { horizontal: 'center' } });
 
+  // No/Nama header (rows 5-6)
+  [ec(0,5), ec(1,5), ec(0,6), ec(1,6)].forEach(a => cs(a, ORANGE_BG));
+
+  // Date header columns
   for (let d = 1; d <= daysInMonth; d++) {
-    const ci = d + 1; // 0-indexed col
+    const ci = COL_FIRST_DATE + (d - 1);
     const isSun = new Date(year, month, d).getDay() === 0;
-    const hdrStyle = isSun ? RED_BG : CYAN_BG;
-    cellStyle(ws[enc(ci, 5)], hdrStyle); // date number row
-    cellStyle(ws[enc(ci, 6)], hdrStyle); // day code row
+    const style = isSun ? RED_BG : CYAN_BG;
+    cs(ec(ci, 5), style);
+    cs(ec(ci, 6), style);
     if (isSun) {
-      // Red cells for all employee rows in Sunday column
-      for (let empIdx = 0; empIdx < allEmployees.length; empIdx++) {
-        const ri = DATA_START + empIdx;
-        if (!ws[enc(ci, ri)]) ws[enc(ci, ri)] = { v: '', t: 's' };
-        ws[enc(ci, ri)].s = RED_CELL;
+      for (let ri = DATA_START; ri < DATA_START + allEmployees.length; ri++) {
+        if (!ws[ec(ci, ri)]) ws[ec(ci, ri)] = { v: '', t: 's' };
+        ws[ec(ci, ri)].s = { fill: { patternType: 'solid', fgColor: { rgb: 'FF0000' } } };
       }
     }
   }
 
-  // Title styles
-  cellStyle(ws[enc(0, 2)], { font: { bold: true, sz: 16 }, alignment: { horizontal: 'center' } });
-  cellStyle(ws[enc(0, 3)], { font: { bold: true, sz: 13 }, alignment: { horizontal: 'center' } });
-  cellStyle(ws[enc(0, 0)], { font: { bold: true, sz: 14 } });
-
   XLSX.utils.book_append_sheet(wb, ws, 'Jadwal Dinas');
 
-  /* ── Sheet 2: Referensi Shift (with instructions) ── */
-  const refShiftData = [
-    ['DAFTAR SHIFT — Gunakan nama shift persis seperti di bawah saat mengisi kolom tanggal'],
+  /* ── Sheet 2: Referensi Shift ──
+     Shift names listed here — user copies name exactly into date cells */
+  const refRows: any[][] = [
+    ['=== DAFTAR NAMA SHIFT (salin persis ke kolom tanggal) ==='],
     [],
     ['ID Shift', 'Nama Shift', 'Jam Masuk', 'Jam Keluar'],
     ...allShifts.map(s => [s.id, s.nama_shift, s.jam_masuk, s.jam_keluar]),
   ];
-  const wsRef = XLSX.utils.aoa_to_sheet(refShiftData);
+  const wsRef = XLSX.utils.aoa_to_sheet(refRows);
   wsRef['!cols'] = [{ wch: 10 }, { wch: 35 }, { wch: 12 }, { wch: 12 }];
-  // Bold the instruction row
   if (wsRef['A1']) wsRef['A1'].s = { font: { bold: true, color: { rgb: 'CC0000' } } };
-  // Bold the column headers
-  ['A3','B3','C3','D3'].forEach(a => { if (wsRef[a]) wsRef[a].s = { font: { bold: true } }; });
   XLSX.utils.book_append_sheet(wb, wsRef, 'Referensi Shift');
 
   /* ── Sheet 3: Referensi Karyawan ── */
@@ -208,12 +225,11 @@ export function generateJadwalDinas(
   wsEmp['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 20 }, { wch: 25 }];
   XLSX.utils.book_append_sheet(wb, wsEmp, 'Referensi Karyawan');
 
-  /* ── Download ── */
   XLSX.writeFile(wb, `Jadwal_Dinas_${monthName}_${year}.xlsx`);
 }
 
 /* ══════════════════════════════════════════════════════════════
-   PARSE — Read Jadwal Dinas Excel back into ImportRow[]
+   PARSE — Read Jadwal Dinas Excel → ImportRow[]
 ══════════════════════════════════════════════════════════════ */
 export async function parseDinasExcel(
   file: File,
@@ -227,15 +243,14 @@ export async function parseDinasExcel(
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const wb = XLSX.read(data, { type: 'array', cellDates: true });
 
-        /* Build lookup maps */
+        /* Lookup maps */
         const nameToId    = new Map(allEmployees.map(emp => [emp.name.toLowerCase().trim(), emp.id]));
         const nameToShift = new Map(availableShifts.map(s => [s.nama_shift.toLowerCase().trim(), s]));
 
         /* Enrich from reference sheets */
         const refEmpWs = wb.Sheets['Referensi Karyawan'];
         if (refEmpWs) {
-          const rows = XLSX.utils.sheet_to_json<any>(refEmpWs, { defval: '' });
-          rows.forEach((row: any) => {
+          XLSX.utils.sheet_to_json<any>(refEmpWs, { defval: '' }).forEach((row: any) => {
             const id   = String(row['ID Karyawan'] ?? '').trim();
             const name = String(row['Nama'] ?? '').toLowerCase().trim();
             if (id && name) nameToId.set(name, id);
@@ -243,8 +258,7 @@ export async function parseDinasExcel(
         }
         const refShiftWs = wb.Sheets['Referensi Shift'];
         if (refShiftWs) {
-          const rows = XLSX.utils.sheet_to_json<any>(refShiftWs, { defval: '' });
-          rows.forEach((row: any) => {
+          XLSX.utils.sheet_to_json<any>(refShiftWs, { defval: '' }).forEach((row: any) => {
             const id   = String(row['ID Shift'] ?? '').trim();
             const name = String(row['Nama Shift'] ?? '').toLowerCase().trim();
             if (id && name && !nameToShift.has(name)) {
@@ -257,11 +271,10 @@ export async function parseDinasExcel(
           });
         }
 
-        /* Find the schedule sheet (first sheet) */
         const ws  = wb.Sheets[wb.SheetNames[0]];
         const aoa: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as any[][];
 
-        /* Find date header row — row where cols[2+] are sequential integers 1–31 */
+        /* Find date header row (≥20 integers 1–31 in cols 2+) */
         let headerRowIdx = -1;
         for (let ri = 0; ri < Math.min(aoa.length, 15); ri++) {
           let cnt = 0;
@@ -275,13 +288,16 @@ export async function parseDinasExcel(
 
         /* col index → day of month */
         const colToDay: Record<number, number> = {};
+        let lockColIdx = -1; // column index of the LOCK column
         aoa[headerRowIdx].forEach((v: any, ci: number) => {
           const n = Number(v);
           if (ci >= 2 && Number.isInteger(n) && n >= 1 && n <= 31) colToDay[ci] = n;
+          // Detect LOCK column by header text
+          if (ci >= 2 && String(v).toLowerCase().includes('lock')) lockColIdx = ci;
         });
         const dayCols = Object.keys(colToDay).map(Number).sort((a, b) => a - b);
 
-        /* Extract year+month */
+        /* year + month */
         let year = new Date().getFullYear(), month = new Date().getMonth();
         for (let ri = 0; ri < headerRowIdx; ri++) {
           const str = aoa[ri].join(' ');
@@ -294,8 +310,7 @@ export async function parseDinasExcel(
         }
         const mStr = pad(month + 1);
 
-        /* Parse employee rows */
-        const legendKw = ['minggu', 'libur', 'cuti', 'hari besar'];
+        const legendKw  = ['minggu', 'libur', 'cuti', 'hari besar', 'daftar shift', '==='];
         const rows: ImportRow[] = [];
         let rowIndex = 1;
 
@@ -304,33 +319,53 @@ export async function parseDinasExcel(
           const nameCell = String(row[1] ?? '').trim();
           if (!nameCell) continue;
           if (legendKw.some(kw => nameCell.toLowerCase().includes(kw))) break;
+          // Skip day-code sub-header row
           if (/^[SsRrKkJjMm]$/.test(nameCell)) continue;
+          // Skip rows that look like numeric-only (No. column in header area)
+          if (/^No$/i.test(nameCell) || /^Nama$/i.test(nameCell)) continue;
 
           const empId = nameToId.get(nameCell.toLowerCase()) ?? null;
-          const dayShiftMap: Record<number, Shift> = {};
 
+          /* Read per-row lock value from LOCK column */
+          let rowLock = 0;
+          if (lockColIdx !== -1) {
+            const lockVal = String(row[lockColIdx] ?? '').trim();
+            rowLock = lockVal === '1' ? 1 : 0;
+          }
+
+          /* Build day → shift map */
+          const dayShiftMap: Record<number, Shift> = {};
           for (const ci of dayCols) {
             const v = String(row[ci] ?? '').trim();
             if (!v) continue;
             const lower = v.toLowerCase();
+            // Exact match first
             let matched = nameToShift.get(lower);
+            // Prefix match
             if (!matched) for (const [k, s] of nameToShift) { if (k.startsWith(lower) || lower.startsWith(k)) { matched = s; break; } }
+            // Contains match
             if (!matched) for (const [k, s] of nameToShift) { if (k.includes(lower) || lower.includes(k)) { matched = s; break; } }
             if (matched) dayShiftMap[colToDay[ci]] = matched;
           }
           if (!Object.keys(dayShiftMap).length) continue;
 
+          /* Group consecutive days with same shift into ranges */
           const sorted = Object.keys(dayShiftMap).map(Number).sort((a, b) => a - b);
           let rStart = sorted[0], rEnd = sorted[0], cur = dayShiftMap[rStart];
+
           const flush = () => rows.push({
-            rowIndex: rowIndex++, user_id: empId ?? '', user_name: nameCell,
-            shift_id: cur.id, shift_name: cur.nama_shift,
+            rowIndex: rowIndex++,
+            user_id:       empId ?? '',
+            user_name:     nameCell,
+            shift_id:      cur.id,
+            shift_name:    cur.nama_shift,
             tanggal_mulai: `${year}-${mStr}-${pad(rStart)}`,
             tanggal_akhir: `${year}-${mStr}-${pad(rEnd)}`,
-            lock_location: 0,
-            status: empId ? 'pending' : 'error',
-            message: empId ? undefined : `Karyawan "${nameCell}" tidak ditemukan`,
+            lock_location: rowLock,
+            status:        empId ? 'pending' : 'error',
+            message:       empId ? undefined : `Karyawan "${nameCell}" tidak ditemukan di sistem`,
           });
+
           for (let di = 1; di < sorted.length; di++) {
             const day = sorted[di], sf = dayShiftMap[day];
             if (day === rEnd + 1 && sf.id === cur.id) rEnd = day;
