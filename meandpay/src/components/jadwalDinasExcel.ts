@@ -56,14 +56,12 @@ function dayCode(date: Date): string {
 }
 function pad(n: number) { return String(n).padStart(2, '0'); }
 
-// Escape characters that are invalid inside XML text content / attribute values
+// Escape characters invalid in XML text content (NOT attribute values — quotes are fine in text nodes)
 function xmlEscape(str: string): string {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
+    .replace(/>/g, '&gt;');
 }
 
 const solidFill = (argb: string): Partial<ExcelJS.Fill> => ({
