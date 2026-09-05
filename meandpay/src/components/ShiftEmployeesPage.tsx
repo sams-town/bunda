@@ -211,9 +211,8 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
   const [deleteConfirm, setDeleteConfirm] = useState<{ userId: string; userName: string } | null>(null);
   const [search, setSearch] = useState('');
 
-  // Dropdown open states for Template / Import
+  // Dropdown open states for Template
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
-  const [importDropdownOpen, setImportDropdownOpen] = useState(false);
 
   // Month/year selector for template download
   const now = new Date();
@@ -221,18 +220,14 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
   const [templateMonth, setTemplateMonth] = useState(now.getMonth()); // 0-indexed
 
   const templateDropdownRef = useRef<HTMLDivElement>(null);
-  const importDropdownRef = useRef<HTMLDivElement>(null);
 
   const { addToast, updateToast } = useToast();
 
-  // Close dropdowns on outside click
+  // Close template dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (templateDropdownRef.current && !templateDropdownRef.current.contains(e.target as Node)) {
         setTemplateDropdownOpen(false);
-      }
-      if (importDropdownRef.current && !importDropdownRef.current.contains(e.target as Node)) {
-        setImportDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -436,7 +431,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             {/* ── Template Button (single, month/year picker) ── */}
             <div className="relative" ref={templateDropdownRef}>
               <button
-                onClick={() => { setTemplateDropdownOpen(v => !v); setImportDropdownOpen(false); }}
+                onClick={() => { setTemplateDropdownOpen(v => !v); }}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm active:scale-[0.97]"
               >
                 <Download className="w-3.5 h-3.5" /> Template
@@ -492,58 +487,13 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
               </AnimatePresence>
             </div>
 
-            {/* ── Import Dropdown ── */}
-            <div className="relative" ref={importDropdownRef}>
-              <button
-                onClick={() => { setImportDropdownOpen(v => !v); setTemplateDropdownOpen(false); }}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm active:scale-[0.97]"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5" /> Import
-                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", importDropdownOpen && "rotate-180")} />
-              </button>
-              <AnimatePresence>
-                {importDropdownOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50"
-                  >
-                    <div className="py-1.5 max-h-72 overflow-y-auto">
-                      <p className="px-4 py-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Import Jadwal untuk Shift</p>
-                      {shifts.map(s => {
-                        const theme = getShiftTheme(s.jam_masuk);
-                        const ShiftIcon = theme.icon;
-                        return (
-                          <button
-                            key={s.id}
-                            onClick={() => {
-                              setImportDropdownOpen(false);
-                              setImportPreselectedShift(s);
-                              setShowImportModal(true);
-                            }}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left"
-                          >
-                            <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br shadow-sm", theme.gradient)}>
-                              <ShiftIcon className="w-3.5 h-3.5 text-white" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[13px] font-bold text-slate-700 truncate">{s.nama_shift}</p>
-                              <p className="text-[10px] text-slate-400">{s.jam_masuk} – {s.jam_keluar}</p>
-                            </div>
-                            <Upload className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                          </button>
-                        );
-                      })}
-                      {shifts.length === 0 && (
-                        <p className="px-4 py-3 text-xs text-slate-400 text-center">Belum ada shift tersedia</p>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            {/* ── Import Button (single) ── */}
+            <button
+              onClick={() => { setImportPreselectedShift(null); setShowImportModal(true); }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm active:scale-[0.97]"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" /> Import
+            </button>
             <button
               onClick={() => fetchData()}
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-slate-700 hover:border-slate-300 transition-all shadow-sm active:scale-[0.97]"

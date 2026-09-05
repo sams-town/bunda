@@ -219,19 +219,6 @@ export async function generateJadwalDinas(
       const isSun = new Date(year, month, d).getDay() === 0;
       if (isSun) cell.fill = solidFill(RED);
 
-      /* ── DATA VALIDATION DROPDOWN ── */
-      cell.dataValidation = {
-        type: 'list',
-        allowBlank: true,
-        formulae: [shiftDropdown],
-        showErrorMessage: true,
-        error: 'Pilih nama shift dari daftar',
-        errorTitle: 'Nilai tidak valid',
-        showInputMessage: true,
-        promptTitle: 'Pilih Shift',
-        prompt: allShifts.map(s => s.nama_shift).join(', '),
-      };
-
       const vl = val.toLowerCase();
       if (vl.includes('pagi') || vl.includes('subuh')) pCount++;
       else if (vl.includes('siang') || vl.includes('sore')) sCount++;
@@ -248,6 +235,26 @@ export async function generateJadwalDinas(
       c.border = { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } };
     });
   });
+
+  /* ── DATA VALIDATION: one entry per date column covering all employee rows ──
+     Writing one DV rule per column (max 31 rules) instead of one per cell
+     (341 × 31 = 10,571 rules) keeps us well under Excel's 65,530 limit. */
+  if (allEmployees.length > 0) {
+    const firstRow = DATA_START_XLSX_ROW;
+    const lastRow  = DATA_START_XLSX_ROW + allEmployees.length - 1;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const colLetter = ws.getColumn(d + 2).letter;
+      const sqref = `${colLetter}${firstRow}:${colLetter}${lastRow}`;
+      ws.dataValidations.add(sqref, {
+        type: 'list',
+        allowBlank: true,
+        formulae: [shiftDropdown],
+        showErrorMessage: true,
+        error: 'Pilih nama shift dari daftar yang tersedia',
+        errorTitle: 'Nilai Tidak Valid',
+      });
+    }
+  }
 
   /* --- Legend rows --- */
   const legRow = DATA_START_XLSX_ROW + allEmployees.length + 1;
