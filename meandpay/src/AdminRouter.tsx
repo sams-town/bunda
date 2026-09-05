@@ -166,10 +166,41 @@ export function AdminRouter({ user, handleLogout, settingsFromApp }: { user: any
       });
       const json = await res.json();
       if (json.success) {
-        const raw = json.data || [];
-        setPreviewNotifications(raw.slice(0, 10)); // Keep latest 10 for preview
+        const raw: any[] = json.data || [];
 
-        const count = raw.filter((n: any) => Number(n.notifiable_id) === Number(user.id)).length;
+        // Transform raw API data → { id, title, message } untuk preview dropdown
+        const transformed = raw.slice(0, 10).map((item: any) => {
+          // NotificationService sudah parse item.data dari JSON string → object
+          // jadi kita cukup gunakan langsung, tapi tetap handle jika masih string
+          let parsedData: any = {};
+          try {
+            parsedData = typeof item.data === 'string' ? JSON.parse(item.data) : (item.data || {});
+          } catch { /* ignore */ }
+
+          const message: string = parsedData.message || parsedData.body || parsedData.text || 'Notifikasi baru';
+          const fromName: string = parsedData.from || parsedData.sender || item.user?.name || 'Sistem';
+
+          let title = fromName;
+          if (parsedData.title) {
+            title = parsedData.title;
+          } else if (message.length > 0) {
+            const words = message.split(' ');
+            title = words.slice(0, 5).join(' ') + (words.length > 5 ? '...' : '');
+          }
+
+          return {
+            id: item.id?.toString(),
+            title,
+            message,
+            time: item.created_at,
+            unread: item.read_at === null || item.read_at === undefined,
+          };
+        });
+
+        setPreviewNotifications(transformed);
+
+        // Hitung notifikasi yang belum dibaca (read_at === null)
+        const count = raw.filter((n: any) => n.read_at === null || n.read_at === undefined).length;
         setUnreadCount(count);
       }
     } catch (err) {
