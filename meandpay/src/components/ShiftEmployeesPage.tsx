@@ -152,10 +152,12 @@ function generateJadwalDinasTemplate(
   year: number,
   month: number
 ) {
-  generateJadwalDinas(allEmployees, allShifts, mappings, year, month).catch(err => {
+  try {
+    generateJadwalDinas(allEmployees, allShifts, mappings, year, month);
+  } catch (err: any) {
     console.error('generateJadwalDinas failed:', err);
-    Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal membuat template Excel: ' + err.message });
-  });
+    Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal membuat template: ' + err.message });
+  }
 }
 
 /* ─── Legacy Import Template Generator (kept for compatibility) ──── */
