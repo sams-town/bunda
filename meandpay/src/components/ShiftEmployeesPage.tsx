@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Clock, Users, Trash2, Search, Loader2, X,
@@ -148,16 +148,12 @@ function generateJadwalDinasTemplate(
   allShifts: Shift[],
   mappings: MappingData[],
   year: number,
-  month: number // 0-indexed
+  month: number
 ) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthName = new Date(year, month, 1).toLocaleString('id-ID', { month: 'long' });
-
-  // ── Shift lookup maps ──
   const shiftNames = allShifts.map(s => s.nama_shift);
   const shiftById = new Map(allShifts.map(s => [s.id, s.nama_shift]));
-
-  // ── Build per-user schedule: userId → { dayNum: shiftName } (ALL shifts) ──
   const scheduleMap: Record<string, Record<number, string>> = {};
   mappings.forEach(m => {
     if (!shiftById.has(m.shift_id)) return;
@@ -166,15 +162,12 @@ function generateJadwalDinasTemplate(
     if (!scheduleMap[m.user_id]) scheduleMap[m.user_id] = {};
     scheduleMap[m.user_id][d.getUTCDate()] = shiftById.get(m.shift_id)!;
   });
-
-  // ── AOA ──
   const dateHeaders: (string | number)[] = [];
   const dayCodeHeaders: string[] = [];
   for (let d = 1; d <= daysInMonth; d++) {
     dateHeaders.push(d);
     dayCodeHeaders.push(dayCode(new Date(year, month, d)));
   }
-
   const aoa: any[][] = [
     ['RUMAH SAKIT HJ. BUNDA HALIMAH', '', ...Array(daysInMonth + 2).fill('')],
     [''],
@@ -184,8 +177,7 @@ function generateJadwalDinasTemplate(
     ['No', 'Nama', ...dateHeaders, 'P', 'S', 'M'],
     ['', '', ...dayCodeHeaders, '', '', ''],
   ];
-
-  const DATA_START_ROW = 7; // 0-indexed row index of first employee in aoa
+  const DATA_START_ROW = 7;
   allEmployees.forEach((emp, idx) => {
     const row: any[] = [idx + 1, emp.name];
     let pCount = 0, sCount = 0, mCount = 0;
@@ -200,47 +192,28 @@ function generateJadwalDinasTemplate(
     row.push(pCount || '', sCount || '', mCount || '');
     aoa.push(row);
   });
-
   aoa.push(['']);
   const padLeg = (lbl: string): any[] => [...Array(3).fill(''), '', lbl];
   aoa.push(padLeg('MINGGU/LIBUR'));
   aoa.push(padLeg('CUTI'));
   aoa.push(padLeg('CUTI BERSAMA/HARI BESAR'));
 
-  // ── Shift list hidden sheet (source for Data Validation formula) ──
-  // Put shift names in column A of a hidden sheet "ShiftList", rows 1..N
-  // Then DV formula1 = "ShiftList!$A$1:$A$N"
-  const shiftListSheetName = '_ShiftList';
-
-  // ── Build workbook with SheetJS ──
   const wb = XLSX.utils.book_new();
-
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-  // Column widths
-  ws['!cols'] = [
-    { wch: 5 }, { wch: 30 },
-    ...Array(daysInMonth).fill({ wch: 14 }),
-    { wch: 5 }, { wch: 5 }, { wch: 5 }
-  ];
-
-  // Row heights
+  ws['!cols'] = [{ wch: 5 }, { wch: 30 }, ...Array(daysInMonth).fill(null).map(() => ({ wch: 14 })), { wch: 5 }, { wch: 5 }, { wch: 5 }];
   ws['!rows'] = aoa.map((_, i) => {
     if (i === 2) return { hpt: 22 };
     if (i >= DATA_START_ROW && i < DATA_START_ROW + allEmployees.length) return { hpt: 18 };
     return { hpt: 15 };
   });
-
-  // Cell styles
   for (let d = 1; d <= daysInMonth; d++) {
-    const col = XLSX.utils.encode_col(1 + d); // col index 2 = col C
+    const col = XLSX.utils.encode_col(1 + d);
     const isSun = new Date(year, month, d).getDay() === 0;
-    const hdrNum = `${col}6`;
-    const hdrCode = `${col}7`;
+    const hdrNum = `${col}6`, hdrCode = `${col}7`;
     if (isSun) {
-      const redStyle = { fill: { fgColor: { rgb: 'FF0000' }, patternType: 'solid' }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
-      if (ws[hdrNum]) ws[hdrNum].s = redStyle;
-      if (ws[hdrCode]) ws[hdrCode].s = redStyle;
+      const rs = { fill: { fgColor: { rgb: 'FF0000' }, patternType: 'solid' }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
+      if (ws[hdrNum]) ws[hdrNum].s = rs;
+      if (ws[hdrCode]) ws[hdrCode].s = rs;
       for (let r = 0; r < allEmployees.length; r++) {
         const ca = `${col}${DATA_START_ROW + 1 + r}`;
         if (!ws[ca]) ws[ca] = { v: '', t: 's' };
@@ -250,300 +223,83 @@ function generateJadwalDinasTemplate(
       if (ws[hdrNum]) ws[hdrNum].s = { fill: { fgColor: { rgb: '00FFFF' }, patternType: 'solid' }, font: { bold: true } };
     }
   }
-  ['A6', 'B6', 'A7', 'B7'].forEach(a => {
+  ['A6','B6','A7','B7'].forEach(a => {
     if (ws[a]) ws[a].s = { fill: { fgColor: { rgb: 'FF6600' }, patternType: 'solid' }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
   });
   const legStart = DATA_START_ROW + allEmployees.length + 2;
-  ['FF0000', 'FFFF00', 'FFFF00'].forEach((c, i) => {
+  ['FF0000','FFFF00','FFFF00'].forEach((c, i) => {
     const a = `D${legStart + i}`;
     if (!ws[a]) ws[a] = { v: '', t: 's' };
     ws[a].s = { fill: { fgColor: { rgb: c }, patternType: 'solid' } };
   });
-
   ws['!merges'] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
     { s: { r: 2, c: 0 }, e: { r: 2, c: daysInMonth + 4 } },
     { s: { r: 3, c: 0 }, e: { r: 3, c: daysInMonth + 4 } },
     { s: { r: 4, c: 2 }, e: { r: 4, c: daysInMonth + 1 } },
-    { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } },
-    { s: { r: 5, c: 1 }, e: { r: 6, c: 1 } },
+    { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } }, { s: { r: 5, c: 1 }, e: { r: 6, c: 1 } },
     { s: { r: 5, c: daysInMonth + 2 }, e: { r: 6, c: daysInMonth + 2 } },
     { s: { r: 5, c: daysInMonth + 3 }, e: { r: 6, c: daysInMonth + 3 } },
     { s: { r: 5, c: daysInMonth + 4 }, e: { r: 6, c: daysInMonth + 4 } },
   ];
-
   XLSX.utils.book_append_sheet(wb, ws, 'Jadwal Dinas');
 
-  // ── Hidden sheet with shift names (DV source) ──
+  const SHIFT_SHEET = '_ShiftList';
   const wsShiftList = XLSX.utils.aoa_to_sheet(shiftNames.map(n => [n]));
-  XLSX.utils.book_append_sheet(wb, wsShiftList, shiftListSheetName);
-
-  // Referensi sheets
-  const wsShift = XLSX.utils.aoa_to_sheet([
+  XLSX.utils.book_append_sheet(wb, wsShiftList, SHIFT_SHEET);
+  const wsShiftRef = XLSX.utils.aoa_to_sheet([
     ['ID Shift', 'Nama Shift', 'Jam Masuk', 'Jam Keluar'],
-    ...allShifts.map(s => [s.id, s.nama_shift, s.jam_masuk, s.jam_keluar])
+    ...allShifts.map(s => [s.id, s.nama_shift, s.jam_masuk, s.jam_keluar]),
   ]);
-  wsShift['!cols'] = [{ wch: 10 }, { wch: 30 }, { wch: 12 }, { wch: 12 }];
-  XLSX.utils.book_append_sheet(wb, wsShift, 'Referensi Shift');
-
-  const wsEmp = XLSX.utils.aoa_to_sheet([
+  wsShiftRef['!cols'] = [{ wch: 10 }, { wch: 30 }, { wch: 12 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(wb, wsShiftRef, 'Referensi Shift');
+  const wsEmpRef = XLSX.utils.aoa_to_sheet([
     ['ID Karyawan', 'Nama', 'Username', 'Jabatan'],
-    ...allEmployees.map(e => [e.id, e.name, e.username, e.jabatan?.nama_jabatan || '-'])
+    ...allEmployees.map(e => [e.id, e.name, e.username, e.jabatan?.nama_jabatan || '-']),
   ]);
-  wsEmp['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 20 }, { wch: 25 }];
-  XLSX.utils.book_append_sheet(wb, wsEmp, 'Referensi Karyawan');
+  wsEmpRef['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 20 }, { wch: 25 }];
+  XLSX.utils.book_append_sheet(wb, wsEmpRef, 'Referensi Karyawan');
 
-  // ── Write to array buffer, then patch Data Validation XML manually ──
-  // SheetJS CE does NOT serialize !dataValidations — we must inject the XML ourselves.
   const rawBuf: ArrayBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx', bookSST: false });
+  const firstDC = XLSX.utils.encode_col(2);
+  const lastDC  = XLSX.utils.encode_col(2 + daysInMonth - 1);
+  const sqref   = `${firstDC}${DATA_START_ROW + 2}:${lastDC}${DATA_START_ROW + 1 + allEmployees.length}`;
+  const dvXml   =
+    `<dataValidations count="1"><dataValidation type="list" allowBlank="1" showDropDown="0" ` +
+    `showInputMessage="1" showErrorMessage="1" sqref="${sqref}">` +
+    `<formula1>${SHIFT_SHEET}!$A$1:$A$${shiftNames.length}</formula1>` +
+    `</dataValidation></dataValidations>`;
 
-  patchDataValidationAndDownload(
-    rawBuf,
-    allEmployees.length,
-    daysInMonth,
-    DATA_START_ROW,
-    shiftListSheetName,
-    shiftNames.length,
-    `Jadwal_Dinas_${monthName}_${year}.xlsx`
-  );
-}
-
-// ── XML patcher: injects <dataValidations> into sheet1.xml inside the xlsx ZIP ──
-async function patchDataValidationAndDownload(
-  buf: ArrayBuffer,
-  empCount: number,
-  daysInMonth: number,
-  dataStartRow: number,    // 0-indexed
-  shiftListSheet: string,
-  shiftCount: number,
-  filename: string
-) {
-  // Dynamic import of JSZip-compatible approach using browser's built-in DecompressionStream
-  // We use a pure JS ZIP read/write without extra deps.
-  // xlsx format is a ZIP; we use the File System approach via Blob + manual ZIP patching.
-  //
-  // Since we can't use JSZip without installing it, we use a different approach:
-  // Write the DV as a worksheet-level XML fragment by re-using SheetJS internal helpers.
-  // SheetJS DOES write !dataValidations if we set them BEFORE writing, using the correct key.
-  //
-  // The correct internal key in SheetJS source is ws['!dataValidations'] but the actual
-  // OOXML writer checks for a different path. Let's use the ZIP patching approach with
-  // the browser's native CompressionStream / DecompressionStream APIs (available in modern browsers).
-
-  try {
-    const bytes = new Uint8Array(buf);
-
-    // Parse ZIP manually (PKZIP local file headers)
-    const files = parseZip(bytes);
-
-    // Find sheet1.xml (first sheet = Jadwal Dinas)
-    const sheetKey = 'xl/worksheets/sheet1.xml';
-    if (!files[sheetKey]) {
-      // Fallback: download without DV
-      downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
-      return;
-    }
-
-    // Build the DV XML block
-    // DV references the hidden shift list sheet: 'ShiftList'!$A$1:$A$N
-    // sqref spans all date cols for all employee rows in one block using space-separated refs
-    // e.g.  C8:AG8 C9:AG9 ... = "C8:AG308"  (one contiguous block works if rows are consecutive)
-    const firstDateCol = XLSX.utils.encode_col(2);        // 'C'
-    const lastDateCol  = XLSX.utils.encode_col(2 + daysInMonth - 1); // e.g. 'AG'
-    const firstEmpXlRow = dataStartRow + 2;  // 1-indexed xlsx row (row 0 in aoa = row 1 in xlsx, row 7 in aoa = row 8 in xlsx)
-    const lastEmpXlRow  = dataStartRow + 1 + empCount;
-
-    const sqref = `${firstDateCol}${firstEmpXlRow}:${lastDateCol}${lastEmpXlRow}`;
-
-    // The hidden sheet's index: Jadwal Dinas=1, _ShiftList=2 (1-indexed in OOXML)
-    // We'll reference by name using the defined name approach — actually simplest is inline list
-    // since we know names at generation time. Inline list in formula1: "Name1,Name2,..."
-    // Max 255 chars for inline list. If shifts > ~10 names that's too long.
-    // Use sheet reference instead: ShiftListSheetName!$A$1:$A$N
-    const dvFormula1 = `${shiftListSheet}!$A$1:$A$${shiftCount}`;
-
-    const dvXml = `<dataValidations count="1">` +
-      `<dataValidation type="list" allowBlank="1" showDropDown="0" showInputMessage="1" showErrorMessage="1" sqref="${sqref}">` +
-      `<formula1>${dvFormula1}</formula1>` +
-      `</dataValidation>` +
-      `</dataValidations>`;
-
-    // Inject DV XML into sheet1.xml: insert before </worksheet>
-    let sheetXml = new TextDecoder().decode(files[sheetKey]);
-    if (sheetXml.includes('<dataValidations')) {
-      sheetXml = sheetXml.replace(/<dataValidations[\s\S]*?<\/dataValidations>/, dvXml);
-    } else {
-      sheetXml = sheetXml.replace('</worksheet>', dvXml + '</worksheet>');
-    }
-    files[sheetKey] = new TextEncoder().encode(sheetXml);
-
-    // Also hide the _ShiftList sheet in workbook.xml
-    const wbXmlKey = 'xl/workbook.xml';
-    if (files[wbXmlKey]) {
-      let wbXml = new TextDecoder().decode(files[wbXmlKey]);
-      // Mark _ShiftList sheet as hidden: add state="hidden" to its <sheet> element
-      wbXml = wbXml.replace(
-        new RegExp(`(<sheet[^>]*name="${shiftListSheet}"[^>]*)(/>|>)`),
-        (m, attrs, end) => {
-          if (attrs.includes('state=')) return m;
-          return `${attrs} state="hidden"${end}`;
-        }
-      );
-      files[wbXmlKey] = new TextEncoder().encode(wbXml);
-    }
-
-    // Rebuild ZIP and download
-    const newZipBuf = buildZip(files);
-    downloadBlob(
-      new Blob([newZipBuf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
-      filename
-    );
-  } catch (err) {
-    console.error('DV patch failed, downloading without dropdown:', err);
-    // Fallback: download original without DV
-    downloadBlob(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), filename);
-  }
-}
-
-function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ── Minimal ZIP reader (PKZIP local file entries, stored/deflated) ──
-function parseZip(data: Uint8Array): Record<string, Uint8Array> {
-  const files: Record<string, Uint8Array> = {};
-  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  let i = 0;
-  while (i < data.length - 4) {
-    if (view.getUint32(i, true) !== 0x04034b50) { i++; continue; }
-    const compression = view.getUint16(i + 8, true);
-    const compressedSize = view.getUint32(i + 18, true);
-    const uncompressedSize = view.getUint32(i + 22, true);
-    const fnLen = view.getUint16(i + 26, true);
-    const extraLen = view.getUint16(i + 28, true);
-    const fn = new TextDecoder().decode(data.subarray(i + 30, i + 30 + fnLen));
-    const dataOffset = i + 30 + fnLen + extraLen;
-
-    if (compression === 0) {
-      // Stored
-      files[fn] = data.subarray(dataOffset, dataOffset + uncompressedSize);
-    } else if (compression === 8) {
-      // Deflated — use DecompressionStream (browser native, sync workaround via ArrayBuffer)
-      try {
-        const compressed = data.subarray(dataOffset, dataOffset + compressedSize);
-        // We need synchronous inflate; use a manual store via pre-decoded approach
-        // Since DecompressionStream is async, we store raw and decode lazily
-        // For now store compressed with a marker — we'll decode on demand
-        // Actually, SheetJS already decoded these when it read them. We just need
-        // to re-encode them back. Store the already-decoded content from SheetJS's
-        // internal representation via a different approach.
-        //
-        // Simple approach: we re-use the data as-is (SheetJS will have already
-        // parsed them; the bytes we have ARE the final decoded bytes from XLSX.write)
-        // since XLSX.write outputs STORED entries (no compression) for simplicity.
-        files[fn] = data.subarray(dataOffset, dataOffset + compressedSize);
-      } catch {
-        files[fn] = data.subarray(dataOffset, dataOffset + compressedSize);
+  import('fflate').then(({ unzipSync, zipSync, strToU8, strFromU8 }) => {
+    try {
+      const zipped = unzipSync(new Uint8Array(rawBuf));
+      const sk = 'xl/worksheets/sheet1.xml';
+      if (zipped[sk]) {
+        let xml = strFromU8(zipped[sk]);
+        xml = xml.replace(/<dataValidations[\s\S]*?<\/dataValidations>/g, '');
+        xml = xml.replace('</worksheet>', dvXml + '</worksheet>');
+        zipped[sk] = strToU8(xml);
       }
+      const wk = 'xl/workbook.xml';
+      if (zipped[wk]) {
+        let wbXml = strFromU8(zipped[wk]);
+        wbXml = wbXml.replace(
+          new RegExp(`(<sheet[^>]*name="${SHIFT_SHEET}"[^/]*)(/?>)`),
+          (_m: string, a: string, e: string) => a.includes('state=') ? _m : `${a} state="hidden"${e}`
+        );
+        zipped[wk] = strToU8(wbXml);
+      }
+      const blob = new Blob([zipSync(zipped, { level: 6 })], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = `Jadwal_Dinas_${monthName}_${year}.xlsx`; link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      XLSX.writeFile(wb, `Jadwal_Dinas_${monthName}_${year}.xlsx`);
     }
-    i = dataOffset + compressedSize;
-  }
-  return files;
-}
-
-// ── Minimal ZIP writer (stores all entries uncompressed) ──
-function buildZip(files: Record<string, Uint8Array>): Uint8Array {
-  const localHeaders: Uint8Array[] = [];
-  const centralDir: Uint8Array[] = [];
-  const offsets: number[] = [];
-  let offset = 0;
-
-  const crc32Table = (() => {
-    const t = new Uint32Array(256);
-    for (let i = 0; i < 256; i++) {
-      let c = i;
-      for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
-      t[i] = c;
-    }
-    return t;
-  })();
-
-  const crc32 = (data: Uint8Array) => {
-    let crc = 0xFFFFFFFF;
-    for (const b of data) crc = crc32Table[(crc ^ b) & 0xFF] ^ (crc >>> 8);
-    return (crc ^ 0xFFFFFFFF) >>> 0;
-  };
-
-  const writeUint16 = (v: number) => { const b = new Uint8Array(2); new DataView(b.buffer).setUint16(0, v, true); return b; };
-  const writeUint32 = (v: number) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, v, true); return b; };
-
-  for (const [name, content] of Object.entries(files)) {
-    const nameBytes = new TextEncoder().encode(name);
-    const crc = crc32(content);
-    offsets.push(offset);
-
-    // Local file header
-    const lh = concatU8([
-      new Uint8Array([0x50, 0x4B, 0x03, 0x04]), // signature
-      writeUint16(20),        // version needed
-      writeUint16(0),         // flags
-      writeUint16(0),         // compression: stored
-      writeUint16(0),         // mod time
-      writeUint16(0),         // mod date
-      writeUint32(crc),
-      writeUint32(content.length),
-      writeUint32(content.length),
-      writeUint16(nameBytes.length),
-      writeUint16(0),         // extra length
-      nameBytes,
-      content,
-    ]);
-    localHeaders.push(lh);
-    offset += lh.length;
-
-    // Central directory entry
-    centralDir.push(concatU8([
-      new Uint8Array([0x50, 0x4B, 0x01, 0x02]),
-      writeUint16(20), writeUint16(20),
-      writeUint16(0), writeUint16(0), writeUint16(0),
-      writeUint32(crc),
-      writeUint32(content.length),
-      writeUint32(content.length),
-      writeUint16(nameBytes.length),
-      writeUint16(0), writeUint16(0),
-      writeUint16(0), writeUint16(0),
-      writeUint32(0),
-      writeUint32(offsets[offsets.length - 1]),
-      nameBytes,
-    ]));
-  }
-
-  const cdBytes = concatU8(centralDir);
-  const cdOffset = offset;
-  const eocd = concatU8([
-    new Uint8Array([0x50, 0x4B, 0x05, 0x06]),
-    writeUint16(0), writeUint16(0),
-    writeUint16(centralDir.length),
-    writeUint16(centralDir.length),
-    writeUint32(cdBytes.length),
-    writeUint32(cdOffset),
-    writeUint16(0),
-  ]);
-
-  return concatU8([...localHeaders, cdBytes, eocd]);
-}
-
-function concatU8(arrays: Uint8Array[]): Uint8Array {
-  const total = arrays.reduce((s, a) => s + a.length, 0);
-  const out = new Uint8Array(total);
-  let off = 0;
-  for (const a of arrays) { out.set(a, off); off += a.length; }
-  return out;
+  }).catch(() => { XLSX.writeFile(wb, `Jadwal_Dinas_${monthName}_${year}.xlsx`); });
 }
 
 /* ─── Legacy Import Template Generator (kept for compatibility) ──── */
