@@ -264,42 +264,65 @@ function generateJadwalDinasTemplate(
   const firstDC = XLSX.utils.encode_col(2);
   const lastDC  = XLSX.utils.encode_col(2 + daysInMonth - 1);
   const sqref   = `${firstDC}${DATA_START_ROW + 2}:${lastDC}${DATA_START_ROW + 1 + allEmployees.length}`;
-  const dvXml   =
+  // Sheet name with underscore must be single-quoted in OOXML formula references
+  const dvFormula1 = `'${SHIFT_SHEET}'!$A$1:$A$${shiftNames.length}`;
+  const dvXml =
     `<dataValidations count="1"><dataValidation type="list" allowBlank="1" showDropDown="0" ` +
     `showInputMessage="1" showErrorMessage="1" sqref="${sqref}">` +
-    `<formula1>${SHIFT_SHEET}!$A$1:$A$${shiftNames.length}</formula1>` +
+    `<formula1>${dvFormula1}</formula1>` +
     `</dataValidation></dataValidations>`;
 
-  import('fflate').then(({ unzipSync, zipSync, strToU8, strFromU8 }) => {
+  import('fflate').then((fflate: any) => {
+    const enc = new TextEncoder();
+    const dec = new TextDecoder();
     try {
-      const zipped = unzipSync(new Uint8Array(rawBuf));
+      const zipped: Record<string, Uint8Array> = fflate.unzipSync(new Uint8Array(rawBuf));
+
+      // Patch sheet1.xml — inject dataValidations before </worksheet>
       const sk = 'xl/worksheets/sheet1.xml';
       if (zipped[sk]) {
-        let xml = strFromU8(zipped[sk]);
-        xml = xml.replace(/<dataValidations[\s\S]*?<\/dataValidations>/g, '');
-        xml = xml.replace('</worksheet>', dvXml + '</worksheet>');
-        zipped[sk] = strToU8(xml);
+        let xml = dec.decode(zipped[sk]);
+        // Remove any existing dataValidations block first
+        xml = xml.replace(/<dataValidations[^>]*>[\s\S]*?<\/dataValidations>/g, '');
+        // Insert before closing worksheet tag
+        xml = xml.replace(/<\/worksheet>/, dvXml + '</worksheet>');
+        zipped[sk] = enc.encode(xml);
       }
+
+      // Hide _ShiftList sheet in workbook.xml
       const wk = 'xl/workbook.xml';
       if (zipped[wk]) {
-        let wbXml = strFromU8(zipped[wk]);
+        let wbXml = dec.decode(zipped[wk]);
+        // Escape the sheet name for regex
+        const escapedName = SHIFT_SHEET.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         wbXml = wbXml.replace(
-          new RegExp(`(<sheet[^>]*name="${SHIFT_SHEET}"[^/]*)(/?>)`),
-          (_m: string, a: string, e: string) => a.includes('state=') ? _m : `${a} state="hidden"${e}`
+          new RegExp(`(<sheet\\b[^>]*\\bname="${escapedName}"[^>]*?)(\\s*/?>)`),
+          (m: string, attrs: string, end: string) =>
+            attrs.includes('state=') ? m : `${attrs} state="hidden"${end}`
         );
-        zipped[wk] = strToU8(wbXml);
+        zipped[wk] = enc.encode(wbXml);
       }
-      const blob = new Blob([zipSync(zipped, { level: 6 })], {
+
+      const patched: Uint8Array = fflate.zipSync(zipped, { level: 0 }); // level 0 = store (no compression), safest
+      const blob = new Blob([patched], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url; link.download = `Jadwal_Dinas_${monthName}_${year}.xlsx`; link.click();
+      link.href = url;
+      link.download = `Jadwal_Dinas_${monthName}_${year}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       URL.revokeObjectURL(url);
-    } catch {
+    } catch (patchErr) {
+      console.error('fflate patch failed:', patchErr);
+      // Fallback: download valid xlsx without dropdown
       XLSX.writeFile(wb, `Jadwal_Dinas_${monthName}_${year}.xlsx`);
     }
-  }).catch(() => { XLSX.writeFile(wb, `Jadwal_Dinas_${monthName}_${year}.xlsx`); });
+  }).catch(() => {
+    XLSX.writeFile(wb, `Jadwal_Dinas_${monthName}_${year}.xlsx`);
+  });
 }
 
 /* ─── Legacy Import Template Generator (kept for compatibility) ──── */
