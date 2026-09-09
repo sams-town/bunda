@@ -66,7 +66,7 @@ class UserService {
         }
 
         const andConditions = [
-            { id: { notIn: [...excludedUserIds, 1062n] } }
+            { id: { notIn: [...excludedUserIds] } }
         ];
 
         if (query.status_kerja === "pkwt") {
@@ -303,7 +303,7 @@ class UserService {
             .filter((id) => id !== null && id !== undefined);
 
         const andConditions = [
-            { id: { notIn: [...excludedUserIds, 1062n] } }
+            { id: { notIn: [...excludedUserIds] } }
         ];
 
         if (query.status_kerja === "pkwt") {
@@ -509,7 +509,7 @@ class UserService {
         const users = await prisma.users.findMany({
             where: {
                 AND: [
-                    { id: { notIn: [...excludedUserIds, 1062n] } },
+                    { id: { notIn: [...excludedUserIds] } },
                     { foto_face_recognition: { not: null } },
                     { foto_face_recognition: { not: "" } },
                     { foto_face_recognition: { not: "null" } }
@@ -538,7 +538,7 @@ class UserService {
             .filter((id) => id !== null && id !== undefined);
 
         const andConditions = [
-            { id: { notIn: [...excludedUserIds, 1062n] } }
+            { id: { notIn: [...excludedUserIds] } }
         ];
 
         if (search && search.trim()) {
