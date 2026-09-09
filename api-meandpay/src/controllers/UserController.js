@@ -162,10 +162,14 @@ class UserController {
             });
         } catch (error) {
             console.error("UserController.store error:", error);
-            return res.status(500).json({
+            // Kembalikan 409 Conflict jika duplikat email/username, bukan 500
+            const isDuplicate = error.message &&
+                (error.message.includes('sudah digunakan') ||
+                 error.message.toLowerCase().includes('unique constraint'));
+            return res.status(isDuplicate ? 409 : 500).json({
                 success: false,
-                message: "Gagal membuat user",
-                error: error.message,
+                message: isDuplicate ? error.message : "Gagal membuat user",
+                error: isDuplicate ? undefined : error.message,
             });
         }
     }

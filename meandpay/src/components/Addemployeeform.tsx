@@ -292,9 +292,13 @@ export function AddEmployeeForm({ onBack, onSuccess, defaultRole }: AddEmployeeF
         const e: any = {};
         if (!form.name.trim()) e.name = 'Wajib';
         if (!form.username.trim()) e.username = 'Wajib';
+        if (!form.email.trim()) e.email = 'Wajib';
         if (!form.password.trim()) e.password = 'Wajib';
         if (!form.role) e.role = 'Wajib';
-        if (Object.keys(e).length > 0) { setErrors(e); setActiveSection(0); return setToast({ type: 'error', message: 'Harap lengkapi form' }); }
+        if (!form.jabatan_id) e.jabatan_id = 'Wajib';
+        if (!form.lokasi_id) e.lokasi_id = 'Wajib';
+        if (!form.status_pajak_id) e.status_pajak_id = 'Wajib';
+        if (Object.keys(e).length > 0) { setErrors(e); setActiveSection(0); return setToast({ type: 'error', message: 'Harap lengkapi semua field yang wajib diisi' }); }
 
         setLoading(true);
         try {
@@ -368,11 +372,11 @@ export function AddEmployeeForm({ onBack, onSuccess, defaultRole }: AddEmployeeF
                                 <SectionTitle icon={User} title="Data Pribadi" />
                                 <div className="grid grid-cols-2 gap-4">
                                     <FormInput label="Nama" name="name" icon={User} value={form.name} onChange={handleChange} error={errors.name} required />
-                                    <FormInput label="Email" name="email" type="email" icon={Mail} value={form.email} onChange={handleChange} required />
+                                    <FormInput label="Email" name="email" type="email" icon={Mail} value={form.email} onChange={handleChange} error={errors.email} required />
                                     <FormInput label="HP" name="telepon" icon={Phone} value={form.telepon} onChange={handleChange} required />
                                     <FormInput label="Username" name="username" icon={User} value={form.username} onChange={handleChange} error={errors.username} required />
                                     <FormInput label="Password" name="password" type="password" icon={Lock} value={form.password} onChange={handleChange} error={errors.password} required />
-                                    <FormSelect label="Lokasi" name="lokasi_id" options={master.lokasi} value={form.lokasi_id} onChange={handleChange} icon={MapPin} required />
+                                    <FormSelect label="Lokasi" name="lokasi_id" options={master.lokasi} value={form.lokasi_id} onChange={handleChange} icon={MapPin} error={errors.lokasi_id} required />
                                     <FormInput label="Tgl Lahir" name="tgl_lahir" type="date" value={form.tgl_lahir} onChange={handleChange} icon={Calendar} required />
                                     <FormSelect label="Jenis Kelamin" name="gender" options={['Laki-laki', 'Perempuan', 'Lain-lain']} value={form.gender} onChange={handleChange} icon={User} required />
                                     <FormInput label="Tgl Masuk" name="tgl_join" type="date" value={form.tgl_join} onChange={handleChange} icon={Calendar} required />
@@ -389,7 +393,7 @@ export function AddEmployeeForm({ onBack, onSuccess, defaultRole }: AddEmployeeF
                                          disabled={defaultRole === 'dokter'}
                                          required 
                                      />
-                                    <FormSearchSelect label="Divisi" name="jabatan_id" placeholder="Pilih Divisi" options={master.jabatan} value={form.jabatan_id} onChange={handleChange} icon={Briefcase} required />
+                                    <FormSearchSelect label="Divisi" name="jabatan_id" placeholder="Pilih Divisi" options={master.jabatan} value={form.jabatan_id} onChange={handleChange} icon={Briefcase} error={errors.jabatan_id} required />
                                     <FormSelect label="Is Admin" name="is_admin" options={['admin', 'user']} value={form.is_admin} onChange={handleChange} icon={Shield} required />
                                     <FormInput label="Nama Ibu Kandung" name="nama_ibu_kandung" icon={User} value={form.nama_ibu_kandung} onChange={handleChange} required />
                                     <FormSearchSelect 
@@ -399,7 +403,8 @@ export function AddEmployeeForm({ onBack, onSuccess, defaultRole }: AddEmployeeF
                                         options={master.statusPajak} 
                                         value={form.status_pajak_id} 
                                         onChange={handleChange} 
-                                        icon={FileText} 
+                                        icon={FileText}
+                                        error={errors.status_pajak_id}
                                         required 
                                     />
                                 </div>

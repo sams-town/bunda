@@ -707,8 +707,15 @@ class UserService {
             });
 
             if (existingUser) {
-                // Jika data ditemukan, lakukan update
-                return this.update(existingUser.id.toString(), data);
+                // Tentukan field mana yang konflik untuk pesan yang lebih jelas
+                const emailConflict = userData.email && existingUser.email === userData.email;
+                const usernameConflict = userData.username && existingUser.username === userData.username;
+                const conflictField = emailConflict && usernameConflict
+                    ? 'Email dan username'
+                    : emailConflict
+                    ? 'Email'
+                    : 'Username';
+                throw new Error(`${conflictField} sudah digunakan oleh pengguna lain`);
             }
         }
 
