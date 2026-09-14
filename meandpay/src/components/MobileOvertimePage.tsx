@@ -20,6 +20,15 @@ import { useToast } from './Toast';
 
 const BASE_URL = import.meta.env.VITE_API_MEANDPAY;
 
+function formatDuration(seconds: string | null) {
+  if (!seconds) return '0j 0m';
+  const totalSeconds = parseInt(seconds);
+  if (isNaN(totalSeconds) || totalSeconds <= 0) return '0j 0m';
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  return `${h}j ${m}m`;
+}
+
 interface Overtime {
   id: string;
   user_id: string;
@@ -448,7 +457,7 @@ export function MobileOvertimePage() {
                 <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
                       <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Durasi</p>
-                      <p className="text-xs font-black text-slate-700">{item.total_lembur || '0'} Jam</p>
+                      <p className="text-xs font-black text-slate-700">{formatDuration(item.total_lembur)}</p>
                     </div>
                     <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
                       <p className="text-[8px] font-black text-slate-400 uppercase mb-1">Lokasi</p>
