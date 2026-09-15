@@ -108,6 +108,11 @@ class AbsensiController {
                 return res.status(400).json({ success: false, message: "Foto absen wajib disertakan untuk absensi wajah." });
             }
 
+            // ── IDEMPOTENCY TRACKING ────────
+            if (payload.idempotency_key) {
+                 console.log(`[AbsenWajah] 🔑 Received idempotency_key: ${payload.idempotency_key} for tipe_absen=${payload.tipe_absen}`);
+            }
+
             // ── RACE CONDITION GUARD (tahap awal, sebelum identifikasi user) ────────
             // Jika payload.user_id sudah ada, kita bisa lock lebih awal
             if (payload.user_id) {
@@ -302,6 +307,23 @@ class AbsensiController {
                     if (!shiftRecord) {
                         const alreadyIn = activeShifts.find(s => isSameDay(s.tanggal, tStr) && s.jam_absen);
                         if (alreadyIn) {
+                            const checkInTime = parseJakartaTime(alreadyIn.tanggal, alreadyIn.jam_absen);
+                            const minutesSinceCheckIn = (now - checkInTime) / (1000 * 60);
+                            
+                            // Check for retry within 5 minutes (Network Error / 504 recovery)
+                            if (minutesSinceCheckIn < 5) {
+                                console.log(`[AbsenWajah] 🛡️ Idempotent reply for ${user.name}. Retry within 5 mins of check-in.`);
+                                const serialized = await absensiService.getById(alreadyIn.id);
+                                return res.status(200).json({
+                                    success: true,
+                                    message: `Absensi masuk sudah tercatat untuk ${user.name} (rekam ulang tidak diperlukan).`,
+                                    data: serialized,
+                                    distance: matchResult.distance,
+                                    idempotent: true,
+                                    user: user
+                                });
+                            }
+                            
                             return res.status(400).json({ success: false, message: `Absensi gagal. ${user.name} sudah melakukan absensi masuk untuk shift hari ini.` });
                         }
                     }

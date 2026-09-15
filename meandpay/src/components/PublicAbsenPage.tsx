@@ -302,13 +302,25 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
         formData.append('user_id', selectedEmployee.id);
       }
 
-      const absenRes = await fetch(`${API}/absensi_wajah`, {
-        method: 'POST',
-        body: formData,
-      });
+      // Tambahkan idempotency key untuk log/tracking retry di backend
+      const idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+      formData.append('idempotency_key', idempotencyKey);
+
+      let absenRes;
+      try {
+        absenRes = await fetch(`${API}/absensi_wajah`, {
+          method: 'POST',
+          body: formData,
+        });
+      } catch (networkError: any) {
+        throw new Error(`Koneksi terputus. Absensi Anda mungkin sudah tercatat jika ini adalah percobaan kedua. Jangan ulangi — periksa riwayat Anda atau hubungi admin.`);
+      }
 
       const ct = absenRes.headers.get('content-type') ?? '';
       if (!ct.includes('application/json')) {
+        if (absenRes.status === 504 || absenRes.status === 503 || absenRes.status === 502) {
+            throw new Error(`Server sedang sibuk (Error ${absenRes.status}). Absensi Anda mungkin sudah tercatat. Jangan ulangi — tunggu konfirmasi di riwayat atau hubungi admin.`);
+        }
         throw new Error(`Server error ${absenRes.status}`);
       }
       
