@@ -1136,6 +1136,30 @@ class UserService {
     serializeList(users) {
         return users.map((user) => this.serialize(user));
     }
+
+    /**
+     * Toggle koordinator status for a user
+     */
+    async toggleKoordinator(id) {
+        const user = await prisma.users.findUnique({ where: { id: BigInt(id) } });
+        if (!user) throw new Error('User tidak ditemukan');
+        if (user.is_admin === 'admin') throw new Error('Tidak dapat mengubah status admin utama');
+
+        const newRole = user.is_admin === 'koordinator' ? null : 'koordinator';
+
+        const updated = await prisma.users.update({
+            where: { id: BigInt(id) },
+            data: { is_admin: newRole }
+        });
+
+        return {
+            newRole,
+            message: newRole
+                ? `Berhasil menjadikan ${updated.name} sebagai koordinator`
+                : `Berhasil menghapus status koordinator dari ${updated.name}`,
+            data: this.serialize(updated)
+        };
+    }
 }
 
 export default new UserService();
