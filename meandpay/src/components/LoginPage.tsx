@@ -51,8 +51,9 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
 
         const isAdmin = user.is_admin === 'admin';
         const isUser = user.is_admin === 'user' || !user.is_admin;
+        const isKoordinator = user.is_admin === 'koordinator';
 
-        if (isAdmin || isUser) {
+        if (isAdmin || isUser || isKoordinator) {
           if (!user.is_admin) user.is_admin = 'user';
           localStorage.setItem('token', responseData.token);
           localStorage.setItem('user', JSON.stringify(user));

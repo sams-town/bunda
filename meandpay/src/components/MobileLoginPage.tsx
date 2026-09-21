@@ -46,8 +46,9 @@ export function MobileLoginPage({ onLogin, settings }: MobileLoginPageProps) {
 
         const isAdmin = user.is_admin === 'admin';
         const isUser = user.is_admin === 'user' || !user.is_admin;
+        const isKoordinator = user.is_admin === 'koordinator';
 
-        if (isAdmin || isUser) {
+        if (isAdmin || isUser || isKoordinator) {
           // Standardize is_admin if missing
           if (!user.is_admin) user.is_admin = 'user';
 
