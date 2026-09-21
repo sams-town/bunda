@@ -458,6 +458,50 @@ class UserController {
             });
         }
     }
+    
+    // Toggle status koordinator
+    async toggleKoordinator(req, res) {
+        try {
+            const { id } = req.params;
+            const user = await prisma.users.findUnique({ where: { id: BigInt(id) } });
+            
+            if (!user) {
+                return res.status(404).json({ success: false, message: "User tidak ditemukan" });
+            }
+
+            // Jika dia admin utama, jangan izinkan diubah jadi koordinator
+            if (user.is_admin === "admin") {
+                return res.status(400).json({ success: false, message: "Tidak dapat mengubah status admin utama" });
+            }
+
+            const newRole = user.is_admin === "koordinator" ? null : "koordinator";
+            
+            const updated = await prisma.users.update({
+                where: { id: BigInt(id) },
+                data: { is_admin: newRole }
+            });
+
+            // Serialize untuk return yang rapi
+            const serialized = {
+                ...updated,
+                id: updated.id.toString(),
+            };
+
+            return res.status(200).json({
+                success: true,
+                message: newRole ? "Berhasil menjadikan user sebagai koordinator" : "Berhasil menghapus status koordinator",
+                data: serialized
+            });
+            
+        } catch (error) {
+            console.error("UserController.toggleKoordinator error:", error);
+            return res.status(500).json({
+                success: false,
+                message: "Gagal mengubah status koordinator",
+                error: error.message,
+            });
+        }
+    }
 }
 
 export default new UserController();

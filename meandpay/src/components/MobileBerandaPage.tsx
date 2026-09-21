@@ -157,6 +157,9 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
       
       return hasManagerRole || hasManagerJabatan;
     }
+    if (permission === 'koordinator_only') {
+      return userData?.is_admin === 'koordinator';
+    }
     if (userData?.is_admin === 'admin') return true;
     
     const perms = userData?.permissions || [];
@@ -202,7 +205,7 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
     { label: 'Data Visit Dokter',  icon: FileSearch,    color: 'bg-[#EEF8F8] text-[#34959E]',path: '#', perm: 'data-patroli.view' },
     { label: 'Target Kinerja',     icon: Target,        color: 'bg-[#FFF4E5] text-[#FB9917]', path: '/finance-target-kinerja', perm: 'target-kinerja.view' },
     { label: 'Laporan Kerja',      icon: ClipboardCheck,color: 'bg-[#EEF8F8] text-[#34959E]',     path: '/kinerja-laporan-kerja', perm: 'laporan-kerja.view' },
-    { label: 'Tim Saya (Shift)',   icon: Users,         color: 'bg-[#EEF8F8] text-[#34959E]',     path: '/manager-shift', perm: 'manager_only' },
+    { label: 'Kelola Jadwal Shift', icon: Users,       color: 'bg-[#EEF8F8] text-[#34959E]',     path: '/koordinator-shift', perm: 'koordinator_only' },
     { label: 'Profile',            icon: User,          color: 'bg-[#FFF0F0] text-[#990000]',     path: '/profile', perm: '' },
     { label: 'Petunjuk',           icon: Book,          color: 'bg-[#FFF4E5] text-[#FB9917]',   path: '#', perm: 'petunjuk.view' },
     { label: 'Logout',             icon: LogOut,        color: 'bg-[#FFF0F0] text-[#990000]',     path: 'logout', perm: '' },

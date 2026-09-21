@@ -1527,6 +1527,40 @@ export function EmployeesPage() {
     }
   };
 
+  const handleToggleKoordinator = async (emp: Employee) => {
+    if (emp.is_admin === 'admin') {
+      Swal.fire({ icon: 'warning', title: 'Perhatian', text: 'Tidak dapat mengubah status admin utama.' });
+      return;
+    }
+    const isKoor = emp.is_admin === 'koordinator';
+    const actionText = isKoor ? 'menghapus' : 'menjadikan';
+    const confirm = await Swal.fire({
+      title: 'Ubah Status?',
+      text: `Anda yakin ingin ${actionText} ${emp.name} sebagai Koordinator?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: isKoor ? '#ef4444' : '#10b981',
+      confirmButtonText: 'Ya, Lanjutkan',
+      cancelButtonText: 'Batal'
+    });
+    
+    if (!confirm.isConfirmed) return;
+    
+    const toastId = addToast({ type: 'loading', title: 'Memproses', message: `Sedang memproses...` });
+    try {
+      const res = await fetch(`${BASE_URL}/users/${emp.id}/koordinator`, { method: 'PUT', headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+      const json = await res.json();
+      if (json.success) {
+        updateToast(toastId, { type: 'success', title: 'Berhasil', message: json.message });
+        fetchEmployees(page, search);
+      } else {
+        updateToast(toastId, { type: 'error', title: 'Gagal', message: json.message || 'Gagal mengubah status.' });
+      }
+    } catch (err: any) {
+      updateToast(toastId, { type: 'error', title: 'Error', message: err.message || 'Terjadi kesalahan sistem' });
+    }
+  };
+
   if (editEmployeeId) return <EditEmployeeForm employeeId={editEmployeeId} onBack={() => navigate(-1)} onSuccess={handleAddSuccess} />;
   if (isAdding) return <AddEmployeeForm onBack={() => setIsAdding(false)} onSuccess={handleAddSuccess} />;
   if (mappingEmployee) return <MappingDinasLuar employee={mappingEmployee} onBack={() => setMappingEmployee(null)} />;
@@ -1806,6 +1840,7 @@ export function EmployeesPage() {
                       </td>
                       <td className="py-3.5 px-4 z-10 relative">
                         <div className="flex items-center justify-end gap-1">
+                          <button onClick={() => handleToggleKoordinator(emp)} className={cn("p-1.5 rounded-lg transition-all", emp.is_admin === 'koordinator' ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50')} title={emp.is_admin === 'koordinator' ? "Hapus Koordinator" : "Jadikan Koordinator"}><UserCheck className="w-4 h-4" /></button>
                           <button onClick={() => navigate(`/employees/${emp.id}`)} className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all" title="Edit"><Edit2 className="w-4 h-4" /></button>
                           <button onClick={() => setPwEmployee(emp)} className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 transition-all" title="Edit Password"><Key className="w-4 h-4" /></button>
                           <button onClick={() => setMappingShiftEmployee(emp)} className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="Mapping Shift"><Map className="w-4 h-4" /></button>

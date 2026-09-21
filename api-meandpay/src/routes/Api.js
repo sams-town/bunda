@@ -96,6 +96,7 @@ router.get("/users/subordinates", authMiddleware, (req, res) => userController.s
 router.get("/users/:id", (req, res) => userController.show(req, res));
 router.post("/users", authMiddleware, upload.single("foto_karyawan"), (req, res) => userController.store(req, res));
 router.put("/users/:id", authMiddleware, upload.single("foto_karyawan"), (req, res) => userController.update(req, res));
+router.put("/users/:id/koordinator", authMiddleware, (req, res) => userController.toggleKoordinator(req, res));
 router.post("/users/face-recognition", authMiddleware, upload.single("foto_face_recognition"), (req, res) => userController.faceRecognition(req, res));
 router.post("/users/:id/face-recognition", authMiddleware, upload.single("foto_face_recognition"), (req, res) => userController.faceRecognition(req, res));
 router.get("/users/:id/face-diagnostic", authMiddleware, (req, res) => userController.faceDiagnostic(req, res));
