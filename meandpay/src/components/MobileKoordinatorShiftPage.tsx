@@ -84,7 +84,7 @@ function generateMappingTemplate(availableShifts: Shift[], allEmployees: Employe
   const fmt = (d: Date) => {
     const day = String(d.getDate()).padStart(2, '0');
     const mon = String(d.getMonth() + 1).padStart(2, '0');
-    return \`\${day}/\${mon}/\${d.getFullYear()}\`;
+    return `${day}/${mon}/${d.getFullYear()}`;
   };
 
   const contoh = [
