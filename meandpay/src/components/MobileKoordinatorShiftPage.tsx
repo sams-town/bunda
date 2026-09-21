@@ -145,12 +145,12 @@ function parseMappingExcel(file: File): Promise<ImportMappingRow[]> {
                 const y = v.getUTCFullYear();
                 const m = String(v.getUTCMonth() + 1).padStart(2, '0');
                 const d = String(v.getUTCDate()).padStart(2, '0');
-                return \`\${y}-\${m}-\${d}\`;
+                return `${y}-${m}-${d}`;
               }
               const s = String(v).trim();
               if (s.includes('/')) {
                 const parts = s.split('/');
-                if (parts.length === 3) return \`\${parts[2]}-\${parts[1].padStart(2, '0')}-\${parts[0].padStart(2, '0')}\`;
+                if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
               }
               return s;
             };
@@ -201,8 +201,8 @@ function ImportMappingModal({ shifts, allEmployees, onClose, onSuccess }: { shif
       setFileInfo({
         name: file.name,
         size: file.size < 1024 * 1024
-          ? \`\${(file.size / 1024).toFixed(1)} KB\`
-          : \`\${(file.size / 1024 / 1024).toFixed(1)} MB\`,
+          ? `${(file.size / 1024).toFixed(1)} KB`
+          : `${(file.size / 1024 / 1024).toFixed(1)} MB`,
       });
       setStep('preview');
     } catch (err: any) {
@@ -221,11 +221,11 @@ function ImportMappingModal({ shifts, allEmployees, onClose, onSuccess }: { shif
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
-        const res = await fetch(\`\${BASE_URL}/mapping-shifts/bulk\`, {
+        const res = await fetch(`${BASE_URL}/mapping-shifts/bulk`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': \`Bearer \${localStorage.getItem('token')}\`
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify({
             user_id: row.user_id,
