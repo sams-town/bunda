@@ -12,10 +12,8 @@ import { cn } from '../lib/utils';
 import { useToast } from './Toast';
 import Swal from 'sweetalert2';
 import { generateJadwalDinas, parseDinasExcel } from './jadwalDinasExcel';
-
 const BASE_URL = import.meta.env.VITE_API_MEANDPAY;
-
-/* ─── Types ─────────────────────────────────────────────── */
+/* â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 interface Shift {
   id: string;
   nama_shift: string;
@@ -24,16 +22,16 @@ interface Shift {
   jam_mulai_istirahat?: string;
   jam_selesai_istirahat?: string;
 }
-
 interface Employee {
   id: string;
   name: string;
   username: string;
   foto_karyawan?: string | null;
   jabatan?: { id: string; nama_jabatan: string } | null;
+  divisi?: { id: string; nama_divisi: string } | null;
+  departemen?: { id: string; nama_departemen: string } | null;
   lokasi?: { id: string; nama_lokasi: string } | null;
 }
-
 interface MappingData {
   id: string;
   user_id: string;
@@ -43,11 +41,9 @@ interface MappingData {
   users?: any;
   shifts?: any;
 }
-
 interface ShiftEmployeesPageProps {
   onBack: () => void;
 }
-
 interface ImportMappingRow {
   rowIndex: number;
   user_id: string;
@@ -60,12 +56,10 @@ interface ImportMappingRow {
   status: 'pending' | 'success' | 'error';
   message?: string;
 }
-
-/* ─── Helpers ────────────────────────────────────────────── */
+/* â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function initials(name: string) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
-
 const avatarGradients = [
   'from-violet-500 to-purple-600',
   'from-blue-500 to-indigo-600',
@@ -76,11 +70,9 @@ const avatarGradients = [
   'from-fuchsia-500 to-pink-600',
   'from-teal-500 to-cyan-600',
 ];
-
 function avatarGradient(id: string) {
   return avatarGradients[parseInt(id) % avatarGradients.length];
 }
-
 type ShiftTheme = {
   icon: typeof Sun;
   label: string;
@@ -90,10 +82,8 @@ type ShiftTheme = {
   lightText: string;
   lightRing: string;
 };
-
 function getShiftTheme(jamMasuk: string): ShiftTheme {
   const hour = parseInt(jamMasuk?.split(':')[0] || '0', 10);
-
   if (hour >= 5 && hour < 11) {
     return {
       icon: Sunrise,
@@ -136,15 +126,13 @@ function getShiftTheme(jamMasuk: string): ShiftTheme {
     };
   }
 }
-
-/* ─── Jadwal Dinas Excel Generator ───────────────────────── */
+/* â”€â”€â”€ Jadwal Dinas Excel Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 // Day-of-week code (Indonesian, Mon=S, Tue=S, Wed=R, Thu=K, Fri=J, Sat=S, Sun=M)
 function dayCode(date: Date): string {
-  const codes = ['M', 'S', 'S', 'R', 'K', 'J', 'S']; // 0=Sun … 6=Sat
+  const codes = ['M', 'S', 'S', 'R', 'K', 'J', 'S']; // 0=Sun â€¦ 6=Sat
   return codes[date.getDay()];
 }
-
-// Thin wrapper — actual logic lives in jadwalDinasExcel.ts
+// Thin wrapper â€” actual logic lives in jadwalDinasExcel.ts
 function generateJadwalDinasTemplate(
   allEmployees: Employee[],
   allShifts: Shift[],
@@ -159,11 +147,9 @@ function generateJadwalDinasTemplate(
     Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal membuat template: ' + err.message });
   }
 }
-
-/* ─── Legacy Import Template Generator (kept for compatibility) ──── */
+/* â”€â”€â”€ Legacy Import Template Generator (kept for compatibility) â”€â”€â”€â”€ */
 function generateMappingTemplate(availableShifts: Shift[], allEmployees: Employee[] = []) {
   const wb = XLSX.utils.book_new();
-
   const headers = [
     'ID Karyawan*', 'Nama Karyawan (Info)', 'ID Shift*', 'Nama Shift (Info)',
     'Tanggal Mulai* (DD/MM/YYYY)', 'Tanggal Akhir* (DD/MM/YYYY)', 'Lock Location (1/0)'
@@ -185,12 +171,10 @@ function generateMappingTemplate(availableShifts: Shift[], allEmployees: Employe
   const ws1 = XLSX.utils.aoa_to_sheet([headers, ...contoh]);
   ws1['!cols'] = [{ wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 18 }];
   XLSX.utils.book_append_sheet(wb, ws1, 'Import Mapping Shift');
-
   const shiftData = availableShifts.map(s => [s.id, s.nama_shift, s.jam_masuk, s.jam_keluar]);
   const ws2 = XLSX.utils.aoa_to_sheet([['ID Shift', 'Nama Shift', 'Jam Masuk', 'Jam Keluar'], ...shiftData]);
   ws2['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 12 }, { wch: 12 }];
   XLSX.utils.book_append_sheet(wb, ws2, 'Referensi Shift');
-
   if (allEmployees.length > 0) {
     const empData = allEmployees.map(e => [e.id, e.name, e.username, e.jabatan?.nama_jabatan || '-']);
     const ws3 = XLSX.utils.aoa_to_sheet([['ID Karyawan', 'Nama Karyawan', 'Username', 'Jabatan'], ...empData]);
@@ -199,8 +183,7 @@ function generateMappingTemplate(availableShifts: Shift[], allEmployees: Employe
   }
   XLSX.writeFile(wb, 'Template_Import_Shift_Pegawai.xlsx');
 }
-
-/* ─── Main Component ─────────────────────────────────────── */
+/* â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
@@ -212,19 +195,14 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
   const [importPreselectedShift, setImportPreselectedShift] = useState<Shift | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ userId: string; userName: string } | null>(null);
   const [search, setSearch] = useState('');
-
   // Dropdown open states for Template
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
-
   // Month/year selector for template download
   const now = new Date();
   const [templateYear, setTemplateYear] = useState(now.getFullYear());
   const [templateMonth, setTemplateMonth] = useState(now.getMonth()); // 0-indexed
-
   const templateDropdownRef = useRef<HTMLDivElement>(null);
-
   const { addToast, updateToast } = useToast();
-
   // Close template dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -235,24 +213,20 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
-
   // Fetch all data
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const headers = { 'Authorization': `Bearer ${token}` };
-
       const [shiftRes, empRes, mappingRes] = await Promise.all([
         fetch(`${BASE_URL}/shifts`, { headers }),
         fetch(`${BASE_URL}/users?limit=100000`, { headers }),
         fetch(`${BASE_URL}/absensi?limit=100000`, { headers }),
       ]);
-
       const shiftJson = await shiftRes.json();
       const empJson = await empRes.json();
       const mappingJson = await mappingRes.json();
-
       if (shiftJson.success) setShifts(shiftJson.data);
       if (empJson.success) setAllEmployees(empJson.data);
       if (mappingJson.success && Array.isArray(mappingJson.data)) setMappings(mappingJson.data);
@@ -262,9 +236,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
       setLoading(false);
     }
   }, []);
-
   useEffect(() => { fetchData(); }, [fetchData]);
-
   const getEmployeesForShift = (shiftId: string) => {
     const userMap = new Map<string, { startDate: string; endDate: string; lockLocation: boolean }>();
     mappings
@@ -273,7 +245,6 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
         const existing = userMap.get(m.user_id);
         const tgl = m.tanggal?.split('T')[0] || '';
         const isLocked = m.lock_location === '1' || m.lock_location === 1;
-
         if (!existing) {
           userMap.set(m.user_id, { startDate: tgl, endDate: tgl, lockLocation: isLocked });
         } else {
@@ -286,7 +257,6 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
       .filter(e => userMap.get(e.id))
       .map(e => ({ ...e, assignment: userMap.get(e.id)! }));
   };
-
   const handleRemoveEmployee = async (userId: string, shiftId: string) => {
     setDeleteConfirm(null);
     setSelectedShift(null);
@@ -299,9 +269,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
       Swal.fire({ icon: 'error', title: 'Gagal', text: 'Data mapping tidak ditemukan.' });
       return;
     }
-
     const toastId = addToast({ type: 'loading', title: 'Menghapus', message: 'Menghapus karyawan dari shift...' });
-
     try {
       const res = await fetch(`${BASE_URL}/mapping-shifts/bulk`, {
         method: 'DELETE',
@@ -327,12 +295,10 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
       updateToast(toastId, { type: 'error', title: 'Error', message: err.message || 'Terjadi kesalahan' });
     }
   };
-
   const filteredShifts = shifts.filter(s =>
     s.nama_shift.toLowerCase().includes(search.toLowerCase())
   );
-
-  /* ── Loading Skeleton ── */
+  /* â”€â”€ Loading Skeleton â”€â”€ */
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto pb-20">
@@ -350,7 +316,6 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             <div className="h-10 w-28 bg-slate-300 rounded-xl animate-pulse" />
           </div>
         </div>
-
         {/* Stats skeleton */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[0, 1, 2].map(i => (
@@ -365,10 +330,8 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             </div>
           ))}
         </div>
-
         {/* Search skeleton */}
         <div className="h-12 w-96 bg-slate-100 rounded-2xl animate-pulse mb-8" />
-
         {/* Cards skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-5">
           {[0, 1, 2, 3, 4, 5].map(i => (
@@ -404,10 +367,8 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
       </div>
     );
   }
-
   const totalEmployeesInShifts = new Set(mappings.map(m => m.user_id)).size;
-
-  /* ── Render ── */
+  /* â”€â”€ Render â”€â”€ */
   return (
     <>
       <motion.div
@@ -415,7 +376,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
         animate={{ opacity: 1 }}
         className="max-w-7xl mx-auto pb-20"
       >
-        {/* ── Page Header ── */}
+        {/* â”€â”€ Page Header â”€â”€ */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -430,7 +391,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             </div>
           </div>
           <div className="flex items-center gap-2.5">
-            {/* ── Template Button (single, month/year picker) ── */}
+            {/* â”€â”€ Template Button (single, month/year picker) â”€â”€ */}
             <div className="relative" ref={templateDropdownRef}>
               <button
                 onClick={() => { setTemplateDropdownOpen(v => !v); }}
@@ -488,8 +449,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
                 )}
               </AnimatePresence>
             </div>
-
-            {/* ── Import Button (single) ── */}
+            {/* â”€â”€ Import Button (single) â”€â”€ */}
             <button
               onClick={() => { setImportPreselectedShift(null); setShowImportModal(true); }}
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm active:scale-[0.97]"
@@ -510,8 +470,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             </button>
           </div>
         </div>
-
-        {/* ── Stats Row ── */}
+        {/* â”€â”€ Stats Row â”€â”€ */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
             { label: 'Total Shift', value: shifts.length, icon: Clock, color: 'from-indigo-500 to-violet-600', lightBg: 'bg-indigo-50', lightIcon: 'text-indigo-500' },
@@ -537,8 +496,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             </motion.div>
           ))}
         </div>
-
-        {/* ── Search ── */}
+        {/* â”€â”€ Search â”€â”€ */}
         <div className="relative w-full max-w-md mb-8">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -554,8 +512,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             </button>
           )}
         </div>
-
-        {/* ── Shifts Grid ── */}
+        {/* â”€â”€ Shifts Grid â”€â”€ */}
         {filteredShifts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center">
@@ -605,12 +562,12 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
                             </span>
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 bg-slate-100/80 px-2 py-[2px] rounded-md">
                               <Clock className="w-2.5 h-2.5 text-slate-400" />
-                              {shift.jam_masuk} — {shift.jam_keluar}
+                              {shift.jam_masuk} â€” {shift.jam_keluar}
                             </span>
                           </div>
                           {shift.jam_mulai_istirahat && shift.jam_selesai_istirahat && (
                             <p className="text-[10px] text-slate-400 mt-1.5">
-                              ☕ Istirahat: {shift.jam_mulai_istirahat} – {shift.jam_selesai_istirahat}
+                              â˜• Istirahat: {shift.jam_mulai_istirahat} â€“ {shift.jam_selesai_istirahat}
                             </p>
                           )}
                         </div>
@@ -624,7 +581,6 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
                       </button>
                     </div>
                   </div>
-
                   {/* Separator */}
                   <div className="mx-5 flex items-center gap-2.5">
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
@@ -633,7 +589,6 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
                     </span>
                     <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
                   </div>
-
                   {/* Employee List */}
                   <div className="p-4 pt-3 max-h-60 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
                     {employeesInShift.length === 0 ? (
@@ -677,7 +632,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
                                     <div className="flex items-center gap-1.5">
                                       <span className="text-[9px] text-slate-400/70 font-mono flex items-center gap-0.5 shrink-0">
                                         <Calendar className="w-2.5 h-2.5" />
-                                        {new Date(emp.assignment.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })} – {new Date(emp.assignment.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' })}
+                                        {new Date(emp.assignment.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })} â€“ {new Date(emp.assignment.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' })}
                                       </span>
                                       <div className={cn(
                                         "flex items-center gap-0.5 px-1 py-[1px] rounded-[4px] text-[8px] font-black uppercase tracking-tighter",
@@ -724,8 +679,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
           </div>
         )}
       </motion.div>
-
-      {/* ── Add Employee Modal ── */}
+      {/* â”€â”€ Add Employee Modal â”€â”€ */}
       <AnimatePresence>
         {showAddModal && selectedShift && (
           <AddEmployeeToShiftModal
@@ -739,9 +693,8 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
           />
         )}
       </AnimatePresence>
-
       {/* Delete Confirmation is now handled by SweetAlert */}
-      {/* ── Import Mapping Modal ── */}
+      {/* â”€â”€ Import Mapping Modal â”€â”€ */}
       <AnimatePresence>
         {showImportModal && (
           <ImportMappingModal
@@ -759,8 +712,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
     </>
   );
 }
-
-/* ─── Add Employee to Shift Modal ────────────────────────── */
+/* â”€â”€â”€ Add Employee to Shift Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function AddEmployeeToShiftModal({
   shift,
   allEmployees,
@@ -784,22 +736,18 @@ function AddEmployeeToShiftModal({
   const [lockLocation, setLockLocation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
-
   const existingUserIds = new Set(
     existingMappings.filter(m => m.shift_id === shift.id).map(m => m.user_id)
   );
-
   const filteredEmployees = allEmployees.filter(emp =>
     (emp.name || '').toLowerCase().includes((employeeSearch || '').toLowerCase()) ||
     (emp.username || '').toLowerCase().includes((employeeSearch || '').toLowerCase())
   );
-
   const toggleEmployee = (id: string) => {
     setSelectedEmployees(prev =>
       prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
     );
   };
-
   const handleSubmit = async () => {
     if (selectedEmployees.length === 0) {
       Swal.fire({ icon: 'warning', title: 'Pilih Karyawan!', text: 'Pilih minimal 1 karyawan untuk ditambahkan.' });
@@ -809,14 +757,11 @@ function AddEmployeeToShiftModal({
       Swal.fire({ icon: 'warning', title: 'Lengkapi Tanggal!', text: 'Silakan isi tanggal mulai dan tanggal akhir.' });
       return;
     }
-
     setSubmitting(true);
     const toastId = addToast({ type: 'loading', title: 'Menambahkan', message: 'Menambahkan karyawan ke shift...' });
-
     try {
       let successCount = 0;
       let failCount = 0;
-
       for (const empId of selectedEmployees) {
         const res = await fetch(`${BASE_URL}/mapping-shifts/bulk`, {
           method: 'POST',
@@ -836,13 +781,11 @@ function AddEmployeeToShiftModal({
         if (json.success) successCount++;
         else failCount++;
       }
-
       if (failCount === 0) {
         updateToast(toastId, { type: 'success', title: 'Berhasil', message: `${successCount} karyawan berhasil ditambahkan ke shift ${shift.nama_shift}` });
       } else {
         updateToast(toastId, { type: 'error', title: 'Sebagian Gagal', message: `${successCount} berhasil, ${failCount} gagal` });
       }
-
       onSuccess();
     } catch (err: any) {
       updateToast(toastId, { type: 'error', title: 'Error', message: err.message || 'Terjadi kesalahan' });
@@ -850,9 +793,7 @@ function AddEmployeeToShiftModal({
       setSubmitting(false);
     }
   };
-
   const theme = getShiftTheme(shift.jam_masuk);
-
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" />
@@ -872,7 +813,7 @@ function AddEmployeeToShiftModal({
               </div>
               <div>
                 <h3 className="text-lg font-black text-slate-800">Tambah Karyawan</h3>
-                <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{shift.nama_shift} • {shift.jam_masuk} – {shift.jam_keluar}</p>
+                <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{shift.nama_shift} â€¢ {shift.jam_masuk} â€“ {shift.jam_keluar}</p>
               </div>
             </div>
             <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all">
@@ -880,7 +821,6 @@ function AddEmployeeToShiftModal({
             </button>
           </div>
         </div>
-
         {/* Date Range */}
         <div className="px-7 py-5 border-b border-slate-100 shrink-0 bg-slate-50/50">
           <div className="grid grid-cols-2 gap-4">
@@ -924,7 +864,6 @@ function AddEmployeeToShiftModal({
             </label>
           </div>
         </div>
-
         {/* Employee Search */}
         <div className="px-7 py-4 border-b border-slate-100 shrink-0">
           <div className="relative">
@@ -943,7 +882,6 @@ function AddEmployeeToShiftModal({
             </p>
           )}
         </div>
-
         {/* Employee List */}
         <div className="flex-1 overflow-y-auto px-7 py-4 space-y-1.5 min-h-0">
           {filteredEmployees.map(emp => {
@@ -968,7 +906,7 @@ function AddEmployeeToShiftModal({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-slate-700 truncate">{emp.name}</p>
-                  <p className="text-[10px] text-slate-400 truncate">@{emp.username} · {emp.jabatan?.nama_jabatan || '-'}</p>
+                  <p className="text-[10px] text-slate-400 truncate">@{emp.username} Â· {emp.jabatan?.nama_jabatan || '-'}</p>
                 </div>
                 {isExisting ? (
                   <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg shrink-0">Sudah ada</span>
@@ -983,7 +921,6 @@ function AddEmployeeToShiftModal({
             );
           })}
         </div>
-
         {/* Footer */}
         <div className="px-7 py-5 border-t border-slate-100 flex gap-3 shrink-0 bg-slate-50/50">
           <button onClick={onClose} className="flex-1 py-3 text-slate-600 font-bold bg-white hover:bg-slate-100 rounded-xl transition-all active:scale-95 border border-slate-200">
@@ -1002,8 +939,7 @@ function AddEmployeeToShiftModal({
     </div>
   );
 }
-
-/* ─── Import Mapping Modal ───────────────────────────────── */
+/* â”€â”€â”€ Import Mapping Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function ImportMappingModal({
   shifts,
   allEmployees,
@@ -1035,7 +971,6 @@ function ImportMappingModal({
   const [dlMonth, setDlMonth] = useState(now.getMonth());
   const [dlYear, setDlYear] = useState(now.getFullYear());
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const handleFile = async (file: File) => {
     if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
       Swal.fire({ icon: 'error', title: 'Format Tidak Didukung', text: 'Gunakan .xlsx, .xls, atau .csv' });
@@ -1047,7 +982,7 @@ function ImportMappingModal({
       try {
         parsed = await parseDinasExcel(file, shifts, allEmployees);
       } catch {
-        // Not Jadwal Dinas format — try legacy column format
+        // Not Jadwal Dinas format â€” try legacy column format
         parsed = await parseMappingExcel(file);
       }
       setRows(parsed);
@@ -1062,15 +997,12 @@ function ImportMappingModal({
       Swal.fire({ icon: 'error', title: 'Gagal Membaca File', text: err.message || 'Gagal membaca file Excel' });
     }
   };
-
   const handleImport = async () => {
     setStep('importing');
     setProgress(0);
-
     const updated = [...rows];
     let successCount = 0;
     let failedCount = 0;
-
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
@@ -1105,16 +1037,13 @@ function ImportMappingModal({
       // Subtle delay to show progress
       if (rows.length < 50) await new Promise(r => setTimeout(r, 50));
     }
-
     setResult({ total: rows.length, success: successCount, failed: failedCount });
     setStep('done');
     if (successCount > 0) onSuccess();
   };
-
   const errorCount = rows.filter(r => r.status === 'error').length;
   const validCount = rows.filter(r => r.status !== 'error').length;
   const displayRows = filterError ? rows.filter(r => r.status === 'error') : rows;
-
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
@@ -1135,8 +1064,8 @@ function ImportMappingModal({
               {preSelectedShift ? (
                 <p className="text-[11px] text-slate-400 font-bold mt-0.5">
                   Shift: <span className="text-emerald-600">{preSelectedShift.nama_shift}</span>
-                  <span className="text-slate-300 mx-1">·</span>
-                  {preSelectedShift.jam_masuk} – {preSelectedShift.jam_keluar}
+                  <span className="text-slate-300 mx-1">Â·</span>
+                  {preSelectedShift.jam_masuk} â€“ {preSelectedShift.jam_keluar}
                 </p>
               ) : (
                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Bulk Upload Karyawan ke Shift</p>
@@ -1147,7 +1076,6 @@ function ImportMappingModal({
             <X className="w-5 h-5" />
           </button>
         </div>
-
         <div className="flex-1 overflow-y-auto min-h-0 bg-slate-50/30">
           {step === 'upload' && (
             <div className="p-10 space-y-6">
@@ -1166,8 +1094,7 @@ function ImportMappingModal({
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  {preSelectedShift && (
-                    <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5">
                       <select
                         value={dlMonth}
                         onChange={e => setDlMonth(Number(e.target.value))}
@@ -1186,15 +1113,10 @@ function ImportMappingModal({
                         max={2100}
                       />
                     </div>
-                  )}
+                  </div>
                   <button
                     onClick={() => {
-                      if (preSelectedShift) {
-                        const empForShift = allEmployees; // all employees — let admin fill in
-                        generateJadwalDinasTemplate(empForShift, shifts, mappings ?? [], dlYear, dlMonth);
-                      } else {
-                        generateMappingTemplate(shifts, allEmployees);
-                      }
+                      generateJadwalDinasTemplate(allEmployees, shifts, mappings ?? [], dlYear, dlMonth);
                     }}
                     className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-emerald-200"
                   >
@@ -1225,7 +1147,6 @@ function ImportMappingModal({
               </div>
             </div>
           )}
-
           {step === 'preview' && (
             <div className="flex flex-col h-full">
               <div className="px-8 py-4 border-b border-slate-100 bg-white flex items-center justify-between gap-4">
@@ -1287,7 +1208,6 @@ function ImportMappingModal({
               </div>
             </div>
           )}
-
           {step === 'importing' && (
             <div className="p-20 flex flex-col items-center gap-10">
               <div className="relative">
@@ -1316,7 +1236,6 @@ function ImportMappingModal({
               </div>
             </div>
           )}
-
           {step === 'done' && result && (
             <div className="p-12 flex flex-col items-center gap-8">
               <div className={cn("w-24 h-24 rounded-[40px] flex items-center justify-center shadow-xl", result.failed === 0 ? "bg-emerald-500" : "bg-amber-500")}>
@@ -1362,7 +1281,6 @@ function ImportMappingModal({
             </div>
           )}
         </div>
-
         {/* Footer */}
         <div className="px-8 py-6 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 shrink-0">
           {step === 'upload' && (
@@ -1382,7 +1300,6 @@ function ImportMappingModal({
     </div>
   );
 }
-
 function parseMappingExcel(file: File): Promise<ImportMappingRow[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1393,7 +1310,6 @@ function parseMappingExcel(file: File): Promise<ImportMappingRow[]> {
         const sheetName = wb.SheetNames[0];
         const ws = wb.Sheets[sheetName];
         const raw = XLSX.utils.sheet_to_json<any>(ws, { defval: '' });
-
         const getVal = (row: any, keys: string[]) => {
           for (const k of keys) {
             const v = row[k] ?? row[k.toLowerCase()] ?? '';
@@ -1401,7 +1317,6 @@ function parseMappingExcel(file: File): Promise<ImportMappingRow[]> {
           }
           return '';
         };
-
         const rows: ImportMappingRow[] = raw
           .slice(0, 1000)
           .map((row: any, i: number) => {
@@ -1423,7 +1338,6 @@ function parseMappingExcel(file: File): Promise<ImportMappingRow[]> {
               }
               return s;
             };
-
             return {
               rowIndex: 0,
               user_id: getVal(row, ['ID Karyawan*', 'id_user', 'user_id', 'id_karyawan']),
@@ -1438,7 +1352,6 @@ function parseMappingExcel(file: File): Promise<ImportMappingRow[]> {
           })
           .filter((r: ImportMappingRow) => r.user_id && r.shift_id)
           .map((r: ImportMappingRow, i: number) => ({ ...r, rowIndex: i + 1 }));
-
         resolve(rows);
       } catch (err) {
         reject(new Error('File tidak valid atau format tidak sesuai template'));
@@ -1448,4 +1361,3 @@ function parseMappingExcel(file: File): Promise<ImportMappingRow[]> {
     reader.readAsArrayBuffer(file);
   });
 }
-

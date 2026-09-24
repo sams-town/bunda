@@ -29,6 +29,8 @@ export interface Employee {
   name: string;
   username: string;
   jabatan?: { id: string; nama_jabatan: string } | null;
+  divisi?: { id: string; nama_divisi: string } | null;
+  departemen?: { id: string; nama_departemen: string } | null;
 }
 export interface MappingData {
   id: string;
@@ -51,7 +53,7 @@ export interface ImportRow {
 }
 
 function dayCode(date: Date): string {
-  return ['M', 'S', 'S', 'R', 'K', 'J', 'S'][date.getDay()];
+  return ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'][date.getDay()];
 }
 function pad(n: number) { return String(n).padStart(2, '0'); }
 
@@ -86,8 +88,8 @@ export function generateJadwalDinas(
   const wb = XLSX.utils.book_new();
 
   /* ── col indices (0-based) ──
-     0=No, 1=Nama, 2..2+days-1=dates, 2+days=P, 2+days+1=S, 2+days+2=M, 2+days+3=LOCK */
-  const COL_FIRST_DATE = 2;
+     0=No, 1=Nama Lengkap, 2=Jabatan, 3=Departemen, 4..4+days-1=dates, 4+days=P, 4+days+1=S, 4+days+2=M, 4+days+3=LOCK */
+  const COL_FIRST_DATE = 5;
   const COL_LAST_DATE  = COL_FIRST_DATE + daysInMonth - 1;
   const COL_P    = COL_LAST_DATE + 1;
   const COL_S    = COL_LAST_DATE + 2;
@@ -103,28 +105,32 @@ export function generateJadwalDinas(
   // Row 1: blank
   aoa.push([]);
   // Row 2: title
-  aoa.push(['JADWAL  DINAS']);
-  // Row 3: month/year
-  aoa.push([`${monthName} ${year}`]);
+  aoa.push([`JADWAL DINAS - ${monthName.toUpperCase()} ${year}`]);
+  // Row 3: blank
+  aoa.push([]);
   // Row 4: TANGGAL label
-  const tanggalRow: any[] = ['', ''];
+  const tanggalRow: any[] = ['', '', '', '', ''];
   for (let d = 1; d <= daysInMonth; d++) tanggalRow.push(d === Math.ceil(daysInMonth / 2) ? 'TANGGAL' : '');
   tanggalRow.push('', '', '', '');
   aoa.push(tanggalRow);
-  // Row 5: headers No | Nama | 1..31 | P | S | M | LOCK
-  const headerRow: any[] = ['No', 'Nama'];
-  for (let d = 1; d <= daysInMonth; d++) headerRow.push(d);
+  // Row 5: headers No | NIP | Nama Karyawan | Departemen | Bagian | Kam | Jum | ... | P | S | M | LOCK
+  const headerRow: any[] = ['No', 'NIP', 'Nama Karyawan', 'Departemen', 'Bagian'];
+  for (let d = 1; d <= daysInMonth; d++) headerRow.push(dayCode(new Date(year, month, d)));
   headerRow.push('P', 'S', 'M', 'LOCK\n(1/0)');
   aoa.push(headerRow);
-  // Row 6: day codes
-  const codeRow: any[] = ['', ''];
-  for (let d = 1; d <= daysInMonth; d++) codeRow.push(dayCode(new Date(year, month, d)));
-  codeRow.push('', '', '', '');
-  aoa.push(codeRow);
+  // Row 6: dates 1..31
+  const dateRow: any[] = ['', '', '', '', ''];
+  for (let d = 1; d <= daysInMonth; d++) dateRow.push(d);
+  dateRow.push('', '', '', '');
+  aoa.push(dateRow);
 
   // Employee data rows
   allEmployees.forEach((emp, idx) => {
-    const row: any[] = [idx + 1, emp.name];
+    const nip = emp.username ?? '';
+    const nama = emp.name ?? '';
+    const departemen = emp.departemen?.nama_departemen ?? '';
+    const bagian = emp.divisi?.nama_divisi ?? emp.jabatan?.nama_jabatan ?? '';
+    const row: any[] = [idx + 1, nip, nama, departemen, bagian];
     let p = 0, s = 0, m = 0;
     // Compute per-employee dominant lock value (1 if any day is locked)
     let hasLock = false;
@@ -153,6 +159,8 @@ export function generateJadwalDinas(
   const colWidths: XLSX.ColInfo[] = [
     { wch: 5 },   // No
     { wch: 28 },  // Nama
+    { wch: 20 },  // Jabatan
+    { wch: 20 },  // Departemen
     ...Array.from({ length: daysInMonth }, () => ({ wch: 5 })),
     { wch: 4 }, { wch: 4 }, { wch: 4 }, // P S M
     { wch: 7 },   // LOCK
@@ -163,10 +171,11 @@ export function generateJadwalDinas(
   ws['!merges'] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
     { s: { r: 2, c: 0 }, e: { r: 2, c: COL_LOCK } },
-    { s: { r: 3, c: 0 }, e: { r: 3, c: COL_LOCK } },
     { s: { r: 4, c: COL_FIRST_DATE }, e: { r: 4, c: COL_LAST_DATE } },
     { s: { r: 5, c: 0 }, e: { r: 6, c: 0 } },
     { s: { r: 5, c: 1 }, e: { r: 6, c: 1 } },
+    { s: { r: 5, c: 2 }, e: { r: 6, c: 2 } }, // Jabatan
+    { s: { r: 5, c: 3 }, e: { r: 6, c: 3 } }, // Departemen
     { s: { r: 5, c: COL_P }, e: { r: 6, c: COL_P } },
     { s: { r: 5, c: COL_S }, e: { r: 6, c: COL_S } },
     { s: { r: 5, c: COL_M }, e: { r: 6, c: COL_M } },
@@ -179,13 +188,13 @@ export function generateJadwalDinas(
   const RED_BG    = { fill: { patternType: 'solid', fgColor: { rgb: 'FF0000' } }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
   const CYAN_BG   = { fill: { patternType: 'solid', fgColor: { rgb: '00FFFF' } }, font: { bold: true } };
   const ORANGE_BG = { fill: { patternType: 'solid', fgColor: { rgb: 'FF6600' } }, font: { bold: true, color: { rgb: 'FFFFFF' } } };
+  const BLUE_TITLE = { font: { bold: true, sz: 16, color: { rgb: '0000FF' } }, alignment: { horizontal: 'center' } };
 
   cs(ec(0, 0), { font: { bold: true, sz: 14 } });
-  cs(ec(0, 2), { font: { bold: true, sz: 16 }, alignment: { horizontal: 'center' } });
-  cs(ec(0, 3), { font: { bold: true, sz: 13 }, alignment: { horizontal: 'center' } });
+  cs(ec(0, 2), BLUE_TITLE);
 
   // No/Nama header (rows 5-6)
-  [ec(0,5), ec(1,5), ec(0,6), ec(1,6)].forEach(a => cs(a, ORANGE_BG));
+  [ec(0,5), ec(1,5), ec(2,5), ec(3,5), ec(0,6), ec(1,6), ec(2,6), ec(3,6)].forEach(a => cs(a, ORANGE_BG));
 
   // Date header columns
   for (let d = 1; d <= daysInMonth; d++) {
@@ -245,6 +254,7 @@ export async function parseDinasExcel(
 
         /* Lookup maps */
         const nameToId    = new Map(allEmployees.map(emp => [emp.name.toLowerCase().trim(), emp.id]));
+        const nipToId     = new Map(allEmployees.map(emp => [(emp.username || '').toLowerCase().trim(), emp.id]));
         const nameToShift = new Map(availableShifts.map(s => [s.nama_shift.toLowerCase().trim(), s]));
 
         /* Enrich from reference sheets */
@@ -292,8 +302,15 @@ export async function parseDinasExcel(
         aoa[headerRowIdx].forEach((v: any, ci: number) => {
           const n = Number(v);
           if (ci >= 2 && Number.isInteger(n) && n >= 1 && n <= 31) colToDay[ci] = n;
-          // Detect LOCK column by header text
-          if (ci >= 2 && String(v).toLowerCase().includes('lock')) lockColIdx = ci;
+        });
+        
+        // Detect LOCK column by header text
+        [headerRowIdx, headerRowIdx - 1].forEach(ri => {
+          if (ri >= 0 && aoa[ri]) {
+            aoa[ri].forEach((v: any, ci: number) => {
+              if (ci >= 2 && String(v).toLowerCase().includes('lock')) lockColIdx = ci;
+            });
+          }
         });
         const dayCols = Object.keys(colToDay).map(Number).sort((a, b) => a - b);
 
@@ -316,15 +333,17 @@ export async function parseDinasExcel(
 
         for (let ri = headerRowIdx + 1; ri < aoa.length; ri++) {
           const row = aoa[ri];
-          const nameCell = String(row[1] ?? '').trim();
-          if (!nameCell) continue;
+          const nipCell = String(row[1] ?? '').trim();
+          const nameCell = String(row[2] ?? '').trim();
+          if (!nipCell && !nameCell) continue;
           if (legendKw.some(kw => nameCell.toLowerCase().includes(kw))) break;
           // Skip day-code sub-header row
-          if (/^[SsRrKkJjMm]$/.test(nameCell)) continue;
+          if (/^(Sen|Sel|Rab|Kam|Jum|Sab|Min)$/i.test(nameCell)) continue;
           // Skip rows that look like numeric-only (No. column in header area)
-          if (/^No$/i.test(nameCell) || /^Nama$/i.test(nameCell)) continue;
+          if (/^No$/i.test(nameCell) || /^NIP$/i.test(nameCell) || /^Nama$/i.test(nameCell) || /^Nama Karyawan$/i.test(nameCell) || /^Nama Lengkap$/i.test(nameCell)) continue;
 
-          const empId = nameToId.get(nameCell.toLowerCase()) ?? null;
+          let empId = nipCell ? nipToId.get(nipCell.toLowerCase()) : null;
+          if (!empId) empId = nameToId.get(nameCell.toLowerCase()) ?? null;
 
           /* Read per-row lock value from LOCK column */
           let rowLock = 0;
