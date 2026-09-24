@@ -1,4 +1,4 @@
-﻿/**
+/**
  * jadwalDinasExcel.ts
  * Template: No | Nama Lengkap | Jabatan | Departemen | tanggal 1-31
  * Baris karyawan: KOSONG (koordinator isi sendiri)
@@ -299,7 +299,22 @@ export async function parseDinasExcel(
             if (!matched) for (const [k, s] of nameToShift) { if (k.includes(lower) || lower.includes(k)) { matched = s; break; } }
             if (matched) dayShiftMap[colToDay[ci]] = matched;
           }
-          if (!Object.keys(dayShiftMap).length) continue;
+          if (!Object.keys(dayShiftMap).length) {
+            // Ada nama karyawan tapi tidak ada shift yang dikenali
+            rows.push({
+              rowIndex: rowIndex++,
+              user_id:       empId ?? '',
+              user_name:     nameCell,
+              shift_id:      '',
+              shift_name:    '',
+              tanggal_mulai: `${year}-${mStr}-01`,
+              tanggal_akhir: `${year}-${mStr}-01`,
+              lock_location: 1,
+              status:        'error',
+              message:       `Karyawan "${nameCell}": nama shift tidak dikenali atau kolom shift kosong`,
+            });
+            continue;
+          }
 
           const sorted = Object.keys(dayShiftMap).map(Number).sort((a, b) => a - b);
           let rStart = sorted[0], rEnd = sorted[0], cur = dayShiftMap[rStart];
@@ -312,9 +327,9 @@ export async function parseDinasExcel(
             shift_name:    cur.nama_shift,
             tanggal_mulai: `${year}-${mStr}-${pad(rStart)}`,
             tanggal_akhir: `${year}-${mStr}-${pad(rEnd)}`,
-            lock_location: 0,
+            lock_location: 1, // selalu ter-lock saat import Excel
             status:        empId ? 'pending' : 'error',
-            message:       empId ? undefined : `Karyawan "${nameCell}" tidak ditemukan di sistem`,
+            message:       empId ? undefined : `Nama karyawan "${nameCell}" tidak ditemukan di sistem. Pastikan nama sesuai data karyawan.`,
           });
 
           for (let di = 1; di < sorted.length; di++) {

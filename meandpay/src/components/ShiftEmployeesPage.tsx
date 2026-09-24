@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Clock, Users, Trash2, Search, Loader2, X,
@@ -13,7 +13,7 @@ import { useToast } from './Toast';
 import Swal from 'sweetalert2';
 import { generateJadwalDinas, parseDinasExcel } from './jadwalDinasExcel';
 const BASE_URL = import.meta.env.VITE_API_MEANDPAY;
-/* â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Types Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 interface Shift {
   id: string;
   nama_shift: string;
@@ -56,7 +56,7 @@ interface ImportMappingRow {
   status: 'pending' | 'success' | 'error';
   message?: string;
 }
-/* â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Helpers Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 function initials(name: string) {
   return name.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 }
@@ -126,13 +126,13 @@ function getShiftTheme(jamMasuk: string): ShiftTheme {
     };
   }
 }
-/* â”€â”€â”€ Jadwal Dinas Excel Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Jadwal Dinas Excel Generator Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 // Day-of-week code (Indonesian, Mon=S, Tue=S, Wed=R, Thu=K, Fri=J, Sat=S, Sun=M)
 function dayCode(date: Date): string {
-  const codes = ['M', 'S', 'S', 'R', 'K', 'J', 'S']; // 0=Sun â€¦ 6=Sat
+  const codes = ['M', 'S', 'S', 'R', 'K', 'J', 'S']; // 0=Sun Ã¢â‚¬Â¦ 6=Sat
   return codes[date.getDay()];
 }
-// Thin wrapper â€” actual logic lives in jadwalDinasExcel.ts
+// Thin wrapper Ã¢â‚¬â€ actual logic lives in jadwalDinasExcel.ts
 function generateJadwalDinasTemplate(
   allEmployees: Employee[],
   allShifts: Shift[],
@@ -147,7 +147,7 @@ function generateJadwalDinasTemplate(
     Swal.fire({ icon: 'error', title: 'Gagal', text: 'Gagal membuat template: ' + err.message });
   }
 }
-/* â”€â”€â”€ Legacy Import Template Generator (kept for compatibility) â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Legacy Import Template Generator (kept for compatibility) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 function generateMappingTemplate(availableShifts: Shift[], allEmployees: Employee[] = []) {
   const wb = XLSX.utils.book_new();
   const headers = [
@@ -183,7 +183,7 @@ function generateMappingTemplate(availableShifts: Shift[], allEmployees: Employe
   }
   XLSX.writeFile(wb, 'Template_Import_Shift_Pegawai.xlsx');
 }
-/* â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Main Component Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
@@ -298,7 +298,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
   const filteredShifts = shifts.filter(s =>
     s.nama_shift.toLowerCase().includes(search.toLowerCase())
   );
-  /* â”€â”€ Loading Skeleton â”€â”€ */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Loading Skeleton Ã¢â€â‚¬Ã¢â€â‚¬ */
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto pb-20">
@@ -368,7 +368,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
     );
   }
   const totalEmployeesInShifts = new Set(mappings.map(m => m.user_id)).size;
-  /* â”€â”€ Render â”€â”€ */
+  /* Ã¢â€â‚¬Ã¢â€â‚¬ Render Ã¢â€â‚¬Ã¢â€â‚¬ */
   return (
     <>
       <motion.div
@@ -376,7 +376,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
         animate={{ opacity: 1 }}
         className="max-w-7xl mx-auto pb-20"
       >
-        {/* â”€â”€ Page Header â”€â”€ */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Page Header Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -391,7 +391,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             </div>
           </div>
           <div className="flex items-center gap-2.5">
-            {/* â”€â”€ Template Button (single, month/year picker) â”€â”€ */}
+            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Template Button (single, month/year picker) Ã¢â€â‚¬Ã¢â€â‚¬ */}
             <div className="relative" ref={templateDropdownRef}>
               <button
                 onClick={() => { setTemplateDropdownOpen(v => !v); }}
@@ -449,7 +449,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
                 )}
               </AnimatePresence>
             </div>
-            {/* â”€â”€ Import Button (single) â”€â”€ */}
+            {/* Ã¢â€â‚¬Ã¢â€â‚¬ Import Button (single) Ã¢â€â‚¬Ã¢â€â‚¬ */}
             <button
               onClick={() => { setImportPreselectedShift(null); setShowImportModal(true); }}
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200/80 rounded-xl text-[13px] font-semibold text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm active:scale-[0.97]"
@@ -470,7 +470,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             </button>
           </div>
         </div>
-        {/* â”€â”€ Stats Row â”€â”€ */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Stats Row Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           {[
             { label: 'Total Shift', value: shifts.length, icon: Clock, color: 'from-indigo-500 to-violet-600', lightBg: 'bg-indigo-50', lightIcon: 'text-indigo-500' },
@@ -496,7 +496,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             </motion.div>
           ))}
         </div>
-        {/* â”€â”€ Search â”€â”€ */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Search Ã¢â€â‚¬Ã¢â€â‚¬ */}
         <div className="relative w-full max-w-md mb-8">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -512,7 +512,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
             </button>
           )}
         </div>
-        {/* â”€â”€ Shifts Grid â”€â”€ */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Shifts Grid Ã¢â€â‚¬Ã¢â€â‚¬ */}
         {filteredShifts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 gap-4">
             <div className="w-20 h-20 rounded-3xl bg-slate-100 flex items-center justify-center">
@@ -562,12 +562,12 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
                             </span>
                             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 bg-slate-100/80 px-2 py-[2px] rounded-md">
                               <Clock className="w-2.5 h-2.5 text-slate-400" />
-                              {shift.jam_masuk} â€” {shift.jam_keluar}
+                              {shift.jam_masuk} Ã¢â‚¬â€ {shift.jam_keluar}
                             </span>
                           </div>
                           {shift.jam_mulai_istirahat && shift.jam_selesai_istirahat && (
                             <p className="text-[10px] text-slate-400 mt-1.5">
-                              â˜• Istirahat: {shift.jam_mulai_istirahat} â€“ {shift.jam_selesai_istirahat}
+                              Ã¢Ëœâ€¢ Istirahat: {shift.jam_mulai_istirahat} Ã¢â‚¬â€œ {shift.jam_selesai_istirahat}
                             </p>
                           )}
                         </div>
@@ -632,7 +632,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
                                     <div className="flex items-center gap-1.5">
                                       <span className="text-[9px] text-slate-400/70 font-mono flex items-center gap-0.5 shrink-0">
                                         <Calendar className="w-2.5 h-2.5" />
-                                        {new Date(emp.assignment.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })} â€“ {new Date(emp.assignment.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' })}
+                                        {new Date(emp.assignment.startDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })} Ã¢â‚¬â€œ {new Date(emp.assignment.endDate).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' })}
                                       </span>
                                       <div className={cn(
                                         "flex items-center gap-0.5 px-1 py-[1px] rounded-[4px] text-[8px] font-black uppercase tracking-tighter",
@@ -679,7 +679,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
           </div>
         )}
       </motion.div>
-      {/* â”€â”€ Add Employee Modal â”€â”€ */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Add Employee Modal Ã¢â€â‚¬Ã¢â€â‚¬ */}
       <AnimatePresence>
         {showAddModal && selectedShift && (
           <AddEmployeeToShiftModal
@@ -694,7 +694,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
         )}
       </AnimatePresence>
       {/* Delete Confirmation is now handled by SweetAlert */}
-      {/* â”€â”€ Import Mapping Modal â”€â”€ */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Import Mapping Modal Ã¢â€â‚¬Ã¢â€â‚¬ */}
       <AnimatePresence>
         {showImportModal && (
           <ImportMappingModal
@@ -712,7 +712,7 @@ export function ShiftEmployeesPage({ onBack }: ShiftEmployeesPageProps) {
     </>
   );
 }
-/* â”€â”€â”€ Add Employee to Shift Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Add Employee to Shift Modal Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 function AddEmployeeToShiftModal({
   shift,
   allEmployees,
@@ -813,7 +813,7 @@ function AddEmployeeToShiftModal({
               </div>
               <div>
                 <h3 className="text-lg font-black text-slate-800">Tambah Karyawan</h3>
-                <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{shift.nama_shift} â€¢ {shift.jam_masuk} â€“ {shift.jam_keluar}</p>
+                <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{shift.nama_shift} Ã¢â‚¬Â¢ {shift.jam_masuk} Ã¢â‚¬â€œ {shift.jam_keluar}</p>
               </div>
             </div>
             <button onClick={onClose} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all">
@@ -906,7 +906,7 @@ function AddEmployeeToShiftModal({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-slate-700 truncate">{emp.name}</p>
-                  <p className="text-[10px] text-slate-400 truncate">@{emp.username} Â· {emp.jabatan?.nama_jabatan || '-'}</p>
+                  <p className="text-[10px] text-slate-400 truncate">@{emp.username} Ã‚Â· {emp.jabatan?.nama_jabatan || '-'}</p>
                 </div>
                 {isExisting ? (
                   <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg shrink-0">Sudah ada</span>
@@ -939,7 +939,7 @@ function AddEmployeeToShiftModal({
     </div>
   );
 }
-/* â”€â”€â”€ Import Mapping Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Import Mapping Modal Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
 function ImportMappingModal({
   shifts,
   allEmployees,
@@ -977,14 +977,55 @@ function ImportMappingModal({
       return;
     }
     try {
-      // Try Jadwal Dinas format first (auto-detect), fall back to legacy column format
+      // Baca file format Jadwal Dinas (auto-detect)
       let parsed: ImportMappingRow[] = [];
       try {
         parsed = await parseDinasExcel(file, shifts, allEmployees);
       } catch {
-        // Not Jadwal Dinas format â€” try legacy column format
+        // Fallback ke format kolom lama
         parsed = await parseMappingExcel(file);
       }
+
+      // Cek baris bermasalah
+      const errorRows = parsed.filter(r => r.status === 'error');
+      const missingName  = errorRows.filter(r => r.user_id === '');
+      const missingShift = errorRows.filter(r => r.shift_id === '');
+
+      if (parsed.length === 0) {
+        Swal.fire({
+          icon: 'error',
+          title: 'File Tidak Dapat Dibaca',
+          html: `<div style="text-align:left;font-size:13px">
+            <p style="font-weight:bold;margin-bottom:8px">Tidak ada data yang terbaca. Kemungkinan:</p>
+            <ul style="margin-left:16px;list-style:disc">
+              <li>Kolom <b>Nama Lengkap</b> masih kosong</li>
+              <li>Kolom shift (P, S, M, dll) tidak terisi</li>
+              <li>Nama shift tidak sesuai data sistem</li>
+            </ul>
+          </div>`,
+        });
+        return;
+      }
+
+      if (missingName.length > 0 || missingShift.length > 0) {
+        const nameList  = missingName.slice(0, 5).map(r => `• ${r.user_name}`).join('<br>');
+        const shiftList = missingShift.slice(0, 5).map(r => `• ${r.user_name}`).join('<br>');
+        const result = await Swal.fire({
+          icon: 'warning',
+          title: 'Ada Data Bermasalah',
+          html: `<div style="text-align:left;font-size:13px">
+            ${missingName.length > 0 ? `<p style="font-weight:bold;color:#ef4444">❌ Nama karyawan tidak ditemukan (${missingName.length} baris):</p><p style="margin-left:8px">${nameList}${missingName.length > 5 ? '<br>... dan lainnya' : ''}</p>` : ''}
+            ${missingShift.length > 0 ? `<p style="font-weight:bold;color:#f97316">⚠️ Nama shift tidak dikenali (${missingShift.length} baris):</p><p style="margin-left:8px">${shiftList}${missingShift.length > 5 ? '<br>... dan lainnya' : ''}</p>` : ''}
+            <p style="margin-top:12px;color:#64748b">Baris bermasalah dilewati. Lanjutkan import data yang valid?</p>
+          </div>`,
+          showCancelButton: true,
+          confirmButtonText: 'Ya, Lanjutkan',
+          cancelButtonText: 'Batal',
+          confirmButtonColor: '#10b981',
+        });
+        if (!result.isConfirmed) return;
+      }
+
       setRows(parsed);
       setFileInfo({
         name: file.name,
@@ -994,7 +1035,19 @@ function ImportMappingModal({
       });
       setStep('preview');
     } catch (err: any) {
-      Swal.fire({ icon: 'error', title: 'Gagal Membaca File', text: err.message || 'Gagal membaca file Excel' });
+      Swal.fire({
+        icon: 'error',
+        title: 'Gagal Membaca File',
+        html: `<div style="text-align:left;font-size:13px">
+          <p style="margin-bottom:8px">${err.message || 'Gagal membaca file Excel'}</p>
+          <p style="color:#64748b">Pastikan:</p>
+          <ul style="margin-left:16px;list-style:disc;color:#64748b">
+            <li>Kolom <b>Nama Lengkap</b> sudah diisi</li>
+            <li>Nama shift sesuai dengan shift di sistem</li>
+            <li>Format file sesuai template yang diunduh</li>
+          </ul>
+        </div>`,
+      });
     }
   };
   const handleImport = async () => {
@@ -1064,8 +1117,8 @@ function ImportMappingModal({
               {preSelectedShift ? (
                 <p className="text-[11px] text-slate-400 font-bold mt-0.5">
                   Shift: <span className="text-emerald-600">{preSelectedShift.nama_shift}</span>
-                  <span className="text-slate-300 mx-1">Â·</span>
-                  {preSelectedShift.jam_masuk} â€“ {preSelectedShift.jam_keluar}
+                  <span className="text-slate-300 mx-1">Ã‚Â·</span>
+                  {preSelectedShift.jam_masuk} Ã¢â‚¬â€œ {preSelectedShift.jam_keluar}
                 </p>
               ) : (
                 <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Bulk Upload Karyawan ke Shift</p>
