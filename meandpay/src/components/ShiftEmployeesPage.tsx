@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Clock, Users, Trash2, Search, Loader2, X,
@@ -1113,7 +1113,6 @@ function ImportMappingModal({
                         max={2100}
                       />
                     </div>
-                  </div>
                   <button
                     onClick={() => {
                       generateJadwalDinasTemplate(allEmployees, shifts, mappings ?? [], dlYear, dlMonth);
