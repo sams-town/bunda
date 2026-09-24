@@ -163,7 +163,8 @@ class CutiService {
                 where: { id: approver }
             });
 
-            const isManager = pemohon.jabatan && pemohon.jabatan.manager && pemohon.jabatan.manager === approver;
+            const userIsAnyManager = await tx.jabatans.findFirst({ where: { manager: approver } });
+            const isManager = (pemohon.jabatan && pemohon.jabatan.manager === approver) || (userIsAnyManager !== null);
             const isAdmin = approverUser?.is_admin === 'admin' || approverUser?.is_admin === 'superadmin' || approver === 1n;
 
             let newStatus = existing.status_cuti;
