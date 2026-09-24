@@ -1,18 +1,8 @@
 ﻿/**
- * jadwalDinasExcel.ts – Jadwal Dinas Excel generator & parser
- *
- * Layout (0-indexed rows):
- *   0 : JADWAL DINAS – <BULAN> <TAHUN>   (merge across all columns)
- *   1 : No | Nama Lengkap | Jabatan | Departemen | Kam | Jum | Sab | ...  (day abbreviations)
- *   2 :    |              |         |            |  1  |  2  |  3  | ...  (date numbers)
- *   3+: employee data rows
- *
- * Columns (0-indexed):
- *   0 = No
- *   1 = Nama Lengkap
- *   2 = Jabatan
- *   3 = Departemen
- *   4 .. 4+daysInMonth-1 = tanggal 1..31
+ * jadwalDinasExcel.ts
+ * Template: No | Nama Lengkap | Jabatan | Departemen | tanggal 1-31
+ * Baris karyawan: KOSONG (koordinator isi sendiri)
+ * Kolom Minggu (Min): background MERAH
  */
 import * as XLSX from 'xlsx';
 
@@ -56,112 +46,167 @@ function dayCode(date: Date): string {
 function pad(n: number) { return String(n).padStart(2, '0'); }
 
 /* ======================================================
-   GENERATE
+   GENERATE – Template KOSONG sesuai format pengguna
 ====================================================== */
 export function generateJadwalDinas(
-  allEmployees: Employee[],
+  _allEmployees: Employee[],
   allShifts: Shift[],
-  mappings: MappingData[],
+  _mappings: MappingData[],
   year: number,
   month: number,
 ): void {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthName   = new Date(year, month, 1).toLocaleString('id-ID', { month: 'long' });
 
-  const shiftById = new Map(allShifts.map(s => [s.id, s.nama_shift]));
-  const scheduleMap: Record<string, Record<number, string>> = {};
-  mappings.forEach(m => {
-    if (!shiftById.has(m.shift_id)) return;
-    const d = new Date(m.tanggal);
-    if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month) return;
-    const day = d.getUTCDate();
-    if (!scheduleMap[m.user_id]) scheduleMap[m.user_id] = {};
-    scheduleMap[m.user_id][day] = shiftById.get(m.shift_id)!;
-  });
-
-  // Col 0=No, 1=Nama Lengkap, 2=Jabatan, 3=Departemen, 4..4+days-1=tanggal
-  const COL_FIRST_DATE = 4;
-  const COL_LAST_DATE  = COL_FIRST_DATE + daysInMonth - 1;
-  const TOTAL_COLS     = COL_LAST_DATE + 1;
+  // Kolom: 0=No, 1=Nama Lengkap, 2=Jabatan, 3=Departemen, 4..=tanggal
+  const COL_FIRST  = 4;
+  const TOTAL_COLS = COL_FIRST + daysInMonth;
+  const EMPTY_ROWS = 30;
 
   const aoa: any[][] = [];
 
-  // Row 0: Title
-  const titleRow: any[] = [`JADWAL DINAS - ${monthName.toUpperCase()} ${year}`];
+  // Row 0: Judul
+  const titleRow: any[] = new Array(TOTAL_COLS).fill('');
+  titleRow[0] = `JADWAL DINAS - ${monthName.toUpperCase()} ${year}`;
   aoa.push(titleRow);
 
-  // Row 1: day abbreviations
+  // Row 1: kosong
+  aoa.push(new Array(TOTAL_COLS).fill(''));
+
+  // Row 2: Header - nama hari
   const dayRow: any[] = ['No', 'Nama Lengkap', 'Jabatan', 'Departemen'];
-  for (let d = 1; d <= daysInMonth; d++) dayRow.push(dayCode(new Date(year, month, d)));
+  for (let d = 1; d <= daysInMonth; d++) {
+    dayRow.push(dayCode(new Date(year, month, d)));
+  }
   aoa.push(dayRow);
 
-  // Row 2: date numbers
+  // Row 3: Header - angka tanggal
   const dateRow: any[] = ['', '', '', ''];
   for (let d = 1; d <= daysInMonth; d++) dateRow.push(d);
   aoa.push(dateRow);
 
-  // Employee rows (min 30 rows)
-  const minRows = Math.max(allEmployees.length, 30);
-  for (let idx = 0; idx < minRows; idx++) {
-    const emp = allEmployees[idx];
-    if (!emp) {
-      const emptyRow: any[] = [idx + 1, '', '', ''];
-      for (let d = 1; d <= daysInMonth; d++) emptyRow.push('');
-      aoa.push(emptyRow);
-      continue;
-    }
-    const jabatan    = emp.jabatan?.nama_jabatan ?? '';
-    const departemen = emp.departemen?.nama_departemen ?? emp.divisi?.nama_divisi ?? '';
-    const row: any[] = [idx + 1, emp.name, jabatan, departemen];
-    for (let d = 1; d <= daysInMonth; d++) row.push(scheduleMap[emp.id]?.[d] ?? '');
+  // Row 4+: Baris KOSONG (30 baris)
+  for (let i = 0; i < EMPTY_ROWS; i++) {
+    const row: any[] = [i + 1, '', '', ''];
+    for (let d = 0; d < daysInMonth; d++) row.push('');
     aoa.push(row);
   }
 
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const ws = XLSX.utils.aoa_to_sheet(aoa, { cellStyles: true });
 
-  // Merge title row
-  ws['!merges'] = [
+  // Merges
+  const merges: XLSX.Range[] = [
+    // Judul: merge semua kolom
     { s: { r: 0, c: 0 }, e: { r: 0, c: TOTAL_COLS - 1 } },
-    { s: { r: 1, c: 0 }, e: { r: 2, c: 0 } },
-    { s: { r: 1, c: 1 }, e: { r: 2, c: 1 } },
-    { s: { r: 1, c: 2 }, e: { r: 2, c: 2 } },
-    { s: { r: 1, c: 3 }, e: { r: 2, c: 3 } },
+    // Baris kosong: merge semua
+    { s: { r: 1, c: 0 }, e: { r: 1, c: TOTAL_COLS - 1 } },
+    // Header tetap: merge hari & tanggal (rows 2-3)
+    { s: { r: 2, c: 0 }, e: { r: 3, c: 0 } },   // No
+    { s: { r: 2, c: 1 }, e: { r: 3, c: 1 } },   // Nama Lengkap
+    { s: { r: 2, c: 2 }, e: { r: 3, c: 2 } },   // Jabatan
+    { s: { r: 2, c: 3 }, e: { r: 3, c: 3 } },   // Departemen
   ];
+  ws['!merges'] = merges;
 
-  // Column widths
-  const colWidths: XLSX.ColInfo[] = [{ wch: 4 }, { wch: 22 }, { wch: 14 }, { wch: 16 }];
-  for (let d = 0; d < daysInMonth; d++) colWidths.push({ wch: 4 });
+  // Lebar kolom
+  const colWidths: XLSX.ColInfo[] = [
+    { wch: 4 },   // No
+    { wch: 22 },  // Nama Lengkap
+    { wch: 14 },  // Jabatan
+    { wch: 14 },  // Departemen
+  ];
+  for (let d = 0; d < daysInMonth; d++) colWidths.push({ wch: 3.5 });
   ws['!cols'] = colWidths;
 
-  ws['!rows'] = [{ hpt: 22 }, { hpt: 16 }, { hpt: 14 }];
+  // Tinggi baris
+  ws['!rows'] = [
+    { hpt: 24 }, // judul
+    { hpt: 6 },  // kosong
+    { hpt: 16 }, // hari
+    { hpt: 14 }, // tanggal
+  ];
 
-  const sheetName = `${monthName.toUpperCase()} ${year}`;
-  XLSX.utils.book_append_sheet(wb, ws, sheetName.substring(0, 31));
+  // ── Style setiap sel ──────────────────────────────────
+  const borderThin = {
+    top:    { style: 'thin', color: { rgb: 'BBBBBB' } },
+    bottom: { style: 'thin', color: { rgb: 'BBBBBB' } },
+    left:   { style: 'thin', color: { rgb: 'BBBBBB' } },
+    right:  { style: 'thin', color: { rgb: 'BBBBBB' } },
+  };
+  const borderBold = {
+    top:    { style: 'thin', color: { rgb: '000000' } },
+    bottom: { style: 'thin', color: { rgb: '000000' } },
+    left:   { style: 'thin', color: { rgb: '000000' } },
+    right:  { style: 'thin', color: { rgb: '000000' } },
+  };
 
-  // Reference: Daftar Shift
-  const shiftAoa = [['ID Shift', 'Nama Shift', 'Jam Masuk', 'Jam Keluar']];
+  // Helper: apakah kolom c adalah hari Minggu?
+  const isSunday = (c: number) => {
+    if (c < COL_FIRST) return false;
+    const day = c - COL_FIRST + 1;
+    return new Date(year, month, day).getDay() === 0;
+  };
+
+  const sunFill  = { fgColor: { rgb: 'FF0000' }, patternType: 'solid' as const };
+  const whtFill  = { fgColor: { rgb: 'FFFFFF' }, patternType: 'solid' as const };
+  const grayFill = { fgColor: { rgb: 'D9E1F2' }, patternType: 'solid' as const };
+
+  // Row 0: judul
+  const a1 = ws['A1'];
+  if (a1) a1.s = {
+    font: { bold: true, sz: 13, color: { rgb: '0070C0' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    fill: { fgColor: { rgb: 'FFFFFF' }, patternType: 'solid' },
+  };
+
+  // Rows 2-3: header
+  for (let r = 2; r <= 3; r++) {
+    for (let c = 0; c < TOTAL_COLS; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+      const sun = isSunday(c);
+      ws[addr].s = {
+        font: { bold: true, sz: 8, color: { rgb: sun ? 'FFFFFF' : '000000' } },
+        alignment: { horizontal: 'center', vertical: 'center' },
+        fill: sun ? sunFill : (c < COL_FIRST ? grayFill : whtFill),
+        border: borderBold,
+      };
+    }
+  }
+
+  // Rows 4+: data kosong
+  const DATA_START = 4;
+  const DATA_END   = DATA_START + EMPTY_ROWS;
+  for (let r = DATA_START; r < DATA_END; r++) {
+    for (let c = 0; c < TOTAL_COLS; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+      const sun = isSunday(c);
+      ws[addr].s = {
+        font: { sz: 9 },
+        alignment: { horizontal: c < COL_FIRST ? 'left' : 'center', vertical: 'center' },
+        fill: sun ? { fgColor: { rgb: 'FFCCCC' }, patternType: 'solid' } : whtFill,
+        border: borderThin,
+      };
+    }
+  }
+
+  const sheetName = `${monthName.toUpperCase()} ${year}`.substring(0, 31);
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+  // Sheet referensi shift
+  const shiftAoa: any[][] = [['ID Shift', 'Nama Shift', 'Jam Masuk', 'Jam Keluar']];
   allShifts.forEach(s => shiftAoa.push([s.id, s.nama_shift, s.jam_masuk, s.jam_keluar]));
   const wsShift = XLSX.utils.aoa_to_sheet(shiftAoa);
   wsShift['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 12 }, { wch: 12 }];
   XLSX.utils.book_append_sheet(wb, wsShift, 'Referensi Shift');
 
-  // Reference: Daftar Karyawan
-  const empAoa = [['ID Karyawan', 'Nama', 'Username', 'Jabatan', 'Departemen']];
-  allEmployees.forEach(e => empAoa.push([
-    e.id, e.name, e.username,
-    e.jabatan?.nama_jabatan ?? '',
-    e.departemen?.nama_departemen ?? e.divisi?.nama_divisi ?? '',
-  ]));
-  const wsEmp = XLSX.utils.aoa_to_sheet(empAoa);
-  wsEmp['!cols'] = [{ wch: 12 }, { wch: 28 }, { wch: 18 }, { wch: 22 }, { wch: 22 }];
-  XLSX.utils.book_append_sheet(wb, wsEmp, 'Referensi Karyawan');
-
   XLSX.writeFile(wb, `Jadwal_Dinas_${monthName}_${year}.xlsx`);
 }
 
 /* ======================================================
-   PARSE
+   PARSE – Baca file Excel yang sudah diisi koordinator
 ====================================================== */
 export async function parseDinasExcel(
   file: File,
@@ -175,17 +220,11 @@ export async function parseDinasExcel(
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const wb = XLSX.read(data, { type: 'array', cellDates: true });
 
-        const nameToId    = new Map(allEmployees.map(emp => [emp.name.toLowerCase().trim(), emp.id]));
+        // Peta nama karyawan → ID
+        const nameToId = new Map(allEmployees.map(emp => [emp.name.toLowerCase().trim(), emp.id]));
         const nameToShift = new Map(availableShifts.map(s => [s.nama_shift.toLowerCase().trim(), s]));
 
-        const refEmpWs = wb.Sheets['Referensi Karyawan'];
-        if (refEmpWs) {
-          XLSX.utils.sheet_to_json<any>(refEmpWs, { defval: '' }).forEach((row: any) => {
-            const id   = String(row['ID Karyawan'] ?? '').trim();
-            const name = String(row['Nama'] ?? '').toLowerCase().trim();
-            if (id && name) nameToId.set(name, id);
-          });
-        }
+        // Enrich dari sheet referensi
         const refShiftWs = wb.Sheets['Referensi Shift'];
         if (refShiftWs) {
           XLSX.utils.sheet_to_json<any>(refShiftWs, { defval: '' }).forEach((row: any) => {
@@ -194,7 +233,7 @@ export async function parseDinasExcel(
             if (id && name && !nameToShift.has(name)) {
               nameToShift.set(name, {
                 id, nama_shift: String(row['Nama Shift']),
-                jam_masuk: String(row['Jam Masuk'] ?? ''),
+                jam_masuk:  String(row['Jam Masuk']  ?? ''),
                 jam_keluar: String(row['Jam Keluar'] ?? ''),
               });
             }
@@ -202,9 +241,9 @@ export async function parseDinasExcel(
         }
 
         const ws  = wb.Sheets[wb.SheetNames[0]];
-        const aoa: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as any[][];
+        const aoa = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, defval: '' }) as any[][];
 
-        // Find row with date numbers 1-31 (>=20 integers in cols 2+)
+        // Cari baris dengan angka tanggal 1-31 (>=20 angka di kolom 2+)
         let dateRowIdx = -1;
         for (let ri = 0; ri < Math.min(aoa.length, 10); ri++) {
           let cnt = 0;
@@ -216,6 +255,7 @@ export async function parseDinasExcel(
         }
         if (dateRowIdx === -1) throw new Error('Format tidak dikenali: baris tanggal 1-31 tidak ditemukan');
 
+        // Peta kolom → hari
         const colToDay: Record<number, number> = {};
         aoa[dateRowIdx].forEach((v: any, ci: number) => {
           const n = Number(v);
@@ -223,6 +263,7 @@ export async function parseDinasExcel(
         });
         const dayCols = Object.keys(colToDay).map(Number).sort((a, b) => a - b);
 
+        // Ambil tahun & bulan dari judul
         let year = new Date().getFullYear(), month = new Date().getMonth();
         for (let ri = 0; ri < dateRowIdx; ri++) {
           const str = aoa[ri].join(' ');
@@ -245,7 +286,6 @@ export async function parseDinasExcel(
           if (!nameCell) continue;
           if (/^(No|Nama|Nama Lengkap|Nama Karyawan)$/i.test(nameCell)) continue;
           if (/^(Sen|Sel|Rab|Kam|Jum|Sab|Min)$/i.test(nameCell)) continue;
-          if (['daftar shift', 'referensi'].some(kw => nameCell.toLowerCase().includes(kw))) break;
 
           const empId = nameToId.get(nameCell.toLowerCase()) ?? null;
 
@@ -285,7 +325,7 @@ export async function parseDinasExcel(
           flush();
         }
 
-        if (!rows.length) throw new Error('Tidak ada data karyawan yang berhasil dibaca');
+        if (!rows.length) throw new Error('Tidak ada data yang berhasil dibaca. Pastikan nama karyawan sudah diisi dan shift sudah sesuai.');
         resolve(rows);
       } catch (err: any) {
         reject(new Error(err.message ?? 'Gagal membaca file'));
