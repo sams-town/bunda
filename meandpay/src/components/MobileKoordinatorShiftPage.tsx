@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
 import { cn, formatPhotoUrl } from '../lib/utils';
 import { MappingShift } from './MappingShift';
+import { generateJadwalDinas, parseDinasExcel } from './jadwalDinasExcel';
 
 const BASE_URL = import.meta.env.VITE_API_MEANDPAY;
 
@@ -188,6 +189,9 @@ function ImportMappingModal({ shifts, allEmployees, onClose, onSuccess }: { shif
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<{ total: number; success: number; failed: number } | null>(null);
   const [filterError, setFilterError] = useState(false);
+  const now = new Date();
+  const [dlMonth, setDlMonth] = useState(now.getMonth());
+  const [dlYear, setDlYear] = useState(now.getFullYear());
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleFile = async (file: File) => {
@@ -196,7 +200,13 @@ function ImportMappingModal({ shifts, allEmployees, onClose, onSuccess }: { shif
       return;
     }
     try {
-      const parsed = await parseMappingExcel(file);
+      let parsed: ImportMappingRow[] = [];
+      try {
+        parsed = await parseDinasExcel(file, shifts, allEmployees);
+      } catch {
+        parsed = await parseMappingExcel(file);
+      }
+      
       setRows(parsed);
       setFileInfo({
         name: file.name,
@@ -295,9 +305,28 @@ function ImportMappingModal({ shifts, allEmployees, onClose, onSuccess }: { shif
                     <p className="text-xs text-slate-500">Isi data jadwal shift sesuai format</p>
                   </div>
                 </div>
-                <button onClick={() => generateMappingTemplate(shifts, allEmployees)} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl whitespace-nowrap">
-                  Unduh Template
-                </button>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={dlMonth}
+                    onChange={e => setDlMonth(Number(e.target.value))}
+                    className="text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <option key={i} value={i}>{new Date(2000, i, 1).toLocaleString('id-ID', { month: 'short' })}</option>
+                    ))}
+                  </select>
+                  <input
+                    type="number"
+                    value={dlYear}
+                    onChange={e => setDlYear(Number(e.target.value))}
+                    className="w-16 text-xs font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg px-2 py-1 outline-none"
+                    min={2020}
+                    max={2100}
+                  />
+                  <button onClick={() => generateJadwalDinas(allEmployees, shifts, [], dlYear, dlMonth)} className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl whitespace-nowrap">
+                    Unduh Template
+                  </button>
+                </div>
               </div>
               <div
                 onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
