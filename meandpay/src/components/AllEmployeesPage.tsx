@@ -302,7 +302,8 @@ function ImportModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback(async (file: File) => {
-    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
+    const isExcel = file.name.match(/\.(xlsx|xls|csv|xlsm|xlsb)$/i) || file.type.match(/(excel|spreadsheet|csv)/i);
+    if (!isExcel && file.name.includes('.')) {
       Swal.fire({ icon: 'error', title: 'Format Tidak Didukung', text: 'Gunakan .xlsx, .xls, atau .csv' });
       return;
     }

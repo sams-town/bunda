@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Clock, Users, Trash2, Search, Loader2, X,
@@ -972,7 +972,8 @@ function ImportMappingModal({
   const [dlYear, setDlYear] = useState(now.getFullYear());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleFile = async (file: File) => {
-    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) {
+    const isExcel = file.name.match(/\.(xlsx|xls|csv|xlsm|xlsb)$/i) || file.type.match(/(excel|spreadsheet|csv)/i);
+    if (!isExcel && file.name.includes('.')) {
       Swal.fire({ icon: 'error', title: 'Format Tidak Didukung', text: 'Gunakan .xlsx, .xls, atau .csv' });
       return;
     }
