@@ -165,19 +165,38 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
 
   const handleDownloadForm = async (leave: Leave) => {
     const employee = employees.find(e => e.id?.toString() === leave.user_id?.toString());
-    
-    // For date difference
-    const d1 = new Date(leave.tanggal);
-    
+
+    const tanggalStr = leave.tanggal || '';
+    let dari = tanggalStr;
+    let sampai = tanggalStr;
+    if (tanggalStr.includes(' - ')) {
+      const parts = tanggalStr.split(' - ');
+      dari = parts[0];
+      sampai = parts[parts.length - 1];
+    }
+
+    const hitungHari = (start: string, end: string) => {
+      const s = new Date(start);
+      const e = new Date(end);
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) return '1';
+      const diff = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return String(diff > 0 ? diff : 1);
+    };
+
+    const formatId = (d: string) => {
+      const date = new Date(d);
+      return isNaN(date.getTime()) ? d : date.toLocaleDateString('id-ID');
+    };
+
     await generateLeaveFormPDF({
-      tanggal_pengajuan: new Date(leave.created_at || leave.tanggal).toLocaleDateString('id-ID'),
-      nama: leave.pemohon?.name || '-',
-      nik: (employee as any)?.nik || '.......',
-      departemen: (employee as any)?.departemen || '.......',
-      tanggal_mulai_kerja: (employee as any)?.tanggal_mulai_kerja ? new Date((employee as any).tanggal_mulai_kerja).toLocaleDateString('id-ID') : '.......',
-      dari_tanggal: new Date(leave.tanggal).toLocaleDateString('id-ID'),
-      sampai_tanggal: new Date(leave.tanggal).toLocaleDateString('id-ID'),
-      jumlah_hari: '1', 
+      tanggal_pengajuan: formatId(leave.created_at || dari),
+      nama: leave.pemohon?.name || employee?.name || '-',
+      nik: employee?.ktp || '.......',
+      departemen: employee?.jabatan?.nama_jabatan || '.......',
+      tanggal_mulai_kerja: employee?.tgl_join ? formatId(employee.tgl_join) : '.......',
+      dari_tanggal: formatId(dari),
+      sampai_tanggal: formatId(sampai),
+      jumlah_hari: hitungHari(dari, sampai),
       alasan_cuti: leave.alasan_cuti || '-',
       jenis_cuti: leave.nama_cuti || 'Cuti Tahunan',
     });

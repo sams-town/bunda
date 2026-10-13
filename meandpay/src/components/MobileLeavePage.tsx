@@ -48,21 +48,46 @@ export function MobileLeavePage() {
   const [leaves, setLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userData, setUserData] = useState<any>(null);
+  const [meData, setMeData] = useState<any>(null);
   
   const [viewState, setViewState] = useState<'list' | 'add' | 'edit'>('list');
   const [editItem, setEditItem] = useState<any | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleDownloadForm = async (leave: any) => {
+    const tanggalStr = leave.tanggal || '';
+    let dari = tanggalStr;
+    let sampai = tanggalStr;
+    if (tanggalStr.includes(' - ')) {
+      const parts = tanggalStr.split(' - ');
+      dari = parts[0];
+      sampai = parts[parts.length - 1];
+    }
+
+    const hitungHari = (start: string, end: string) => {
+      const s = new Date(start);
+      const e = new Date(end);
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) return '1';
+      const diff = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return String(diff > 0 ? diff : 1);
+    };
+
+    const formatId = (d: string) => {
+      const date = new Date(d);
+      return isNaN(date.getTime()) ? d : date.toLocaleDateString('id-ID');
+    };
+
+    const emp = leave.pemohon || leave.users || meData || userData || {};
+
     await generateLeaveFormPDF({
-      tanggal_pengajuan: new Date(leave.created_at || leave.tanggal).toLocaleDateString('id-ID'),
-      nama: leave.pemohon?.name || leave.users?.name || userData?.name || '-',
-      nik: '.......',
-      departemen: '.......',
-      tanggal_mulai_kerja: '.......',
-      dari_tanggal: new Date(leave.tanggal).toLocaleDateString('id-ID'),
-      sampai_tanggal: new Date(leave.tanggal).toLocaleDateString('id-ID'),
-      jumlah_hari: '1', 
+      tanggal_pengajuan: formatId(leave.created_at || dari),
+      nama: emp?.name || '-',
+      nik: meData?.ktp || '.......',
+      departemen: meData?.jabatan?.nama_jabatan || '.......',
+      tanggal_mulai_kerja: meData?.tgl_join ? formatId(meData.tgl_join) : '.......',
+      dari_tanggal: formatId(dari),
+      sampai_tanggal: formatId(sampai),
+      jumlah_hari: hitungHari(dari, sampai),
       alasan_cuti: leave.alasan_cuti || '-',
       jenis_cuti: leave.nama_cuti || 'Cuti Tahunan',
     });
@@ -112,6 +137,7 @@ export function MobileLeavePage() {
           });
           const jsonUser = await resUser.json();
           const me = jsonUser.data;
+          setMeData(me);
           
           const isMasterUser = me?.id?.toString() === '1' || Number(me?.id) === 1 || me?.is_admin === 'superadmin' || me?.is_admin === 'admin' || me?.role === 'superadmin' || me?.role === 'admin';
           
