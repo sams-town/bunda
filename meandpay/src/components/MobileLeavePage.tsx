@@ -55,6 +55,23 @@ export function MobileLeavePage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleDownloadForm = async (leave: any) => {
+    let emp = meData;
+    if (!emp || !emp.ktp || !emp.tgl_join) {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${BASE_URL}/users/${leave.user_id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          emp = json.data;
+          setMeData(json.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user detail:', err);
+      }
+    }
+
     const tanggalStr = leave.tanggal || '';
     let dari = tanggalStr;
     let sampai = tanggalStr;
@@ -77,14 +94,12 @@ export function MobileLeavePage() {
       return isNaN(date.getTime()) ? d : date.toLocaleDateString('id-ID');
     };
 
-    const emp = leave.pemohon || leave.users || meData || userData || {};
-
     await generateLeaveFormPDF({
       tanggal_pengajuan: formatId(leave.created_at || dari),
-      nama: emp?.name || '-',
-      nik: meData?.ktp || '.......',
-      departemen: meData?.jabatan?.nama_jabatan || '.......',
-      tanggal_mulai_kerja: meData?.tgl_join ? formatId(meData.tgl_join) : '.......',
+      nama: emp?.name || leave.pemohon?.name || leave.users?.name || userData?.name || '-',
+      nik: emp?.ktp || '.......',
+      departemen: emp?.jabatan?.nama_jabatan || '.......',
+      tanggal_mulai_kerja: emp?.tgl_join ? formatId(emp.tgl_join) : '.......',
       dari_tanggal: formatId(dari),
       sampai_tanggal: formatId(sampai),
       jumlah_hari: hitungHari(dari, sampai),

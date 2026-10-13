@@ -164,7 +164,22 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
   };
 
   const handleDownloadForm = async (leave: Leave) => {
-    const employee = employees.find(e => e.id?.toString() === leave.user_id?.toString());
+    let employee = employees.find(e => e.id?.toString() === leave.user_id?.toString());
+
+    if (!employee || !employee.ktp || !employee.tgl_join) {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${import.meta.env.VITE_API_MEANDPAY}/users/${leave.user_id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          employee = json.data;
+        }
+      } catch (err) {
+        console.error('Failed to fetch user detail:', err);
+      }
+    }
 
     const tanggalStr = leave.tanggal || '';
     let dari = tanggalStr;
