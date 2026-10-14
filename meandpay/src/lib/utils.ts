@@ -67,6 +67,78 @@ export function downloadTemplate(type: 'form_cuti' | 'form_lembur' | 'slip_gaji'
   document.body.removeChild(a);
 }
 
+export interface LeaveTemplateData {
+  nama: string;
+  nik: string;
+  departemen: string;
+  tanggal_mulai_kerja: string;
+  dari_tanggal: string;
+  sampai_tanggal: string;
+  jumlah_hari: string;
+  alasan_cuti: string;
+  tanggal_pengajuan: string;
+}
+
+export async function downloadFilledLeaveTemplate(data: LeaveTemplateData) {
+  const apiBase = import.meta.env.VITE_API_MEANDPAY || 'https://hris.rsbundahalimah.com/api';
+  const url = `${apiBase}/settings/download-template?type=form_cuti`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+    const buffer = await res.arrayBuffer();
+
+    const ExcelJS = (await import('exceljs')).default;
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+
+    const sheet = workbook.worksheets[0];
+
+    const fillNextToLabel = (label: string, value: string) => {
+      if (!value || value === '.......' || value === '-') return;
+      sheet.eachRow((row) => {
+        row.eachCell((cell) => {
+          const text = String(cell.value || '').trim().toLowerCase();
+          if (text === label.toLowerCase() || text.includes(label.toLowerCase())) {
+            const nextCol = cell.col + 1;
+            const targetCell = sheet.getCell(cell.row, nextCol);
+            targetCell.value = value;
+            targetCell.font = targetCell.font || { size: 10 };
+            targetCell.alignment = { ...(targetCell.alignment || {}), horizontal: 'left', vertical: 'middle' };
+          }
+        });
+      });
+    };
+
+    fillNextToLabel('Nama', data.nama);
+    fillNextToLabel('NIK', data.nik);
+    fillNextToLabel('Departemen / Unit', data.departemen);
+    fillNextToLabel('Departemen/Unit', data.departemen);
+    fillNextToLabel('Tgl Mulai Kerja Awal', data.tanggal_mulai_kerja);
+    fillNextToLabel('Tgl Mulai Kerja', data.tanggal_mulai_kerja);
+    fillNextToLabel('Dari', data.dari_tanggal);
+    fillNextToLabel('s/d', data.sampai_tanggal);
+    fillNextToLabel('Jumlah Hari', data.jumlah_hari);
+    fillNextToLabel('Alasan Cuti', data.alasan_cuti);
+    fillNextToLabel('TANGGAL PENGAJUAN', data.tanggal_pengajuan);
+    fillNextToLabel('Tanggal Pengajuan', data.tanggal_pengajuan);
+
+    const out = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `Form_Cuti_${data.nama.replace(/\s+/g, '_')}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    console.error('Failed to fill leave template:', err);
+    downloadTemplate('form_cuti');
+  }
+}
+
 /**
  * downloadFile — generic blob download for arbitrary file URLs.
  * Falls back to window.open if fetch fails.

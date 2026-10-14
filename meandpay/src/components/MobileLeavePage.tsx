@@ -19,7 +19,7 @@ import {
   User,
   Printer
 } from 'lucide-react';
-import { cn, formatPhotoUrl, compressImageFile, downloadTemplate } from '../lib/utils';
+import { cn, formatPhotoUrl, compressImageFile, downloadTemplate, downloadFilledLeaveTemplate } from '../lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from './Toast';
 import { generateLeaveFormPDF } from '../lib/pdfLeaveForm';
@@ -134,6 +134,40 @@ export function MobileLeavePage() {
   const [isApproving, setIsApproving] = useState(false);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [isRejecting, setIsRejecting] = useState(false);
+
+  const handleDownloadFilledTemplate = async () => {
+    const formatId = (d: string) => {
+      if (!d) return '';
+      const date = new Date(d);
+      return isNaN(date.getTime()) ? d : date.toLocaleDateString('id-ID');
+    };
+
+    const dari = formData.tanggal_mulai || '';
+    const sampai = formData.tanggal_akhir || dari;
+
+    const hitungHari = (start: string, end: string) => {
+      if (!start) return '';
+      const s = new Date(start);
+      const e = new Date(end || start);
+      if (isNaN(s.getTime()) || isNaN(e.getTime())) return '';
+      const diff = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      return String(diff > 0 ? diff : 1);
+    };
+
+    const emp = meData || userData || {};
+
+    await downloadFilledLeaveTemplate({
+      nama: emp?.name || '',
+      nik: emp?.ktp || '',
+      departemen: emp?.jabatan?.nama_jabatan || '',
+      tanggal_mulai_kerja: emp?.tgl_join ? formatId(emp.tgl_join) : '',
+      dari_tanggal: formatId(dari),
+      sampai_tanggal: formatId(sampai),
+      jumlah_hari: hitungHari(dari, sampai),
+      alasan_cuti: formData.alasan_cuti || '',
+      tanggal_pengajuan: new Date().toLocaleDateString('id-ID'),
+    });
+  };
 
 
 
@@ -725,7 +759,7 @@ export function MobileLeavePage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => downloadTemplate('form_cuti')}
+                    onClick={() => handleDownloadFilledTemplate()}
                     className="w-full py-3 bg-white border border-indigo-200 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black text-indigo-600 uppercase tracking-[0.1em] shadow-sm active:scale-95 transition-all cursor-pointer"
                   >
                     <Download className="w-4 h-4" />

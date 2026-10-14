@@ -111,7 +111,7 @@ export default function App() {
     if (location.pathname === '/absen-masuk') {
       return <PublicAbsenPage mode="masuk" settings={settings} />;
     }
-    if (location.pathname === '/absen-keluar') {
+    if (location.pathname === '/absen-keluar' || location.pathname === '/absen-pulang') {
       return <PublicAbsenPage mode="keluar" settings={settings} />;
     }
     if (location.pathname === '/absen') {

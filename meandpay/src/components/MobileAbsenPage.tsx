@@ -144,14 +144,19 @@ export function MobileAbsenPage() {
 
         const openShift = records.find((s: any) => {
           if (!s.jam_absen || s.jam_pulang) return false; // harus sudah masuk, belum pulang
-          // Hitung selisih waktu sejak absen masuk
-          const datePart = s.tanggal.split('T')[0];
+          
+          const datePart = s.tanggal?.split('T')[0];
+          // JIKA SHIFT HARI INI: Selalu prioritaskan dan anggap shift terbuka yang harus absen pulang
+          if (datePart === todayStr) {
+            return true;
+          }
+
+          // JIKA SHIFT KEMARIN (Shift Malam): Masih dalam toleransi 18 jam sejak absen masuk
           const [yr, mo, dy] = datePart.split('-').map(Number);
           const [h, m] = s.jam_absen.split(':').map(Number);
           const checkInTime = new Date(yr, mo - 1, dy, h, m);
           const elapsedHours = (now.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
-          // Masih dalam toleransi 14 jam sejak absen masuk
-          return elapsedHours >= 0 && elapsedHours < OPEN_SHIFT_TOLERANCE_HOURS;
+          return elapsedHours >= -0.5 && elapsedHours < 18;
         });
 
         if (openShift) {
@@ -808,7 +813,7 @@ export function MobileAbsenPage() {
                   <Loader2 className="animate-spin w-7 h-7" />
                 ) : (
                   <>
-                    <Fingerprint className="w-7 h-7" />
+                    <Camera className="w-7 h-7" />
                     {isCheckedIn ? 'Absen Pulang' : 'Absen Masuk'}
                   </>
                 )}

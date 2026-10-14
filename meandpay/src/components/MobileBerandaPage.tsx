@@ -125,6 +125,10 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
           activeShift = json.data.find((s: any) => {
             if (!s.tanggal) return false;
             const shiftDate = s.tanggal.split('T')[0];
+            return shiftDate === todayStr && s.jam_absen && !s.jam_pulang;
+          }) || json.data.find((s: any) => {
+            if (!s.tanggal) return false;
+            const shiftDate = s.tanggal.split('T')[0];
             return shiftDate === todayStr;
           }) || json.data[0];
         }

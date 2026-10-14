@@ -278,26 +278,34 @@ class AbsensiController {
             let shiftRecord = null;
             let tipe_absen = payload.tipe_absen; // 'masuk' or 'pulang'
 
-            // Deteksi shift malam yang belum selesai (check-in kemarin, belum check-out)
-            // Toleransi maksimal 14 jam: shift 8 jam + lembur max 4 jam + buffer 2 jam
-            // 18 jam terlalu lebar dan bisa overlap dengan shift hari berikutnya
-            const NIGHT_SHIFT_TOLERANCE_HOURS = 14;
+            // Deteksi shift malam kemarin yang belum selesai (check-in kemarin, belum check-out)
+            const NIGHT_SHIFT_TOLERANCE_HOURS = 18;
             const openNightShift = activeShifts.find(s => {
-                if (s.jam_absen && !s.jam_pulang) {
+                if (s.jam_absen && !s.jam_pulang && !isSameDay(s.tanggal, tStr)) {
                     const checkInTime = parseJakartaTime(s.tanggal, s.jam_absen);
                     const elapsedHours = (now - checkInTime) / (1000 * 60 * 60);
-                    return elapsedHours > 0 && elapsedHours < NIGHT_SHIFT_TOLERANCE_HOURS;
+                    return elapsedHours >= -0.5 && elapsedHours < NIGHT_SHIFT_TOLERANCE_HOURS;
                 }
                 return false;
             });
 
-            if (openNightShift) {
+            if (openNightShift && (tipe_absen === 'pulang' || tipe_absen === 'keluar' || !tipe_absen)) {
                 shiftRecord = openNightShift;
                 tipe_absen = 'pulang';
             } else {
                 // SMART LOGIC: Find the best shift record among ACTIVE shifts
                 if (tipe_absen === 'pulang' || tipe_absen === 'keluar') {
-                    shiftRecord = activeShifts.find(s => s.jam_absen && !s.jam_pulang);
+                    // 1. Shift hari ini yang sudah absen masuk tapi belum pulang
+                    shiftRecord = activeShifts.find(s => isSameDay(s.tanggal, tStr) && s.jam_absen && !s.jam_pulang);
+                    // 2. Jika tidak ada, cek shift kemarin yang masih terbuka (shift malam)
+                    if (!shiftRecord && openNightShift) {
+                        shiftRecord = openNightShift;
+                    }
+                    // 3. Fallback: Shift mana pun yang sudah masuk tapi belum pulang
+                    if (!shiftRecord) {
+                        shiftRecord = activeShifts.find(s => s.jam_absen && !s.jam_pulang);
+                    }
+                    // 4. Fallback: Shift hari ini
                     if (!shiftRecord) {
                         shiftRecord = activeShifts.find(s => isSameDay(s.tanggal, tStr));
                     }
@@ -321,6 +329,14 @@ class AbsensiController {
                                     distance: matchResult.distance,
                                     idempotent: true,
                                     user: user
+                                });
+                            }
+                            
+                            // Jika sudah lewat 15 menit dan belum ada jam_pulang, berikan arahan untuk memilih Absen Pulang
+                            if (!alreadyIn.jam_pulang) {
+                                return res.status(400).json({ 
+                                    success: false, 
+                                    message: `Absensi gagal. ${user.name} sudah melakukan absensi masuk (pk. ${alreadyIn.jam_absen}). Silakan pilih opsi "Absen Pulang" untuk menyelesaikan shift.` 
                                 });
                             }
                             

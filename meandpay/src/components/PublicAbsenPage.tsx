@@ -5,7 +5,8 @@ import {
   Camera, MapPin, ArrowLeft, Loader2, CheckCircle2,
   AlertCircle, Fingerprint, ShieldCheck, X,
   Clock, RefreshCw, User, Search, Check, ChevronRight,
-  UserCheck, Sparkles, AlertTriangle, History, ArrowRight
+  UserCheck, Sparkles, AlertTriangle, History, ArrowRight,
+  LogIn, LogOut
 } from 'lucide-react';
 import { cn, compressImage, formatPhotoUrl } from '../lib/utils';
 
@@ -34,8 +35,21 @@ interface PublicAbsenPageProps {
 
 const RECENT_KEY = 'bunda_quick_recent_employees_v1';
 
-export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
+export function PublicAbsenPage({ mode: initialMode, settings }: PublicAbsenPageProps) {
   const navigate = useNavigate();
+
+  const [currentMode, setCurrentMode] = useState<Mode>(initialMode || 'masuk');
+  const [employeeAttendanceStatus, setEmployeeAttendanceStatus] = useState<{
+    hasCheckedIn: boolean;
+    jamMasuk?: string | null;
+    hasCheckedOut: boolean;
+    jamPulang?: string | null;
+  } | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
+  useEffect(() => {
+    if (initialMode) setCurrentMode(initialMode);
+  }, [initialMode]);
 
   const [step, setStep] = useState<Step>('scan');
 
@@ -237,15 +251,105 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
     ).slice(0, 20);
   }, [employees, searchQuery]);
 
+  const checkEmployeeStatus = async (empId: string) => {
+    setCheckingStatus(true);
+    try {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${y}-${m}-${d}`;
+
+      // Juga cek kemarin — konsisten dengan logika backend (shift malam yang belum pulang)
+      const yesterday = new Date(now.getTime() - 24 * 3600 * 1000);
+      const yy = yesterday.getFullYear();
+      const ym = String(yesterday.getMonth() + 1).padStart(2, '0');
+      const yd = String(yesterday.getDate()).padStart(2, '0');
+      const yesterdayStr = `${yy}-${ym}-${yd}`;
+
+      const NIGHT_SHIFT_TOLERANCE_HOURS = 18;
+      
+      const res = await fetch(`${API}/absensi_user_history/${empId}/${yesterdayStr}/${todayStr}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          const records: any[] = json.data;
+
+          // ── PRIORITAS 1: Shift yang sudah masuk tapi belum pulang (hari ini ATAU shift malam kemarin)
+          const openShift = records.find((s: any) => {
+            if (!s.jam_absen || s.jam_pulang) return false;
+            const shiftDate = s.tanggal?.split('T')[0];
+            // Shift hari ini yang sudah masuk belum pulang — selalu prioritas
+            if (shiftDate === todayStr) return true;
+            // Shift kemarin (shift malam) — cek toleransi 18 jam
+            if (shiftDate === yesterdayStr) {
+              const [h, mi] = s.jam_absen.split(':').map(Number);
+              const [yr, mo, dy] = shiftDate.split('-').map(Number);
+              const checkInTime = new Date(yr, mo - 1, dy, h, mi);
+              const elapsedHours = (now.getTime() - checkInTime.getTime()) / (1000 * 60 * 60);
+              return elapsedHours >= -0.5 && elapsedHours < NIGHT_SHIFT_TOLERANCE_HOURS;
+            }
+            return false;
+          });
+
+          if (openShift) {
+            const statusInfo = {
+              hasCheckedIn: true,
+              jamMasuk: openShift.jam_absen,
+              hasCheckedOut: false,
+              jamPulang: null,
+            };
+            setEmployeeAttendanceStatus(statusInfo);
+            // Otomatis alihkan ke Absen Pulang
+            setCurrentMode('keluar');
+            return;
+          }
+
+          // ── PRIORITAS 2: Cek shift hari ini (belum masuk atau sudah selesai)
+          const todayRecord = records.find((s: any) => {
+            const shiftDate = s.tanggal?.split('T')[0];
+            return shiftDate === todayStr;
+          }) || records[0];
+
+          if (todayRecord) {
+            const statusInfo = {
+              hasCheckedIn: !!todayRecord.jam_absen,
+              jamMasuk: todayRecord.jam_absen,
+              hasCheckedOut: !!todayRecord.jam_pulang,
+              jamPulang: todayRecord.jam_pulang,
+            };
+            setEmployeeAttendanceStatus(statusInfo);
+
+            // AUTO-SWITCH MODE
+            if (statusInfo.hasCheckedIn && !statusInfo.hasCheckedOut) {
+              setCurrentMode('keluar');
+            } else if (!statusInfo.hasCheckedIn) {
+              setCurrentMode('masuk');
+            }
+            return;
+          }
+        }
+      }
+      setEmployeeAttendanceStatus(null);
+    } catch (e) {
+      console.warn('Gagal cek status kehadiran pegawai:', e);
+      setEmployeeAttendanceStatus(null);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
   const handleSelectEmployee = (emp: EmployeeQuick) => {
     setSelectedEmployee(emp);
     setSearchQuery('');
     setIsDropdownOpen(false);
+    checkEmployeeStatus(emp.id);
   };
 
   const handleClearSelected = () => {
     setSelectedEmployee(null);
     setCaptured(null);
+    setEmployeeAttendanceStatus(null);
     if (!camReady) startCamera();
   };
 
@@ -288,14 +392,19 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
       formData.append('foto_wajah', photoFile);
       formData.append('lat', location.lat.toString());
       formData.append('long', location.lng.toString());
-      formData.append('tipe_absen', mode);
+      formData.append('tipe_absen', currentMode);
       
-      if (mode === 'keluar') {
+      if (currentMode === 'keluar') {
         formData.append('jam_pulang', submitTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
       } else {
         formData.append('jam_absen', submitTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
       }
-      formData.append('tanggal', submitTime.toISOString().split('T')[0]);
+      
+      // Gunakan waktu lokal Indonesia (YYYY-MM-DD), bukan toISOString() untuk cegah pergeseran tanggal sebelum 07:00 WIB
+      const y = submitTime.getFullYear();
+      const m = String(submitTime.getMonth() + 1).padStart(2, '0');
+      const d = String(submitTime.getDate()).padStart(2, '0');
+      formData.append('tanggal', `${y}-${m}-${d}`);
 
       // Kirim user_id untuk verifikasi 1:1 (Aman & Anti-Salah Orang)
       if (selectedEmployee) {
@@ -330,7 +439,7 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
       }
 
       setResultOk(true);
-      setResultMsg(json.message || `Absen ${mode === 'masuk' ? 'Masuk' : 'Keluar'} berhasil dicatat!`);
+      setResultMsg(json.message || `Absen ${currentMode === 'masuk' ? 'Masuk' : 'Pulang'} berhasil dicatat!`);
       setResultTime(submitTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
       setResultData(json.user || selectedEmployee);
       
@@ -363,7 +472,7 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
   };
 
   /* ══════════ THEME COLORS ══════════ */
-  const isKeluar = mode === 'keluar';
+  const isKeluar = currentMode === 'keluar';
   const brandGradient = isKeluar 
     ? 'from-[#990000] via-[#800000] to-[#660000]' 
     : 'from-[#34959E] via-[#287B83] to-[#1F6268]';
@@ -380,20 +489,20 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
         <div className="absolute -top-16 -right-16 w-60 h-60 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-10 w-44 h-44 bg-black/15 rounded-full blur-2xl pointer-events-none" />
 
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 pb-6 relative z-10">
-          <div className="flex items-center justify-between">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-5 pb-6 relative z-10">
+          <div className="flex items-center justify-between gap-3">
             {/* Back Button */}
             <button
               onClick={() => { stopCamera(); navigate('/'); }}
-              className="group flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 active:scale-95 backdrop-blur-md rounded-2xl border border-white/20 transition-all text-xs font-bold"
+              className="group flex items-center gap-2 px-3 py-2 bg-white/15 hover:bg-white/25 active:scale-95 backdrop-blur-md rounded-2xl border border-white/20 transition-all text-xs font-bold shrink-0"
             >
               <ArrowLeft className="w-4 h-4 text-white group-hover:-translate-x-0.5 transition-transform" />
               <span className="hidden sm:inline">Kembali</span>
             </button>
 
-            {/* Hospital Logo & Title */}
-            <div className="text-center flex flex-col items-center">
-              <div className="flex items-center gap-2 mb-1">
+            {/* Hospital Logo & Title & Mode Selector */}
+            <div className="text-center flex flex-col items-center gap-1.5 flex-1 min-w-0">
+              <div className="flex items-center gap-2">
                 {settings?.logo ? (
                   <img src={formatPhotoUrl(settings.logo)} className="w-6 h-6 object-contain rounded-md drop-shadow-sm" alt="Logo" />
                 ) : (
@@ -401,25 +510,60 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
                     BH
                   </div>
                 )}
-                <span className="font-extrabold text-sm tracking-wider uppercase opacity-95">
+                <span className="font-extrabold text-xs sm:text-sm tracking-wider uppercase opacity-95 truncate">
                   {settings?.name || 'RS Bunda Halimah'}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight drop-shadow-sm">
-                  {isKeluar ? 'Akses Cepat · Absen Keluar' : 'Akses Cepat · Absen Masuk'}
-                </h1>
+              
+              <h1 className="text-lg sm:text-2xl font-black tracking-tight drop-shadow-sm truncate">
+                {isKeluar ? 'Akses Cepat · Absen Pulang' : 'Akses Cepat · Absen Masuk'}
+              </h1>
+
+              {/* Mode Switcher Tabs */}
+              <div className="inline-flex items-center p-1 bg-black/25 backdrop-blur-md rounded-2xl border border-white/20 shadow-inner mt-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentMode('masuk');
+                    setCaptured(null);
+                  }}
+                  className={cn(
+                    'flex items-center gap-1.5 py-1.5 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all',
+                    !isKeluar 
+                      ? 'bg-white text-emerald-800 shadow-md scale-100' 
+                      : 'text-white/75 hover:text-white hover:bg-white/10'
+                  )}
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  Absen Masuk
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentMode('keluar');
+                    setCaptured(null);
+                  }}
+                  className={cn(
+                    'flex items-center gap-1.5 py-1.5 px-3 sm:px-4 rounded-xl text-xs font-black uppercase tracking-wider transition-all',
+                    isKeluar 
+                      ? 'bg-white text-rose-800 shadow-md scale-100' 
+                      : 'text-white/75 hover:text-white hover:bg-white/10'
+                  )}
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Absen Pulang
+                </button>
               </div>
             </div>
 
             {/* Realtime Digital Clock */}
-            <div className="text-right bg-black/20 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-white/15">
-              <p className="font-black text-sm sm:text-base tabular-nums tracking-wide text-white flex items-center gap-1.5 justify-end">
+            <div className="text-right bg-black/20 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-white/15 shrink-0">
+              <p className="font-black text-xs sm:text-base tabular-nums tracking-wide text-white flex items-center gap-1.5 justify-end">
                 <Clock className="w-3.5 h-3.5 opacity-80" />
-                {now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })} <span className="text-[10px] font-bold opacity-75">WIB</span>
+                {now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })} <span className="text-[9px] font-bold opacity-75">WIB</span>
               </p>
-              <p className="text-white/70 text-[10px] font-semibold">
-                {now.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+              <p className="text-white/70 text-[9px] sm:text-[10px] font-semibold">
+                {now.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}
               </p>
             </div>
           </div>
@@ -503,6 +647,57 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
                         </span>
                         <span className="text-slate-400 font-semibold">100% Anti-Salah</span>
                       </div>
+
+                      {/* Status Kehadiran Hari Ini */}
+                      {checkingStatus ? (
+                        <div className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-100/80 text-xs text-slate-500 font-medium animate-pulse">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#34959E]" />
+                          Memeriksa status absen hari ini...
+                        </div>
+                      ) : employeeAttendanceStatus ? (
+                        <div className={cn(
+                          "p-3 rounded-xl border text-xs flex items-center justify-between gap-3",
+                          employeeAttendanceStatus.hasCheckedIn && !employeeAttendanceStatus.hasCheckedOut
+                            ? "bg-rose-50 border-rose-200 text-rose-800"
+                            : employeeAttendanceStatus.hasCheckedOut
+                            ? "bg-slate-100 border-slate-200 text-slate-700"
+                            : "bg-emerald-50 border-emerald-200 text-emerald-800"
+                        )}>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Clock className="w-4 h-4 shrink-0" />
+                            <div className="truncate">
+                              <p className="font-extrabold text-[11px] leading-tight truncate">
+                                {employeeAttendanceStatus.hasCheckedIn && !employeeAttendanceStatus.hasCheckedOut
+                                  ? `Sudah Masuk: pk. ${employeeAttendanceStatus.jamMasuk}`
+                                  : employeeAttendanceStatus.hasCheckedOut
+                                  ? `Shift Selesai (Masuk ${employeeAttendanceStatus.jamMasuk} · Pulang ${employeeAttendanceStatus.jamPulang})`
+                                  : "Belum Absen Masuk Hari Ini"}
+                              </p>
+                              <p className="text-[10px] opacity-80 mt-0.5 truncate">
+                                {employeeAttendanceStatus.hasCheckedIn && !employeeAttendanceStatus.hasCheckedOut
+                                  ? "Mode otomatis dialihkan ke: Absen Pulang"
+                                  : employeeAttendanceStatus.hasCheckedOut
+                                  ? "Anda sudah absen pulang hari ini"
+                                  : "Siap untuk Absen Masuk"}
+                              </p>
+                            </div>
+                          </div>
+                          <span className={cn(
+                            "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider shrink-0",
+                            employeeAttendanceStatus.hasCheckedIn && !employeeAttendanceStatus.hasCheckedOut
+                              ? "bg-rose-600 text-white"
+                              : employeeAttendanceStatus.hasCheckedOut
+                              ? "bg-slate-300 text-slate-800"
+                              : "bg-emerald-600 text-white"
+                          )}>
+                            {employeeAttendanceStatus.hasCheckedIn && !employeeAttendanceStatus.hasCheckedOut
+                              ? "Absen Pulang"
+                              : employeeAttendanceStatus.hasCheckedOut
+                              ? "Selesai"
+                              : "Absen Masuk"}
+                          </span>
+                        </div>
+                      ) : null}
                     </motion.div>
                   ) : (
                     /* JIKA BELUM MEMILIH PEGAWAI: SEARCH BOX */
@@ -785,7 +980,9 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
                         )}
                       >
                         <Camera className="w-5 h-5" />
-                        {selectedEmployee ? `Ambil Foto & Absen (${selectedEmployee.name.split(' ')[0]})` : 'Ambil Foto Selfie'}
+                        {selectedEmployee 
+                          ? `Ambil Foto & Absen ${isKeluar ? 'Pulang' : 'Masuk'} (${selectedEmployee.name.split(' ')[0]})` 
+                          : `Ambil Foto Selfie (${isKeluar ? 'Absen Pulang' : 'Absen Masuk'})`}
                       </button>
                     ) : (
                       <button
@@ -796,8 +993,8 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
                           brandBg, brandShadow
                         )}
                       >
-                        <Fingerprint className="w-5 h-5" />
-                        Kirim & Verifikasi Absensi
+                        <Camera className="w-5 h-5" />
+                        {isKeluar ? 'Kirim & Verifikasi Absen Pulang' : 'Kirim & Verifikasi Absen Masuk'}
                       </button>
                     )}
 
@@ -840,7 +1037,7 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
               {/* Title & Message */}
               <div className="space-y-2">
                 <h2 className={cn('text-2xl sm:text-3xl font-black tracking-tight', resultOk ? 'text-emerald-700' : 'text-rose-700')}>
-                  {resultOk ? (isKeluar ? 'Absen Keluar Berhasil!' : 'Absen Masuk Berhasil!') : 'Verifikasi Absensi Gagal'}
+                  {resultOk ? (isKeluar ? 'Absen Pulang Berhasil!' : 'Absen Masuk Berhasil!') : 'Verifikasi Absensi Gagal'}
                 </h2>
                 <p className="text-sm font-semibold text-slate-600 max-w-md mx-auto leading-relaxed">
                   {resultMsg}
@@ -848,7 +1045,7 @@ export function PublicAbsenPage({ mode, settings }: PublicAbsenPageProps) {
                 {resultOk && resultTime && (
                   <div className="inline-flex items-center gap-2 mt-2 px-4 py-2 rounded-xl bg-slate-100 text-slate-800 font-extrabold text-sm border border-slate-200">
                     <Clock className="w-4 h-4 text-[#34959E]" />
-                    {resultTime} WIB · {isKeluar ? 'Absen Keluar' : 'Absen Masuk'}
+                    {resultTime} WIB · {isKeluar ? 'Absen Pulang' : 'Absen Masuk'}
                   </div>
                 )}
               </div>

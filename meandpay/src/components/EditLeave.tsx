@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Save, X, Calendar, User, FileText, ImageIcon, Loader2 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { ArrowLeft, Save, X, Calendar, User, FileText, ImageIcon, Loader2, Download } from 'lucide-react';
+import { cn, formatPhotoUrl, downloadFilledLeaveTemplate } from '../lib/utils';
 import { useToast } from './Toast';
 
 interface EditLeaveProps {
@@ -52,6 +52,7 @@ export function EditLeave({ onBack, leave }: EditLeaveProps) {
     // State for options
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loadingEmployees, setLoadingEmployees] = useState(false);
+    const [templateUrl, setTemplateUrl] = useState<string | null>(null);
 
     // Derived selected employee
     const selectedEmp = employees.find(e => e.id.toString() === formData.user_id.toString());
@@ -61,6 +62,16 @@ export function EditLeave({ onBack, leave }: EditLeaveProps) {
 
     useEffect(() => {
         fetchEmployees();
+
+        fetch(`${import.meta.env.VITE_API_MEANDPAY}/settings/1`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        })
+            .then(r => r.json())
+            .then(j => {
+                const item = Array.isArray(j.data) ? j.data[0] : j.data;
+                if (item?.file_form_cuti) setTemplateUrl(formatPhotoUrl(item.file_form_cuti));
+            })
+            .catch(() => { });
     }, []);
 
     const fetchEmployees = async () => {
@@ -100,6 +111,38 @@ export function EditLeave({ onBack, leave }: EditLeaveProps) {
         } finally {
             setLoadingEmployees(false);
         }
+    };
+
+    const handleDownloadFilledTemplate = () => {
+        const formatId = (d: string) => {
+            if (!d) return '';
+            const date = new Date(d);
+            return isNaN(date.getTime()) ? d : date.toLocaleDateString('id-ID');
+        };
+
+        const dari = formData.tanggal_mulai || '';
+        const sampai = formData.tanggal_akhir || dari;
+
+        const hitungHari = (start: string, end: string) => {
+            if (!start) return '';
+            const s = new Date(start);
+            const e = new Date(end || start);
+            if (isNaN(s.getTime()) || isNaN(e.getTime())) return '';
+            const diff = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            return String(diff > 0 ? diff : 1);
+        };
+
+        downloadFilledLeaveTemplate({
+            nama: selectedEmp?.name || leave?.pemohon?.name || '',
+            nik: selectedEmp?.ktp || '',
+            departemen: selectedEmp?.jabatan?.nama_jabatan || '',
+            tanggal_mulai_kerja: selectedEmp?.tgl_join ? formatId(selectedEmp.tgl_join) : '',
+            dari_tanggal: formatId(dari),
+            sampai_tanggal: formatId(sampai),
+            jumlah_hari: hitungHari(dari, sampai),
+            alasan_cuti: formData.alasan_cuti || '',
+            tanggal_pengajuan: new Date().toLocaleDateString('id-ID'),
+        });
     };
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,6 +234,28 @@ export function EditLeave({ onBack, leave }: EditLeaveProps) {
             </div>
 
             <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-xl shadow-slate-200/40 border border-slate-200 space-y-8">
+
+                {templateUrl && (
+                    <div className="flex items-center justify-between p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shadow-sm">
+                                <FileText className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-black text-indigo-900 uppercase tracking-tight">Template Formulir Cuti</p>
+                                <p className="text-[10px] font-bold text-indigo-400">Unduh & lengkapi sebelum mengunggah</p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleDownloadFilledTemplate}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-200 active:scale-95 transition-all cursor-pointer"
+                        >
+                            <Download className="w-3.5 h-3.5" />
+                            Unduh File
+                        </button>
+                    </div>
+                )}
 
                 {/* Nama Pegawai & Nama Cuti */}
                 <div className="grid grid-cols-2 gap-6">

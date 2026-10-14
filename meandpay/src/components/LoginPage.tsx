@@ -278,7 +278,7 @@ export function LoginPage({ onLogin, settings }: LoginPageProps) {
                   >
                     <LogOut className="w-5 h-5" />
                     <div className="text-left">
-                      <p className="text-[11px] font-bold tracking-wider uppercase text-white leading-tight">Absen Keluar</p>
+                      <p className="text-[11px] font-bold tracking-wider uppercase text-white leading-tight">Absen Pulang</p>
                     </div>
                   </motion.button>
                 </div>
