@@ -74,12 +74,21 @@ class AbsensiService {
             }
         }
 
-        if (query.start_date && query.end_date) {
-            where.AND.push({
-                tanggal: {
-                    gte: new Date(query.start_date),
-                    lte: new Date(query.end_date)
+        if (query.start_date || query.end_date) {
+            const dateFilter = {};
+            if (query.start_date) {
+                dateFilter.gte = new Date(query.start_date);
+            }
+            if (query.end_date) {
+                const parts = query.end_date.split("-").map(Number);
+                if (parts.length === 3) {
+                    dateFilter.lte = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999));
+                } else {
+                    dateFilter.lte = new Date(query.end_date);
                 }
+            }
+            where.AND.push({
+                tanggal: dateFilter
             });
         }
 
@@ -107,13 +116,23 @@ class AbsensiService {
 
         const finalWhere = where.AND.length > 0 ? where : {};
 
+        let orderByClause = [
+            { tanggal: "desc" },
+            { id: "desc" }
+        ];
+
+        if (query.order_by === 'name' || query.sort_by === 'name') {
+            orderByClause = [
+                { users: { name: "asc" } },
+                { tanggal: "desc" },
+                { id: "desc" }
+            ];
+        }
+
         const [data, total] = await Promise.all([
             prisma.mapping_shifts.findMany({
                 where: finalWhere,
-                orderBy: [
-                    { tanggal: "desc" },
-                    { id: "desc" }
-                ],
+                orderBy: orderByClause,
                 skip,
                 take: limit,
                 include: {

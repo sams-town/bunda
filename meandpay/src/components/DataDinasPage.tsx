@@ -187,43 +187,112 @@ export function DataDinasPage({ initialFilters }: { initialFilters?: { userId?: 
   const handleExportExcel = async () => {
     const toastId = addToast({ type: 'loading', title: 'Export Excel', message: 'Sedang menyiapkan data...' });
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_MEANDPAY}/dinas-luar?limit=100000`, {
+      const queryParams = new URLSearchParams();
+      if (filterEmployeeId) queryParams.append('user_id', filterEmployeeId);
+      if (filterStartDate) queryParams.append('start_date', filterStartDate);
+      if (filterEndDate) queryParams.append('end_date', filterEndDate);
+      queryParams.append('limit', '100000');
+
+      const res = await fetch(`${import.meta.env.VITE_API_MEANDPAY}/dinas-luar?${queryParams.toString()}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.message);
 
-      const allData: DinasData[] = json.data;
-      const exportData = allData.map((item, index) => ({
-        'No': index + 1,
-        'Nama Pegawai': item.users?.name || `User ID ${item.user_id}`,
-        'Shift': item.shifts ? `${item.shifts.nama_shift} (${item.shifts.jam_masuk} - ${item.shifts.jam_keluar})` : '-',
-        'Tanggal': item.tanggal ? new Date(item.tanggal).toLocaleDateString('id-ID') : '-',
-        'Jam Masuk': item.jam_absen || '-',
-        'Telat (Menit)': item.telat || '0',
-        'Jam Pulang': item.jam_pulang || '-',
-        'Pulang Cepat (Detik)': item.pulang_cepat || '0',
-        'Status Absen': item.status_absen || '-'
-      }));
+      let allData: DinasData[] = Array.isArray(json.data) ? json.data : [];
+
+      if (filterEmployeeId) {
+        allData = allData.filter(item => String(item.user_id) === String(filterEmployeeId));
+      }
+
+      if (filterStartDate || filterEndDate) {
+        allData = allData.filter(item => {
+          if (!item.tanggal) return false;
+          const itemDateStr = typeof item.tanggal === 'string'
+            ? item.tanggal.substring(0, 10)
+            : new Date(item.tanggal).toISOString().substring(0, 10);
+          if (filterStartDate && itemDateStr < filterStartDate) return false;
+          if (filterEndDate && itemDateStr > filterEndDate) return false;
+          return true;
+        });
+      }
+
+      if (allData.length === 0) {
+        updateToast(toastId, {
+          type: 'warning',
+          title: 'Tidak Ada Data',
+          message: 'Tidak ada data dinas untuk rentang tanggal dan pegawai yang dipilih'
+        });
+        return;
+      }
+
+      allData.sort((a, b) => {
+        const nameA = (a.users?.name?.trim() || `User ID ${a.user_id}`).toLowerCase();
+        const nameB = (b.users?.name?.trim() || `User ID ${b.user_id}`).toLowerCase();
+        const nameComp = nameA.localeCompare(nameB, 'id', { sensitivity: 'base' });
+        if (nameComp !== 0) return nameComp;
+
+        const dateAStr = a.tanggal ? (typeof a.tanggal === 'string' ? a.tanggal.substring(0, 10) : new Date(a.tanggal).toISOString().substring(0, 10)) : '';
+        const dateBStr = b.tanggal ? (typeof b.tanggal === 'string' ? b.tanggal.substring(0, 10) : new Date(b.tanggal).toISOString().substring(0, 10)) : '';
+        if (dateBStr !== dateAStr) return dateBStr.localeCompare(dateAStr);
+
+        return String(b.id || '').localeCompare(String(a.id || ''));
+      });
+
+      const exportData = allData.map((item, index) => {
+        let formattedDate = '-';
+        if (item.tanggal) {
+          const dateStr = typeof item.tanggal === 'string' ? item.tanggal.substring(0, 10) : new Date(item.tanggal).toISOString().substring(0, 10);
+          const parts = dateStr.split('-');
+          if (parts.length === 3) {
+            formattedDate = `${parseInt(parts[2], 10)}/${parseInt(parts[1], 10)}/${parts[0]}`;
+          } else {
+            formattedDate = new Date(item.tanggal).toLocaleDateString('id-ID');
+          }
+        }
+
+        return {
+          'No': index + 1,
+          'Nama Pegawai': item.users?.name || `User ID ${item.user_id}`,
+          'Shift': item.shifts ? `${item.shifts.nama_shift} (${item.shifts.jam_masuk} - ${item.shifts.jam_keluar})` : '-',
+          'Tanggal': formattedDate,
+          'Jam Masuk': item.jam_absen || '-',
+          'Telat (Menit)': item.telat || '0',
+          'Jam Pulang': item.jam_pulang || '-',
+          'Pulang Cepat (Detik)': item.pulang_cepat || '0',
+          'Status Absen': item.status_absen || '-'
+        };
+      });
 
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Data Dinas');
 
       ws['!cols'] = [
-        { wch: 5 },  // No
-        { wch: 25 }, // Nama
-        { wch: 25 }, // Shift
+        { wch: 6 },  // No
+        { wch: 28 }, // Nama
+        { wch: 26 }, // Shift
         { wch: 15 }, // Tanggal
-        { wch: 12 }, // Jam Masuk
-        { wch: 15 }, // Telat
-        { wch: 12 }, // Jam Pulang
-        { wch: 20 }, // Pulang Cepat
+        { wch: 14 }, // Jam Masuk
+        { wch: 16 }, // Telat
+        { wch: 14 }, // Jam Pulang
+        { wch: 22 }, // Pulang Cepat
         { wch: 20 }, // Status
       ];
 
-      XLSX.writeFile(wb, `Data_Dinas_${new Date().toISOString().split('T')[0]}.xlsx`);
-      updateToast(toastId, { type: 'success', title: 'Berhasil', message: 'Data berhasil di-export ke Excel' });
+      let fileName = 'Data_Dinas';
+      if (filterStartDate && filterEndDate) {
+        fileName += `_${filterStartDate}_sd_${filterEndDate}`;
+      } else if (filterStartDate) {
+        fileName += `_dari_${filterStartDate}`;
+      } else if (filterEndDate) {
+        fileName += `_sampai_${filterEndDate}`;
+      } else {
+        fileName += `_${new Date().toISOString().split('T')[0]}`;
+      }
+
+      XLSX.writeFile(wb, `${fileName}.xlsx`);
+      updateToast(toastId, { type: 'success', title: 'Berhasil', message: `Data (${exportData.length} baris) berhasil di-export ke Excel` });
     } catch (err: any) {
       console.error('Export error:', err);
       updateToast(toastId, { type: 'error', title: 'Gagal', message: err.message || 'Gagal mengekspor data' });

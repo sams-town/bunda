@@ -107,10 +107,63 @@ export function AttendancePage() {
         return events;
     }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    const exportEx = () => {
-        const ws = XLSX.utils.json_to_sheet(logs.map((l: any, i) => ({ No: i + 1, Nama: l.name, Lokasi: l.loc, Tipe: l.type, Tanggal: l.date, Jam: l.time, Status: l.status })));
-        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Absensi');
-        XLSX.writeFile(wb, `Absensi_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const exportEx = async () => {
+        try {
+            const queryParams = new URLSearchParams({
+                limit: '100000',
+                user_id: searchTerm,
+                lokasi_id: lokasiId,
+                tanggal: tanggal
+            });
+            const res = await fetch(`${import.meta.env.VITE_API_MEANDPAY}/absensi?${queryParams.toString()}`, { 
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } 
+            });
+            const json = await res.json();
+            const rawData = json.success && Array.isArray(json.data) ? json.data : data;
+
+            let allLogs = rawData.flatMap((i: any) => {
+                const events = [
+                    i.jam_absen && { id: `${i.id}-in`, name: i.users?.name, loc: i.users?.lokasi?.nama_lokasi, type: 'Masuk', date: i.tanggal, time: i.jam_absen, status: i.status_absen === 'Libur' ? 'Libur' : (Number(i.telat) > 0 ? 'Terlambat' : 'Hadir') },
+                    i.jam_pulang && { id: `${i.id}-out`, name: i.users?.name, loc: i.users?.lokasi?.nama_lokasi, type: 'Pulang', date: i.tanggal, time: i.jam_pulang, status: i.status_absen === 'Libur' ? 'Libur' : (Number(i.pulang_cepat) > 0 ? 'Pulang Cepat' : 'Hadir') }
+                ].filter(Boolean);
+
+                if (events.length === 0) {
+                    return [{ 
+                        id: i.id, 
+                        name: i.users?.name, 
+                        loc: i.users?.lokasi?.nama_lokasi, 
+                        type: 'Belum Absen', 
+                        date: i.tanggal, 
+                        time: '-', 
+                        status: i.status_absen || 'Belum Absen' 
+                    }];
+                }
+                return events;
+            });
+
+            // Urutkan per nama pegawai (A-Z), lalu tanggal terbaru ke terlama
+            allLogs.sort((a: any, b: any) => {
+                const nameA = (a.name || '').toLowerCase();
+                const nameB = (b.name || '').toLowerCase();
+                if (nameA !== nameB) return nameA.localeCompare(nameB, 'id');
+                return new Date(b.date).getTime() - new Date(a.date).getTime();
+            });
+
+            const ws = XLSX.utils.json_to_sheet(allLogs.map((l: any, i: number) => ({
+                No: i + 1,
+                Nama: l.name || '-',
+                Lokasi: l.loc || '-',
+                Tipe: l.type || '-',
+                Tanggal: l.date ? new Date(l.date).toLocaleDateString('id-ID') : '-',
+                Jam: l.time || '-',
+                Status: l.status || '-'
+            })));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Absensi');
+            XLSX.writeFile(wb, `Absensi_${new Date().toISOString().split('T')[0]}.xlsx`);
+        } catch (err) {
+            console.error('Error export:', err);
+        }
     };
 
     return (
