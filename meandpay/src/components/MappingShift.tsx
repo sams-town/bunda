@@ -334,6 +334,21 @@ export function MappingShift({ employee, onBack }: MappingShiftProps) {
                                 </label>
                             </div>
 
+                            {(() => {
+                                const sel = shifts.find(s => s.id === selectedShiftId);
+                                if (sel && /office|back office|backoffice|non shift|kantor/i.test(sel.nama_shift)) {
+                                    return (
+                                        <div className="p-3.5 bg-indigo-50/80 border border-indigo-100 rounded-2xl flex items-center gap-2.5 text-indigo-700 text-xs font-bold shadow-sm">
+                                            <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 text-[11px] font-black">
+                                                ✓
+                                            </div>
+                                            <span>Shift Office Hour: Hari <b>Sabtu</b> &amp; <b>Minggu</b> otomatis terhitung <b>Libur</b> di sistem.</span>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+
                             <div className="pt-4">
                                 <button
                                     type="submit"
@@ -427,7 +442,22 @@ export function MappingShift({ employee, onBack }: MappingShiftProps) {
                                                                 ))}
                                                             </select>
                                                         ) : (
-                                                            <span className="text-xs font-bold text-slate-900">{row.shifts?.nama_shift || '-'}</span>
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="text-xs font-bold text-slate-900">{row.shifts?.nama_shift || '-'}</span>
+                                                                {(() => {
+                                                                    const d = new Date(row.tanggal);
+                                                                    const isWknd = d.getDay() === 0 || d.getDay() === 6;
+                                                                    const isOff = /office|back office|backoffice|non shift|kantor/i.test(row.shifts?.nama_shift || '');
+                                                                    if (isWknd && isOff) {
+                                                                        return (
+                                                                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg text-[9px] font-black uppercase tracking-wider">
+                                                                                Libur Weekend
+                                                                            </span>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })()}
+                                                            </div>
                                                         )}
                                                     </td>
 

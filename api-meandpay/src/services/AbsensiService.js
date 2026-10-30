@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { isBackOfficeShift, isWeekendDay, isBackOfficeWeekendOff } from "../utils/shiftHelper.js";
 
 // ─── CACHE PEGAWAI KELUAR ─────────────────────────────────────────────────────
 // Query pegawai_keluars sangat boros jika dijalankan setiap request GET /absensi.
@@ -229,6 +230,16 @@ class AbsensiService {
             payload.tanggal = new Date(payload.tanggal);
         }
 
+        // Otomatis tandai 'Libur' jika shift Back Office / Office Hour pada hari Sabtu atau Minggu dan belum absen
+        if (!payload.status_absen && payload.shift_id && payload.tanggal && !payload.jam_absen && !payload.jam_pulang) {
+            if (isWeekendDay(payload.tanggal)) {
+                const shift = await prisma.shifts.findUnique({ where: { id: payload.shift_id } });
+                if (shift && isBackOfficeShift(shift.nama_shift)) {
+                    payload.status_absen = 'Libur';
+                }
+            }
+        }
+
         const record = await prisma.mapping_shifts.create({ data: payload });
         return this.serialize(record);
     }
@@ -248,6 +259,19 @@ class AbsensiService {
                 updateData[key] = new Date(value);
             } else {
                 updateData[key] = value;
+            }
+        }
+
+        // Jika shift diupdate ke Office Hour di hari Sabtu/Minggu dan belum absen, otomatis tandai 'Libur'
+        if (!updateData.status_absen) {
+            const shiftIdToCheck = updateData.shift_id || existing.shift_id;
+            const dateToCheck = updateData.tanggal || existing.tanggal;
+            const hasAttended = Boolean(updateData.jam_absen || existing.jam_absen || updateData.jam_pulang || existing.jam_pulang);
+            if (shiftIdToCheck && !hasAttended && isWeekendDay(dateToCheck)) {
+                const shift = await prisma.shifts.findUnique({ where: { id: shiftIdToCheck } });
+                if (shift && isBackOfficeShift(shift.nama_shift)) {
+                    updateData.status_absen = 'Libur';
+                }
             }
         }
 
@@ -309,6 +333,15 @@ class AbsensiService {
             }
         }
 
+        // Jika data belum ada status_absen dan belum absen masuk/pulang,
+        // namun shift adalah Back Office pada hari Sabtu atau Minggu -> otomatis anggap 'Libur'
+        if ((!record.status_absen || record.status_absen === 'Alfa' || record.status_absen === 'Belum Absen') && !record.jam_absen && !record.jam_pulang) {
+            const shiftName = record.shifts?.nama_shift || '';
+            if (isBackOfficeShift(shiftName) && isWeekendDay(record.tanggal)) {
+                serialized.status_absen = 'Libur';
+            }
+        }
+
         return serialized;
     }
 
@@ -354,12 +387,16 @@ class AbsensiService {
             };
 
             userAttendance.forEach(a => {
+                const isBackOffice = a.shifts && isBackOfficeShift(a.shifts.nama_shift);
+                const isWeekend = isWeekendDay(a.tanggal);
+                const isLibur = a.status_absen === 'Libur' || (!a.jam_absen && !a.jam_pulang && isBackOffice && isWeekend);
+
                 if (a.status_absen === 'Cuti') stats.total_cuti++;
                 else if (a.status_absen === 'Izin') stats.total_izin_masuk++;
                 else if (a.status_absen === 'Sakit') stats.total_sakit++;
                 else if (a.status_absen === 'Masuk' || a.status_absen === 'Pulang') stats.total_hadir++;
+                else if (isLibur) stats.total_libur++;
                 else if (a.status_absen === 'Alfa') stats.total_alfa++;
-                else if (a.status_absen === 'Libur') stats.total_libur++;
 
                 const tolerance = user.batas_terlambat ? Number(user.batas_terlambat) : 0;
                 let telatRecord = a.telat ? parseInt(a.telat) : 0;

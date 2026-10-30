@@ -310,6 +310,18 @@ export function MobileBerandaPage({ settings }: { settings?: any }) {
                 {absenData?.shifts?.jam_masuk || '--:--'} - {absenData?.shifts?.jam_keluar || '--:--'}
               </p>
               <p className="text-[9px] font-bold text-slate-400 mt-0.5">{absenData?.shifts?.nama_shift || '-'}</p>
+              {(() => {
+                const isWknd = new Date().getDay() === 0 || new Date().getDay() === 6;
+                const isOffc = /office|back office|backoffice|non shift|kantor/i.test(absenData?.shifts?.nama_shift || '');
+                if (absenData?.status_absen === 'Libur' || (isOffc && isWknd && !absenData?.jam_absen)) {
+                  return (
+                    <span className="inline-block mt-1 px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-600 text-[8px] font-black uppercase rounded-md tracking-wider">
+                      Libur Weekend
+                    </span>
+                  );
+                }
+                return null;
+              })()}
             </div>
             {/* Jam Absen Masuk Aktual */}
             <div className="flex flex-col items-center text-center px-2">

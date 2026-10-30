@@ -863,6 +863,14 @@ function AddEmployeeToShiftModal({
               Lock Location
             </label>
           </div>
+          {/office|back office|backoffice|non shift|kantor/i.test(shift.nama_shift) && (
+            <div className="mt-3.5 p-3.5 bg-indigo-50/80 border border-indigo-100 rounded-2xl flex items-center gap-2.5 text-indigo-700 text-xs font-bold shadow-sm">
+              <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 text-[11px] font-black">
+                ✓
+              </div>
+              <span>Shift Office Hour: Hari <b>Sabtu</b> &amp; <b>Minggu</b> otomatis terhitung <b>Libur</b> di sistem.</span>
+            </div>
+          )}
         </div>
         {/* Employee Search */}
         <div className="px-7 py-4 border-b border-slate-100 shrink-0">

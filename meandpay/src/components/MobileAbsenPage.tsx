@@ -62,6 +62,7 @@ export function MobileAbsenPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingAbsenType, setPendingAbsenType] = useState<'masuk' | 'pulang' | null>(null);
+  const [forceCheckIn, setForceCheckIn] = useState(false);
   // Shift kemarin yang sudah masuk tapi belum pulang (sudah lewat toleransi 14 jam)
   const [missedCheckout, setMissedCheckout] = useState<any>(null);
 
@@ -497,6 +498,10 @@ export function MobileAbsenPage() {
                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                    <span className="text-[9px] font-black uppercase tracking-widest">{todayMapping.jam_absen}</span>
                 </div>
+              ) : isLiburWeekend ? (
+                <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-full">
+                   <span className="text-[9px] font-black uppercase tracking-widest">Libur Weekend</span>
+                </div>
               ) : (
                 <p className="text-[9px] font-black text-slate-300 mt-3 uppercase tracking-widest">Belum Absen</p>
               )}
@@ -509,6 +514,10 @@ export function MobileAbsenPage() {
                 <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-rose-500 text-white rounded-full">
                    <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                    <span className="text-[9px] font-black uppercase tracking-widest">{todayMapping.jam_pulang}</span>
+                </div>
+              ) : isLiburWeekend ? (
+                <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-full">
+                   <span className="text-[9px] font-black uppercase tracking-widest">Libur Weekend</span>
                 </div>
               ) : (
                 <p className="text-[9px] font-black text-slate-300 mt-3 uppercase tracking-widest">Belum Pulang</p>
@@ -632,6 +641,39 @@ export function MobileAbsenPage() {
                   className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 active:scale-95 transition-all flex items-center justify-center gap-3"
                 >
                   <RefreshCw className="w-4 h-4" /> Hubungi Admin
+                </button>
+              </div>
+            </motion.div>
+          ) : (isLiburWeekend && !forceCheckIn && !isCheckedIn) ? (
+            <motion.div
+              key="libur-weekend"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-[2.5rem] p-8 text-center border border-indigo-100 shadow-xl shadow-indigo-500/10 space-y-6"
+            >
+              <div className="relative mx-auto w-20 h-20">
+                <div className="absolute inset-0 bg-indigo-500 blur-2xl opacity-20 rounded-full" />
+                <div className="relative w-20 h-20 bg-indigo-50 rounded-[1.8rem] flex items-center justify-center border border-indigo-100">
+                  <Calendar className="w-10 h-10 text-indigo-600" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full text-indigo-700 text-xs font-black uppercase tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                  Hari Libur Akhir Pekan
+                </div>
+                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Selamat Beristirahat!</h3>
+                <p className="text-xs text-slate-500 font-bold leading-relaxed px-2">
+                  Shift <span className="text-indigo-600 font-black">{todayMapping.shifts?.nama_shift || 'Office Hour'}</span> otomatis libur pada hari Sabtu &amp; Minggu. Anda tidak memiliki kewajiban absensi hari ini.
+                </p>
+              </div>
+              <div className="pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setForceCheckIn(true)}
+                  className="w-full py-3.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-2xl text-xs font-bold transition-all border border-slate-200 active:scale-95"
+                >
+                  Tetap Absen Masuk (Lembur / Tugas Khusus)
                 </button>
               </div>
             </motion.div>

@@ -173,6 +173,20 @@ export function MappingShiftMatrixPage() {
                         <button onClick={fetchData} className="ml-2 p-2 hover:bg-slate-200 rounded-xl transition-colors"><RefreshCw className={cn("w-5 h-5", loading && "animate-spin")} /></button>
                     </div>
 
+                    {/* Office Hour info banner if active */}
+                    {(() => {
+                        const activeObj = shifts.find(s => String(s.id) === activeShiftId);
+                        if (activeObj && /office|back office|backoffice|non shift|kantor/i.test(activeObj.nama_shift)) {
+                            return (
+                                <div className="px-3.5 py-1.5 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-700 text-xs font-bold flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+                                    <span>Office Hour: Hari <b>Sabtu</b> &amp; <b>Minggu</b> otomatis <b>Libur</b> di sistem.</span>
+                                </div>
+                            );
+                        }
+                        return null;
+                    })()}
+
                     {/* Paint Palette */}
                     <div className="flex flex-wrap items-center gap-2 p-1.5 bg-white rounded-2xl border border-slate-200 shadow-sm">
                         <span className="text-xs font-bold text-slate-400 ml-3 mr-1 uppercase tracking-widest">Pilih Kuas:</span>
@@ -221,11 +235,16 @@ export function MappingShiftMatrixPage() {
                             <tr className="bg-slate-100 text-[10px] font-black text-slate-600 uppercase tracking-widest">
                                 <th className="sticky left-0 bg-slate-100 px-4 py-3 border border-slate-200 w-12 text-center shadow-[2px_0_5px_rgba(0,0,0,0.05)] z-20">No</th>
                                 <th className="sticky left-12 bg-slate-100 px-4 py-3 border border-slate-200 w-64 text-left shadow-[2px_0_5px_rgba(0,0,0,0.05)] z-20">Nama Pegawai</th>
-                                {days.map(d => (
-                                    <th key={d} className={cn("px-2 py-3 border border-slate-200 w-10 text-center", (new Date(year, month, d).getDay() === 0) && "bg-rose-100 text-rose-600")}>
-                                        {d}
-                                    </th>
-                                ))}
+                                {days.map(d => {
+                                    const dayOfWeek = new Date(year, month, d).getDay();
+                                    const isSun = dayOfWeek === 0;
+                                    const isSat = dayOfWeek === 6;
+                                    return (
+                                        <th key={d} className={cn("px-2 py-3 border border-slate-200 w-10 text-center", isSun ? "bg-rose-100 text-rose-600" : isSat ? "bg-amber-100/70 text-amber-700" : "")}>
+                                            {d}
+                                        </th>
+                                    );
+                                })}
                             </tr>
                         </thead>
                         <tbody className="text-xs">
@@ -239,9 +258,14 @@ export function MappingShiftMatrixPage() {
                                         </div>
                                     </td>
                                     {days.map(day => {
-                                        const isSunday = new Date(year, month, day).getDay() === 0;
+                                        const dayOfWeek = new Date(year, month, day).getDay();
+                                        const isSunday = dayOfWeek === 0;
+                                        const isSaturday = dayOfWeek === 6;
+                                        const isWeekend = isSunday || isSaturday;
                                         const val = matrix[emp.id]?.[day.toString()];
                                         const meta = val ? shiftMap[val] : null;
+                                        const shiftObj = val ? shifts.find(s => String(s.id) === val) : null;
+                                        const isOfficeWeekend = isWeekend && shiftObj && /office|back office|backoffice|non shift|kantor/i.test(shiftObj.nama_shift);
                                         
                                         return (
                                             <td 
@@ -249,12 +273,16 @@ export function MappingShiftMatrixPage() {
                                                 onClick={() => handleCellClick(emp.id, day)}
                                                 className={cn(
                                                     "border border-slate-200 p-0 text-center relative w-10 min-w-[2.5rem] cursor-pointer hover:ring-2 hover:ring-inset hover:ring-indigo-400 transition-all", 
-                                                    meta?.bgClass || (isSunday ? "bg-rose-50/30" : "bg-transparent"),
+                                                    isOfficeWeekend ? "bg-indigo-50/60" : (meta?.bgClass || (isSunday ? "bg-rose-50/30" : isSaturday ? "bg-amber-50/20" : "bg-transparent")),
                                                     meta?.textClass || "text-slate-300 font-normal"
                                                 )}
+                                                title={isOfficeWeekend ? "Office Hour (Libur Weekend)" : undefined}
                                             >
-                                                <div className="w-full h-full min-h-[2.5rem] flex items-center justify-center">
-                                                    {meta?.code || '-'}
+                                                <div className="w-full h-full min-h-[2.5rem] flex flex-col items-center justify-center">
+                                                    <span>{meta?.code || '-'}</span>
+                                                    {isOfficeWeekend && (
+                                                        <span className="text-[7px] font-black text-indigo-500 leading-none">OFF</span>
+                                                    )}
                                                 </div>
                                             </td>
                                         );

@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { isBackOfficeWeekendOff } from "../utils/shiftHelper.js";
 
 class PayrollService {
     serialize(item) {
@@ -348,7 +349,7 @@ class PayrollService {
 
                 const cuti = userMappingShifts.filter(m => m.status_absen === 'Cuti').length;
                 const sakit = userMappingShifts.filter(m => m.status_absen === 'Sakit').length;
-                const libur = userMappingShifts.filter(m => m.status_absen === 'Libur').length;
+                const libur = userMappingShifts.filter(m => isBackOfficeWeekendOff(m)).length;
                 const izinMasukMapping = userMappingShifts.filter(m => m.status_absen === 'Izin Masuk').length;
                 const izinPelatihan = userMappingShifts.filter(m => m.status_absen === 'Izin Pelatihan').length;
 
@@ -613,7 +614,7 @@ class PayrollService {
         const hadir = userMappingShifts.filter(m => ['Masuk', 'Pulang'].includes(m.status_absen)).length;
         const izinTelat = userMappingShifts.filter(m => m.status_absen === 'Izin Telat').length;
         const izinPulangCepat = userMappingShifts.filter(m => m.status_absen === 'Izin Pulang Cepat').length;
-        const libur = userMappingShifts.filter(m => m.status_absen === 'Libur').length;
+        const libur = userMappingShifts.filter(m => isBackOfficeWeekendOff(m)).length;
         const cuti = userMappingShifts.filter(m => m.status_absen === 'Cuti').length;
         const izinMasukMapping = userMappingShifts.filter(m => m.status_absen === 'Izin Masuk').length;
         const sakit = userMappingShifts.filter(m => m.status_absen === 'Sakit').length;

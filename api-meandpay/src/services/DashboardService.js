@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { isBackOfficeWeekendOff } from "../utils/shiftHelper.js";
 
 class DashboardService {
     async getStats(requestedMonth, requestedYear, requestedDate) {
@@ -14,6 +15,7 @@ class DashboardService {
         const currentYear = year.toString();
 
         const pegawaiKeluars = await prisma.pegawai_keluars.findMany({
+            include: { shifts: true },
             where: { status: { in: ['APPROVED', 'DELETED'] } },
             select: { user_id: true }
         });
@@ -22,6 +24,7 @@ class DashboardService {
             .filter((id) => id !== null && id !== undefined);
 
         const doctorUsers = await prisma.model_has_roles.findMany({
+            include: { shifts: true },
             where: { roles: { name: { in: ["dokter", "bidan"] } } },
             select: { model_id: true }
         });
@@ -29,12 +32,14 @@ class DashboardService {
 
         // 1. Total Pegawai (Exclude Super Admins and Doctors)
         const totalPegawai = await prisma.users.count({
+            include: { shifts: true },
             where: {
                 id: { notIn: [...excludedUserIds, 1062n, ...doctorUserIds] }
             }
         });
 
         const totalDokter = await prisma.users.count({
+            include: { shifts: true },
             where: {
                 id: { in: doctorUserIds, notIn: [...excludedUserIds, 1062n] }
             }
@@ -46,6 +51,7 @@ class DashboardService {
         const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
         const todayAttendance = await prisma.mapping_shifts.findMany({
+            include: { shifts: true },
             where: {
                 tanggal: {
                     gte: startOfToday,
@@ -54,6 +60,9 @@ class DashboardService {
                 users: {
                     id: { notIn: [...excludedUserIds, 1062n] }
                 }
+            },
+            include: {
+                shifts: true
             }
         });
 
@@ -69,7 +78,12 @@ class DashboardService {
         };
 
         todayAttendance.forEach(a => {
+            const isLibur = a.status_absen === 'Libur' || isBackOfficeWeekendOff(a);
+
             if (a.status_absen === 'Masuk' || a.status_absen === 'Pulang') attendanceStats.masuk++;
+            else if (isLibur) {
+                // Hari libur / weekend Office Hour: tidak dihitung Alfa
+            }
             else if (a.status_absen === 'Alfa') attendanceStats.alfa++;
             else if (a.status_absen === 'Cuti') attendanceStats.cuti++;
             else if (a.status_absen === 'Izin') attendanceStats.izin++;
@@ -85,6 +99,7 @@ class DashboardService {
 
         // 2.1 Attendance Events (Current Month for Calendar)
         const attendance = await prisma.mapping_shifts.findMany({
+            include: { shifts: true },
             where: {
                 tanggal: {
                     gte: startOfMonth,
@@ -139,6 +154,7 @@ class DashboardService {
 
         // 2.2 Dinas Luar (Business Trips)
         const dinasLuars = await prisma.dinas_luars.findMany({
+            include: { shifts: true },
             where: {
                 tanggal: {
                     contains: `${currentYear}-${String(month + 1).padStart(2, '0')}`
@@ -149,6 +165,7 @@ class DashboardService {
         // Fetch users for dinas luars to get names (Exclude Super Admins)
         const dlUserIds = [...new Set(dinasLuars.map(dl => dl.user_id).filter(id => id !== null))];
         const dlUsers = await prisma.users.findMany({
+            include: { shifts: true },
             where: { 
                 id: { in: dlUserIds, notIn: [...excludedUserIds, 1062n] }
             },
@@ -170,6 +187,7 @@ class DashboardService {
 
         // 2.3 Approved Cuti (from cutis table for ranges - Exclude Super Admins)
         const approvedCutis = await prisma.cutis.findMany({
+            include: { shifts: true },
             where: {
                 status_cuti: 'Diterima',
                 OR: [
@@ -181,6 +199,7 @@ class DashboardService {
 
         const cutiUserIds = [...new Set(approvedCutis.map(c => c.user_id).filter(id => id !== null))];
         const cutiUsers = await prisma.users.findMany({
+            include: { shifts: true },
             where: {
                 id: { in: cutiUserIds, notIn: [...excludedUserIds, 1062n] }
             },
@@ -228,6 +247,7 @@ class DashboardService {
 
         // 2.4 Approved Overtime (Exclude Super Admins)
         const approvedLemburs = await prisma.lemburs.findMany({
+            include: { shifts: true },
             where: {
                 tanggal: {
                     contains: `${currentYear}-${String(month + 1).padStart(2, '0')}`
@@ -257,6 +277,7 @@ class DashboardService {
 
         // 2.5 Birthdays (Exclude Super Admins)
         const allUsers = await prisma.users.findMany({
+            include: { shifts: true },
             where: { 
                 id: { notIn: [...excludedUserIds, 1062n] },
                 tgl_lahir: { not: null }
@@ -312,6 +333,7 @@ class DashboardService {
 
         // 5. Payroll Total (Selected Month)
         const payrollTotal = await prisma.payrolls.aggregate({
+            include: { shifts: true },
             where: {
                 bulan: currentMonthName,
                 tahun: currentYear
@@ -323,6 +345,7 @@ class DashboardService {
 
         // 6. Kasbon Total (Selected Month)
         const kasbonTotal = await prisma.kasbons.aggregate({
+            include: { shifts: true },
             where: {
                 tanggal: {
                     gte: startOfMonth,
@@ -337,6 +360,7 @@ class DashboardService {
 
         // 7. Reimbursement Total (Selected Month)
         const reimbursementTotal = await prisma.reimbursements.aggregate({
+            include: { shifts: true },
             where: {
                 tanggal: {
                     gte: startOfMonth,

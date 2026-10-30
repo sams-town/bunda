@@ -304,7 +304,9 @@ export function MobileAttendancePage() {
                             </div>
                          ) : (
                             <div className="py-2">
-                               <p className="text-xs font-bold text-slate-300 italic">No entry data</p>
+                               <p className={cn("text-xs font-bold italic", record.status_absen === 'Libur' ? "text-indigo-500" : "text-slate-300")}>
+                                  {record.status_absen === 'Libur' ? "Libur Akhir Pekan" : "No entry data"}
+                               </p>
                             </div>
                          )}
                       </div>
@@ -355,7 +357,9 @@ export function MobileAttendancePage() {
                             </div>
                          ) : (
                             <div className="py-2">
-                               <p className="text-xs font-bold text-slate-300 italic">Working...</p>
+                               <p className={cn("text-xs font-bold italic", record.status_absen === 'Libur' ? "text-indigo-500" : "text-slate-300")}>
+                                  {record.status_absen === 'Libur' ? "Libur Akhir Pekan" : "Working..."}
+                               </p>
                             </div>
                          )}
                       </div>

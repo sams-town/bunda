@@ -1,4 +1,5 @@
 import prisma from "../config/prisma.js";
+import { isBackOfficeShift, isWeekendDay } from "../utils/shiftHelper.js";
 
 class MappingShiftService {
     async getAll(query = {}) {
@@ -124,6 +125,10 @@ class MappingShiftService {
             }
         });
 
+        // Cek apakah shift yang di-assign adalah shift Back Office
+        const shift = shift_id ? await prisma.shifts.findUnique({ where: { id: BigInt(shift_id) } }) : null;
+        const isBackOffice = shift && isBackOfficeShift(shift.nama_shift);
+
         let current = new Date(start);
         while (current <= end) {
             // Gunakan UTC agar tidak bergeser karena timezone server (Vercel/DigitalOcean dll)
@@ -131,12 +136,18 @@ class MappingShiftService {
             const m = String(current.getUTCMonth() + 1).padStart(2, '0');
             const d = String(current.getUTCDate()).padStart(2, '0');
             const dateStr = `${y}-${m}-${d}`;
+            const targetDate = new Date(dateStr);
+            const isWeekend = isWeekendDay(targetDate);
+
+            // Jika shift Back Office dan jatuh pada hari Sabtu atau Minggu, otomatis status_absen = 'Libur'
+            const statusAbsen = (isBackOffice && isWeekend) ? "Libur" : null;
 
             const record = await prisma.mapping_shifts.create({
                 data: {
                     user_id: BigInt(user_id),
                     shift_id: shift_id ? BigInt(shift_id) : null,
-                    tanggal: new Date(dateStr),
+                    tanggal: targetDate,
+                    status_absen: statusAbsen,
                     lock_location: lock_location ? lock_location.toString() : "0"
                 }
             });
@@ -151,6 +162,7 @@ class MappingShiftService {
     async bulkStoreMatrix(matrixData) {
         const createdRecords = [];
         // matrixData is expected to be an array of: { user_id, tanggal, shift_id, lock_location }
+        const shiftCache = new Map();
         
         for (const item of matrixData) {
             const { user_id, tanggal, shift_id, lock_location } = item;
@@ -164,12 +176,26 @@ class MappingShiftService {
             });
             
             if (shift_id) {
+                let statusAbsen = item.status_absen || null;
+                if (!statusAbsen) {
+                    let isBackOffice = shiftCache.get(shift_id);
+                    if (isBackOffice === undefined) {
+                        const shift = await prisma.shifts.findUnique({ where: { id: BigInt(shift_id) } });
+                        isBackOffice = shift ? isBackOfficeShift(shift.nama_shift) : false;
+                        shiftCache.set(shift_id, isBackOffice);
+                    }
+                    if (isBackOffice && isWeekendDay(tanggal)) {
+                        statusAbsen = "Libur";
+                    }
+                }
+
                 // If a shift is selected, create new mapping
                 const record = await prisma.mapping_shifts.create({
                     data: {
                         user_id: BigInt(user_id),
                         shift_id: BigInt(shift_id),
                         tanggal: new Date(tanggal),
+                        status_absen: statusAbsen,
                         lock_location: lock_location !== undefined ? lock_location.toString() : "0"
                     }
                 });
@@ -182,6 +208,9 @@ class MappingShiftService {
 
     async bulkUpdateRange(data) {
         const { user_id, start_date, end_date, shift_id, lock_location } = data;
+
+        const shift = shift_id ? await prisma.shifts.findUnique({ where: { id: BigInt(shift_id) } }) : null;
+        const isBackOffice = shift && isBackOfficeShift(shift.nama_shift);
 
         const result = await prisma.mapping_shifts.updateMany({
             where: {
@@ -196,6 +225,30 @@ class MappingShiftService {
                 lock_location: lock_location !== undefined ? lock_location.toString() : undefined
             }
         });
+
+        // Jika shift Back Office, update otomatis hari Sabtu & Minggu yang belum absen agar berstatus Libur
+        if (isBackOffice) {
+            const rangeRecords = await prisma.mapping_shifts.findMany({
+                where: {
+                    user_id: BigInt(user_id),
+                    tanggal: {
+                        gte: new Date(start_date),
+                        lte: new Date(end_date)
+                    },
+                    jam_absen: null,
+                    jam_pulang: null
+                }
+            });
+
+            for (const rec of rangeRecords) {
+                if (isWeekendDay(rec.tanggal) && rec.status_absen !== 'Libur') {
+                    await prisma.mapping_shifts.update({
+                        where: { id: rec.id },
+                        data: { status_absen: 'Libur' }
+                    });
+                }
+            }
+        }
 
         return { count: result.count };
     }
@@ -216,14 +269,28 @@ class MappingShiftService {
         return { count: result.count };
     }
 
+    enrichRecord(record) {
+        if (!record) return record;
+        // Jika data lama belum ada status_absen, dan belum ada jam absen masuk/pulang,
+        // namun shift adalah Back Office pada hari Sabtu atau Minggu -> otomatis anggap 'Libur'
+        if ((!record.status_absen || record.status_absen === 'Alfa' || record.status_absen === 'Belum Absen') && !record.jam_absen && !record.jam_pulang) {
+            const shiftName = record.shifts?.nama_shift || '';
+            if (isBackOfficeShift(shiftName) && isWeekendDay(record.tanggal)) {
+                return { ...record, status_absen: 'Libur' };
+            }
+        }
+        return record;
+    }
+
     serialize(record) {
         if (record === null || record === undefined) return record;
         if (typeof record === "bigint") return record.toString();
         if (record instanceof Date) return record.toISOString();
         if (Array.isArray(record)) return record.map(i => this.serialize(i));
         if (typeof record === "object") {
+            const enriched = this.enrichRecord(record);
             const serialized = {};
-            for (const [key, value] of Object.entries(record)) {
+            for (const [key, value] of Object.entries(enriched)) {
                 serialized[key] = this.serialize(value);
             }
             return serialized;

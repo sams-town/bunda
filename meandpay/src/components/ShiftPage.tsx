@@ -185,6 +185,12 @@ function ShiftModal({
               )}
             />
             {errors.nama_shift && <p className="text-[11px] text-rose-500 font-medium">{errors.nama_shift}</p>}
+            {/office|back office|backoffice|non shift|kantor/i.test(form.nama_shift) && (
+              <div className="mt-2 p-2.5 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-700 text-xs font-bold flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
+                <span>Shift Office Hour: Hari <b>Sabtu</b> &amp; <b>Minggu</b> otomatis <b>Libur</b> di sistem.</span>
+              </div>
+            )}
           </div>
 
           {/* Jam Kerja */}
