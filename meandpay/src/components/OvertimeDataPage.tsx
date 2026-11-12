@@ -4,7 +4,7 @@ import * as XLSX from 'xlsx';
 import {
   Search, Download, Edit2, Trash2, Eye, ChevronLeft, ChevronRight,
   MapPin, Clock, CheckCircle2, XCircle, AlertCircle, AlertTriangle,
-  ArrowUpDown, Filter, Loader2, Play, FileText
+  ArrowUpDown, Filter, Loader2, Play, FileText, Image as ImageIcon
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet';
 import L from 'leaflet';
@@ -184,8 +184,9 @@ export function OvertimeDataPage({ initialFilters }: { initialFilters?: { userId
     return false;
   };
 
-  const handleApprove = async (id: string, notes: string) => {
-    const toastId = addToast({ type: 'loading', title: 'Approving', message: 'Sedang memproses approval...' });
+  const handleApprove = async (id: string, notes: string, status: 'Approved' | 'Rejected' = 'Approved') => {
+    const actionLabel = status === 'Rejected' ? 'Menolak' : 'Menyetujui';
+    const toastId = addToast({ type: 'loading', title: 'Memproses...', message: `Sedang ${actionLabel.toLowerCase()} lembur...` });
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const approverId = user.id ? String(user.id) : '1';
@@ -195,11 +196,11 @@ export function OvertimeDataPage({ initialFilters }: { initialFilters?: { userId
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ notes, approved_by: approverId })
+        body: JSON.stringify({ status, notes, approved_by: approverId })
       });
       const json = await res.json();
       if (json.success) {
-        updateToast(toastId, { type: 'success', title: 'Berhasil', message: json.message || 'Lembur berhasil di-approve' });
+        updateToast(toastId, { type: 'success', title: 'Berhasil', message: json.message || `Lembur berhasil diproses` });
         fetchData();
       } else {
         updateToast(toastId, { type: 'error', title: 'Gagal', message: json.message || 'Gagal memproses approval' });
@@ -537,8 +538,8 @@ export function OvertimeDataPage({ initialFilters }: { initialFilters?: { userId
         {approveData && (
           <ApprovalModal
             data={approveData}
-            onConfirm={(notes) => {
-              handleApprove(approveData.id, notes);
+            onConfirm={(notes, status) => {
+              handleApprove(approveData.id, notes, status);
               setApproveData(null);
             }}
             onCancel={() => setApproveData(null)}
@@ -629,66 +630,105 @@ function DeleteConfirmModal({ data, onConfirm, onCancel }: { data: OvertimeData,
   );
 }
 
-function ApprovalModal({ data, onConfirm, onCancel }: { data: OvertimeData, onConfirm: (notes: string) => void, onCancel: () => void }) {
+function ApprovalModal({ data, onConfirm, onCancel }: { data: OvertimeData, onConfirm: (notes: string, status: 'Approved' | 'Rejected') => void, onCancel: () => void }) {
   const [notes, setNotes] = useState(data.notes || '');
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCancel} className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-      <motion.div initial={{ scale: 0.9, opacity: 0, y: 30 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 30 }} className="relative bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] w-full max-w-md overflow-hidden p-10 flex flex-col border border-slate-100">
-        <div className="flex items-center gap-4 mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+      <motion.div initial={{ scale: 0.9, opacity: 0, y: 30 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 30 }} className="relative bg-white rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden p-8 flex flex-col border border-slate-100">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center">
+            <CheckCircle2 className="w-7 h-7 text-indigo-600" />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Approval Lembur</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Konfirmasi Pengajuan</p>
+            <h3 className="text-xl font-black text-slate-900 tracking-tight">Review / Approval Lembur</h3>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">Konfirmasi & Verifikasi Pengajuan</p>
           </div>
         </div>
 
-        <div className="space-y-6 mb-10">
-          <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Karyawan</p>
-            <p className="text-sm font-black text-slate-700">{data.karyawan?.name}</p>
-            <div className="flex items-center gap-4 mt-4 pt-4 border-t border-slate-200/60">
+        <div className="space-y-5 mb-8">
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Karyawan</p>
+              <p className="text-sm font-black text-slate-800">{data.karyawan?.name}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200/60">
               <div>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tanggal</p>
-                <p className="text-xs font-black text-slate-600">{data.tanggal}</p>
+                <p className="text-xs font-black text-slate-700">{data.tanggal}</p>
               </div>
               <div>
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Durasi</p>
-                <p className="text-xs font-black text-slate-600">{formatDuration(data.total_lembur)}</p>
+                <p className="text-xs font-black text-slate-700">{formatDuration(data.total_lembur)}</p>
               </div>
-              {data.file_lembur && (
-                <div>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Berkas</p>
-                  <a
-                    href={formatPhotoUrl(data.file_lembur)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs font-black text-indigo-600 hover:text-indigo-800 transition-colors uppercase tracking-wider"
-                  >
-                    <FileText className="w-3.5 h-3.5" /> Lihat
-                  </a>
-                </div>
-              )}
             </div>
+
+            {/* Unggahan / Lampiran */}
+            {(data.file_lembur || data.foto_jam_masuk || data.foto_jam_keluar) && (
+              <div className="pt-3 border-t border-slate-200/60">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Lampiran Berkas & Foto</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {data.file_lembur && (
+                    <a
+                      href={formatPhotoUrl(data.file_lembur)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-indigo-200 rounded-xl text-[10px] font-black text-indigo-600 hover:bg-indigo-50 transition-colors uppercase tracking-wider shadow-sm"
+                    >
+                      <FileText className="w-3.5 h-3.5" /> Berkas Lembur
+                    </a>
+                  )}
+                  {data.foto_jam_masuk && (
+                    <a
+                      href={formatPhotoUrl(data.foto_jam_masuk)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-200 rounded-xl text-[10px] font-black text-emerald-600 hover:bg-emerald-50 transition-colors uppercase tracking-wider shadow-sm"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" /> Foto Masuk
+                    </a>
+                  )}
+                  {data.foto_jam_keluar && (
+                    <a
+                      href={formatPhotoUrl(data.foto_jam_keluar)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-200 rounded-xl text-[10px] font-black text-blue-600 hover:bg-blue-50 transition-colors uppercase tracking-wider shadow-sm"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" /> Foto Keluar
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
-            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 block">Catatan Approval</label>
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1 block">Catatan Approval (Opsional)</label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Tulis catatan (misal: Lanjutkan kerjanya!)..."
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all min-h-[120px] resize-none"
+              placeholder="Tulis catatan (misal: Disetujui, tolong lampirkan laporan kerja)..."
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all min-h-[90px] resize-none"
             />
           </div>
         </div>
 
-        <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-4 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95">Batal</button>
-          <button onClick={() => onConfirm(notes)} className="flex-[2] py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-emerald-200 transition-all active:scale-95">Setujui Lembur</button>
+        <div className="flex items-center gap-2">
+          <button onClick={onCancel} className="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95">Batal</button>
+          <button
+            onClick={() => onConfirm(notes, 'Rejected')}
+            className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-1.5 shadow-sm"
+          >
+            <XCircle className="w-4 h-4" /> Tolak
+          </button>
+          <button
+            onClick={() => onConfirm(notes, 'Approved')}
+            className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+          >
+            <CheckCircle2 className="w-4 h-4" /> Setujui
+          </button>
         </div>
       </motion.div>
     </div>

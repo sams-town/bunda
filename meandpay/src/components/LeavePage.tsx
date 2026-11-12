@@ -17,7 +17,9 @@ import {
   Loader2,
   CheckCircle,
   Check,
-  Printer
+  Printer,
+  XCircle,
+  Eye
 } from 'lucide-react';
 import { cn, formatPhotoUrl } from '../lib/utils';
 import { useToast } from './Toast';
@@ -66,6 +68,9 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
   const [isEditing, setIsEditing] = useState<Leave | null>(null);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [rejectNotes, setRejectNotes] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -281,6 +286,41 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
     }
   };
 
+  const executeReject = async () => {
+    if (!rejectingId) return;
+    try {
+      setIsRejecting(true);
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      const approverId = user.id ? String(user.id) : '1';
+
+      const fd = new FormData();
+      fd.append('user_approval', String(approverId));
+      fd.append('status', 'Ditolak');
+      if (rejectNotes) fd.append('notes', rejectNotes);
+
+      const res = await fetch(`${import.meta.env.VITE_API_MEANDPAY}/cutis/${rejectingId}/approve`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: fd
+      });
+      const json = await res.json();
+      if (json.success) {
+        addToast({ type: 'success', message: 'Cuti berhasil ditolak' });
+        setRejectingId(null);
+        setRejectNotes('');
+        fetchData();
+      } else {
+        addToast({ type: 'error', message: json.message || 'Gagal menolak cuti' });
+      }
+    } catch (err) {
+      addToast({ type: 'error', message: 'Terdapat masalah pada server' });
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
   const executeDelete = async () => {
     if (!deletingId) return;
     try {
@@ -462,7 +502,13 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
                     <td className="py-6 px-8">
                       <span className={cn(
                         "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest",
-                        item.status_cuti?.toLowerCase() === 'diterima' || item.status_cuti?.toLowerCase() === 'approved' ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                        item.status_cuti?.toLowerCase() === 'diterima' || item.status_cuti?.toLowerCase() === 'approved'
+                          ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                          : item.status_cuti?.toLowerCase() === 'ditolak' || item.status_cuti?.toLowerCase() === 'rejected'
+                          ? "bg-rose-50 text-rose-600 border border-rose-100"
+                          : item.status_cuti?.toLowerCase() === 'disetujui manager'
+                          ? "bg-blue-50 text-blue-600 border border-blue-100"
+                          : "bg-amber-50 text-amber-600 border border-amber-100"
                       )}>
                         {item.status_cuti}
                       </span>
@@ -477,12 +523,24 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
                         ) : (
                           <>
                             {canApprove(item) && (
-                              <button
-                                onClick={() => setApprovingId(item.id)}
-                                className="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all border border-slate-200"
-                              >
-                                Approve
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => setApprovingId(item.id)}
+                                  className="px-2.5 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all border border-emerald-200 shadow-sm flex items-center gap-1"
+                                  title="Setujui Cuti"
+                                >
+                                  <Check className="w-3 h-3" />
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={() => setRejectingId(item.id)}
+                                  className="px-2.5 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all border border-rose-200 shadow-sm flex items-center gap-1"
+                                  title="Tolak Cuti"
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                  Tolak
+                                </button>
+                              </div>
                             )}
                             <button
                               onClick={() => setIsEditing(item)}
@@ -584,6 +642,54 @@ export function LeavePage({ initialFilters }: LeavePageProps = {}) {
                     className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {isApproving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ya, Setujui'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {rejectingId && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100"
+            >
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
+                  <XCircle className="w-8 h-8 text-rose-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Tolak Cuti?</h3>
+                  <p className="text-sm text-slate-500 mt-1">Pengajuan cuti ini akan ditolak.</p>
+                </div>
+                <div className="w-full text-left">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Catatan Penolakan (Opsional)</label>
+                  <input
+                    type="text"
+                    value={rejectNotes}
+                    onChange={(e) => setRejectNotes(e.target.value)}
+                    placeholder="Alasan penolakan..."
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-rose-500"
+                  />
+                </div>
+                <div className="flex gap-3 w-full mt-2">
+                  <button
+                    onClick={() => { setRejectingId(null); setRejectNotes(''); }}
+                    disabled={isRejecting}
+                    className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={executeReject}
+                    disabled={isRejecting}
+                    className="flex-1 px-4 py-3 rounded-xl text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isRejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ya, Tolak'}
                   </button>
                 </div>
               </div>

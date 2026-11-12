@@ -23,7 +23,7 @@ class CutiService {
         if (ids.length) {
             const users = await prisma.users.findMany({
                 where: { id: { in: ids } },
-                select: { id: true, name: true },
+                select: { id: true, name: true, jabatan_id: true, jabatan: true },
             });
             usersMap = Object.fromEntries(users.map(u => [u.id, u]));
         }
@@ -85,10 +85,33 @@ class CutiService {
                 include: { jabatan: true }
             });
 
-            if (pemohon && pemohon.id.toString() !== "1") {
-                let managerId = "1";
-                if (pemohon.jabatan && pemohon.jabatan.manager) {
-                    managerId = pemohon.jabatan.manager.toString();
+            if (pemohon) {
+                let managerId = null;
+
+                // 1. Cek apakah id_manager dikirim langsung dari form
+                if (data.id_manager && /^\d+$/.test(String(data.id_manager))) {
+                    managerId = String(data.id_manager);
+                } else if (data.manager_id && /^\d+$/.test(String(data.manager_id))) {
+                    managerId = String(data.manager_id);
+                }
+
+                // 2. Jika tidak ada, cek manager dari jabatan karyawan
+                if (!managerId) {
+                    if (pemohon.jabatan && pemohon.jabatan.manager) {
+                        managerId = pemohon.jabatan.manager.toString();
+                    } else if (pemohon.jabatan_id) {
+                        const jab = await prisma.jabatans.findUnique({
+                            where: { id: pemohon.jabatan_id }
+                        });
+                        if (jab && jab.manager) {
+                            managerId = jab.manager.toString();
+                        }
+                    }
+                }
+
+                // 3. Fallback ke Superadmin (1) jika tidak ada manager atau jika pemohon adalah manager itu sendiri
+                if (!managerId || managerId === pemohon.id.toString()) {
+                    managerId = "1";
                 }
 
                 await notificationService.create({
@@ -99,7 +122,8 @@ class CutiService {
                         message: `${pemohon.name} mengajukan cuti: ${tanggalValue}`,
                         user_id: pemohon.id.toString(),
                         cuti_id: cuti.id.toString(),
-                        status: 'Pending'
+                        status: 'Pending',
+                        action: `leave?user_id=${pemohon.id}`
                     },
                     created_at: now,
                     updated_at: now
@@ -167,10 +191,17 @@ class CutiService {
             const isManager = (pemohon.jabatan && pemohon.jabatan.manager === approver) || (userIsAnyManager !== null);
             const isAdmin = approverUser?.is_admin === 'admin' || approverUser?.is_admin === 'superadmin' || approver === 1n;
 
+            const isRejection = body.status === "Rejected" || body.status === "Ditolak";
             let newStatus = existing.status_cuti;
             let shouldFinalize = false;
 
-            if (isManager && (existing.status_cuti === "Pending" || existing.status_cuti === "Menunggu")) {
+            if (isRejection) {
+                if (!isManager && !isAdmin) {
+                    throw new Error("Anda tidak memiliki wewenang untuk menolak pengajuan ini.");
+                }
+                newStatus = "Ditolak";
+                shouldFinalize = true;
+            } else if (isManager && (existing.status_cuti === "Pending" || existing.status_cuti === "Menunggu")) {
                 newStatus = "Disetujui Manager";
             } else if (isAdmin) {
                 const managerId = pemohon.jabatan?.manager;
@@ -190,14 +221,23 @@ class CutiService {
             }
 
             // 2. Update status cuti ke status baru
+            const updateData = { 
+                user_approval: approver, 
+                status_cuti: newStatus, 
+                updated_at: new Date() 
+            };
+            if (body.notes || body.catatan) {
+                updateData.catatan = body.notes || body.catatan;
+            }
+
             const cuti = await tx.cutis.update({
                 where: { id: BigInt(id) },
-                data: { user_approval: approver, status_cuti: newStatus, updated_at: new Date() },
+                data: updateData,
                 include: { users: { select: { id: true, name: true } } },
             });
 
-            // 1. Hitung jumlah hari cuti (hanya jika difinalisasi oleh Admin)
-            if (shouldFinalize) {
+            // 1. Hitung jumlah hari cuti (hanya jika difinalisasi oleh Admin dan Diterima)
+            if (shouldFinalize && newStatus === "Diterima") {
                 let amount = 0;
                 const t = existing.tanggal || "";
                 if (t.includes(" - ")) {
@@ -273,45 +313,71 @@ class CutiService {
             // KIRIM NOTIFIKASI
             // ==========================================================
             try {
-                if (shouldFinalize) {
+                if (isRejection) {
+                    // Notifikasi penolakan ke pemohon
                     if (existing.user_id) {
                         await notificationService.create({
                             type: 'Persetujuan Cuti',
                             notifiable_type: 'App\\Models\\User',
                             notifiable_id: existing.user_id.toString(),
                             data: {
-                                message: `Pengajuan cuti Anda telah disetujui`,
+                                message: `Pengajuan cuti Anda telah ditolak`,
                                 user_id: existing.user_id.toString(),
                                 cuti_id: existing.id.toString(),
-                                status: '2'
+                                status: 'Ditolak',
+                                action: `leave?user_id=${existing.user_id}`
+                            },
+                            created_at: new Date(),
+                            updated_at: new Date()
+                        });
+                    }
+                } else if (shouldFinalize) {
+                    // Notifikasi persetujuan admin ke pemohon
+                    if (existing.user_id) {
+                        await notificationService.create({
+                            type: 'Persetujuan Cuti',
+                            notifiable_type: 'App\\Models\\User',
+                            notifiable_id: existing.user_id.toString(),
+                            data: {
+                                message: `Pengajuan cuti Anda telah disetujui (Diterima)`,
+                                user_id: existing.user_id.toString(),
+                                cuti_id: existing.id.toString(),
+                                status: 'Diterima',
+                                action: `leave?user_id=${existing.user_id}`
                             },
                             created_at: new Date(),
                             updated_at: new Date()
                         });
                     }
                 } else {
-                    // Notifikasi ke admin bahwa manager menyetujui
+                    // Notifikasi ke superadmin/admin bahwa manager telah menyetujui
                     const admins = await tx.users.findMany({
                         where: {
                             OR: [
                                 { is_admin: 'admin' },
                                 { is_admin: 'superadmin' },
+                                { is_admin: 'super_admin' },
+                                { is_admin: 'super admin' },
                                 { id: 1n }
                             ]
                         },
                         select: { id: true }
                     });
 
-                    for (const admin of admins) {
+                    const adminIds = new Set(admins.map(a => a.id.toString()));
+                    adminIds.add("1");
+
+                    for (const adminId of adminIds) {
                         await notificationService.create({
                             type: 'Pengajuan Cuti',
                             notifiable_type: 'App\\Models\\User',
-                            notifiable_id: admin.id.toString(),
+                            notifiable_id: adminId,
                             data: {
                                 message: `${pemohon.name} mengajukan cuti: ${existing.tanggal} (Disetujui Manager)`,
                                 user_id: pemohon.id.toString(),
                                 cuti_id: existing.id.toString(),
-                                status: 'Disetujui Manager'
+                                status: 'Disetujui Manager',
+                                action: `leave?user_id=${pemohon.id}`
                             },
                             created_at: new Date(),
                             updated_at: new Date()

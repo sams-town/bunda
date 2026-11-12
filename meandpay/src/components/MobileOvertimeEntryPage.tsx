@@ -90,24 +90,30 @@ export function MobileOvertimeEntryPage() {
       const jsonUser = await resUser.json();
       const me = jsonUser.data;
       
+      const resJab = await fetch(`${BASE_URL}/jabatans`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const jsonJab = await resJab.json();
+      const jabs = jsonJab.data || [];
+      
+      const results: any[] = [];
       if (me?.jabatan_id) {
-        const resJab = await fetch(`${BASE_URL}/jabatans`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        const jsonJab = await resJab.json();
-        const myJab = jsonJab.data?.find((j: any) => j.id.toString() === me.jabatan_id.toString());
-        
-        if (myJab) {
-          const results: any[] = [];
-          if (myJab.manager) {
-            results.push({ id: String(myJab.manager), name: `${myJab.manager_name} (${myJab.nama_jabatan})` });
-          }
-          
-          setManagers(results);
-          if (results.length > 0) {
-             setFormData(prev => ({ ...prev, id_manager: results[0].id }));
-          }
+        const myJab = jabs.find((j: any) => j.id.toString() === me.jabatan_id.toString());
+        if (myJab && myJab.manager) {
+          results.push({ id: String(myJab.manager), name: `${myJab.manager_name || 'Manager'} (${myJab.nama_jabatan})` });
         }
+      }
+      
+      // Fallback: tambahkan manager lain dari daftar jabatan
+      jabs.forEach((j: any) => {
+        if (j.manager && !results.some(r => r.id === String(j.manager))) {
+          results.push({ id: String(j.manager), name: `${j.manager_name || 'Manager'} (${j.nama_jabatan})` });
+        }
+      });
+      
+      setManagers(results);
+      if (results.length > 0) {
+        setFormData(prev => ({ ...prev, id_manager: prev.id_manager || results[0].id }));
       }
     } catch (err) { }
   };

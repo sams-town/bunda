@@ -82,15 +82,22 @@ class CutiController {
 
     async approve(req, res) {
         try {
-            const { user_approval } = req.body || {};
+            let { user_approval, status, notes, catatan } = req.body || {};
+            if (!user_approval && req.user && req.user.id) {
+                user_approval = req.user.id;
+            }
             if (!user_approval) {
                 return res.status(400).json({ success: false, message: "Field 'user_approval' wajib diisi" });
             }
-            const cuti = await cutiService.approve(req.params.id, { user_approval });
+            const cuti = await cutiService.approve(req.params.id, {
+                user_approval,
+                status,
+                notes: notes || catatan
+            });
             if (!cuti) return res.status(404).json({ success: false, message: "Cuti tidak ditemukan" });
-            return res.status(200).json({ success: true, message: "Cuti berhasil di-approve", data: cuti });
+            return res.status(200).json({ success: true, message: `Cuti berhasil diproses (${cuti.status_cuti})`, data: cuti });
         } catch (error) {
-            return res.status(500).json({ success: false, message: "Gagal meng-approve cuti", error: error.message });
+            return res.status(500).json({ success: false, message: "Gagal memproses approval cuti", error: error.message });
         }
     }
 

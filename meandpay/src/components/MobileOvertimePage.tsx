@@ -14,7 +14,7 @@ import {
   X,
   MessageSquare
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, formatPhotoUrl } from '../lib/utils';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useToast } from './Toast';
 
@@ -475,22 +475,46 @@ export function MobileOvertimePage() {
                   </button>
                 )}
 
-                <div className="flex items-center justify-between gap-3 bg-indigo-50/50 p-3 rounded-xl mb-4">
+                <div className="flex flex-col gap-2 bg-indigo-50/50 p-3 rounded-xl mb-4">
                    <div className="flex items-start gap-2 min-w-0">
                       <FileText className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
                       <p className="text-[10px] font-bold text-slate-600 leading-relaxed italic truncate">
                           {item.notes || 'Belum ada catatan...'}
                       </p>
                    </div>
-                   {item.file_lembur && (
-                      <a 
-                        href={item.file_lembur} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="px-3 py-1.5 bg-white border border-indigo-100 rounded-lg text-[9px] font-black text-indigo-600 uppercase tracking-widest shrink-0"
-                      >
-                        Berkas
-                      </a>
+                   {(item.file_lembur || item.foto_jam_masuk || item.foto_jam_keluar) && (
+                     <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-indigo-100/60">
+                        {item.file_lembur && (
+                           <a 
+                             href={formatPhotoUrl(item.file_lembur)} 
+                             target="_blank" 
+                             rel="noopener noreferrer"
+                             className="px-2.5 py-1 bg-white border border-indigo-100 rounded-lg text-[9px] font-black text-indigo-600 uppercase tracking-widest shrink-0"
+                           >
+                             Berkas
+                           </a>
+                        )}
+                        {item.foto_jam_masuk && (
+                           <a 
+                             href={formatPhotoUrl(item.foto_jam_masuk)} 
+                             target="_blank" 
+                             rel="noopener noreferrer"
+                             className="px-2.5 py-1 bg-white border border-emerald-100 rounded-lg text-[9px] font-black text-emerald-600 uppercase tracking-widest shrink-0"
+                           >
+                             Foto Masuk
+                           </a>
+                        )}
+                        {item.foto_jam_keluar && (
+                           <a 
+                             href={formatPhotoUrl(item.foto_jam_keluar)} 
+                             target="_blank" 
+                             rel="noopener noreferrer"
+                             className="px-2.5 py-1 bg-white border border-blue-100 rounded-lg text-[9px] font-black text-blue-600 uppercase tracking-widest shrink-0"
+                           >
+                             Foto Keluar
+                           </a>
+                        )}
+                     </div>
                    )}
                 </div>
 

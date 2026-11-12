@@ -161,6 +161,7 @@ const cutiUpload = createUploadMiddleware("cuti", "cuti");
 router.post("/cutis", authMiddleware, cutiUpload.single("foto_cuti"), (req, res) => cutiController.store(req, res));
 router.put("/cutis/:id", cutiUpload.single("foto_cuti"), (req, res) => cutiController.update(req, res));
 router.put("/cutis/:id/approve", upload.none(), (req, res) => cutiController.approve(req, res));
+router.post("/cutis/:id/approve", upload.none(), (req, res) => cutiController.approve(req, res)); // Fallback
 router.delete("/cutis/:id", (req, res) => cutiController.destroy(req, res));
 
 // ========================

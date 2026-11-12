@@ -207,12 +207,22 @@ export function MobileLeavePage() {
             managed = jabs.filter((j: any) => j.manager?.toString() === user.id.toString()).map((j: any) => j.id.toString());
             isManager = managed.length > 0;
             
+            const managerList: { id: string; name: string }[] = [];
             if (me?.jabatan_id) {
               const myJab = jabs.find((j: any) => j.id.toString() === me.jabatan_id.toString());
               if (myJab && myJab.manager) {
-                setManagers([{ id: String(myJab.manager), name: `${myJab.manager_name} (${myJab.nama_jabatan})` }]);
-                setFormData(prev => ({ ...prev, id_manager: String(myJab.manager) }));
+                managerList.push({ id: String(myJab.manager), name: `${myJab.manager_name || 'Manager'} (${myJab.nama_jabatan})` });
               }
+            }
+            // Add other managers from jabatans as fallback options
+            jabs.forEach((j: any) => {
+              if (j.manager && !managerList.some(m => m.id === String(j.manager))) {
+                managerList.push({ id: String(j.manager), name: `${j.manager_name || 'Manager'} (${j.nama_jabatan})` });
+              }
+            });
+            setManagers(managerList);
+            if (managerList.length > 0) {
+              setFormData(prev => ({ ...prev, id_manager: prev.id_manager || managerList[0].id }));
             }
           }
           
@@ -355,9 +365,11 @@ export function MobileLeavePage() {
       setIsRejecting(true);
 
       const fd = new FormData();
-      fd.append('status_cuti', 'Ditolak');
+      const approverId = userData.id ? String(userData.id) : '1';
+      fd.append('user_approval', String(approverId));
+      fd.append('status', 'Ditolak');
 
-      const res = await fetch(`${BASE_URL}/cutis/${rejectingId}`, {
+      const res = await fetch(`${BASE_URL}/cutis/${rejectingId}/approve`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`

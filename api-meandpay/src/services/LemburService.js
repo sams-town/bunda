@@ -112,10 +112,33 @@ class LemburService {
                 include: { jabatan: true }
             });
 
-            if (pemohon && pemohon.id.toString() !== "1") {
-                let managerId = "1";
-                if (pemohon.jabatan && pemohon.jabatan.manager) {
-                    managerId = pemohon.jabatan.manager.toString();
+            if (pemohon) {
+                let managerId = null;
+
+                // 1. Cek apakah id_manager dikirim langsung
+                if (payload.id_manager && /^\d+$/.test(String(payload.id_manager))) {
+                    managerId = String(payload.id_manager);
+                } else if (payload.manager_id && /^\d+$/.test(String(payload.manager_id))) {
+                    managerId = String(payload.manager_id);
+                }
+
+                // 2. Jika tidak ada, cek dari jabatan karyawan
+                if (!managerId) {
+                    if (pemohon.jabatan && pemohon.jabatan.manager) {
+                        managerId = pemohon.jabatan.manager.toString();
+                    } else if (pemohon.jabatan_id) {
+                        const jab = await prisma.jabatans.findUnique({
+                            where: { id: pemohon.jabatan_id }
+                        });
+                        if (jab && jab.manager) {
+                            managerId = jab.manager.toString();
+                        }
+                    }
+                }
+
+                // 3. Fallback ke Superadmin (1) jika tidak ada manager atau jika pemohon adalah manager itu sendiri
+                if (!managerId || managerId === pemohon.id.toString()) {
+                    managerId = "1";
                 }
 
                 const notificationService = (await import("./NotificationService.js")).default;
@@ -127,8 +150,11 @@ class LemburService {
                         message: `${pemohon.name} mengajukan lembur tanggal: ${record.tanggal}`,
                         user_id: pemohon.id.toString(),
                         lembur_id: record.id.toString(),
-                        status: 'Pending'
-                    }
+                        status: 'Pending',
+                        action: `overtime-data?user_id=${pemohon.id}`
+                    },
+                    created_at: new Date(),
+                    updated_at: new Date()
                 });
             }
         } catch (err) {
@@ -285,8 +311,11 @@ class LemburService {
                                     : `Pengajuan lembur Anda telah disetujui`,
                                 user_id: existing.user_id.toString(),
                                 lembur_id: existing.id.toString(),
-                                status: newStatus
-                            }
+                                status: newStatus,
+                                action: `overtime-data?user_id=${existing.user_id}`
+                            },
+                            created_at: new Date(),
+                            updated_at: new Date()
                         });
                     }
                 } else {
@@ -296,23 +325,31 @@ class LemburService {
                             OR: [
                                 { is_admin: 'admin' },
                                 { is_admin: 'superadmin' },
+                                { is_admin: 'super_admin' },
+                                { is_admin: 'super admin' },
                                 { id: 1n }
                             ]
                         },
                         select: { id: true }
                     });
 
-                    for (const admin of admins) {
+                    const adminIds = new Set(admins.map(a => a.id.toString()));
+                    adminIds.add("1");
+
+                    for (const adminId of adminIds) {
                         await notificationService.create({
                             type: 'Pengajuan Lembur',
                             notifiable_type: 'App\\Models\\User',
-                            notifiable_id: admin.id.toString(),
+                            notifiable_id: adminId,
                             data: {
                                 message: `${pemohon.name} mengajukan lembur: ${existing.tanggal} (Disetujui Manager)`,
                                 user_id: pemohon.id.toString(),
                                 lembur_id: existing.id.toString(),
-                                status: 'Disetujui Manager'
-                            }
+                                status: 'Disetujui Manager',
+                                action: `overtime-data?user_id=${pemohon.id}`
+                            },
+                            created_at: new Date(),
+                            updated_at: new Date()
                         });
                     }
                 }
